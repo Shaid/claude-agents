@@ -1,0 +1,20 @@
+# This repository versions ONLY the game-re reverse-engineering agent system.
+# Everything else in ~/.claude (credentials, sessions, memory, settings,
+# history) is private runtime state and must never be tracked.
+#
+# Whitelist pattern: ignore everything, then opt in specific paths.
+
+/*
+
+!/.gitignore
+!/README.md
+
+!/agents
+/agents/*
+!/agents/game-re.md
+
+!/skills
+/skills/*
+!/skills/re-codebreaker
+!/skills/re-oracle
+!/skills/re-learn
