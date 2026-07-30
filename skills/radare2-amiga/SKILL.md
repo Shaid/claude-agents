@@ -16,11 +16,16 @@ the file contains valid data.
 ## Workaround: Extract Hunks First
 
 The reliable approach is to **extract each hunk to a separate raw binary file**
-before opening in radare2. Use the project's `parseHunks()` function
-(`src/assets/formats/exe-data.ts`) to locate hunk boundaries:
+before opening in radare2. Check whether the current project already has a
+hunk parser before writing your own — e.g. middilgard's `parseHunks()` in
+`src/assets/formats/exe-data.ts` — and adapt the import below to wherever
+it actually lives; if the project has none yet, write one against the
+AmigaOS Hunk Format Reference just below and add it to the project's shared
+decode library (see the `game-re` agent's Output-conventions section) rather
+than as a one-off inline script:
 
 ```typescript
-import { parseHunks } from './src/assets/formats/exe-data.ts';
+import { parseHunks } from './src/assets/formats/exe-data.ts'; // adapt path
 import { readFileSync, writeFileSync } from 'fs';
 
 const exe = new Uint8Array(readFileSync('path/to/executable'));
@@ -77,8 +82,11 @@ Per hunk:  hunk type (u32)
 
 ## SAS/C Small Data Model
 
-Melbourne House games were compiled with SAS/C using the small data model.
-Key addressing conventions:
+Applies **if** the target was compiled with SAS/C using the small data
+model — common for Amiga games of this era (e.g. Melbourne House titles),
+but confirm it for your target rather than assuming it; a `JSR offset(A4)`
+pattern in the disassembly is the tell. Key addressing conventions when it
+applies:
 
 - **A4** = base register for the small data section (DATA hunk end)
 - Data accesses use `offset(A4)` with signed 16-bit displacements
@@ -138,6 +146,14 @@ if (opcode === 0x4ef9) {
 | `4F EF xx xx` | `LEA.L (d16, A7), A7` — clean up stack |
 | `06 40 xx xx` | `ADD.W #imm, D0` — add immediate to D0 |
 
+**Reading `MULU`/`MULS` as record-size disclosure:** a `MULU #imm,Dn`
+immediately before an indexed address computation (feeding a `LEA`/`ADD.L
+Dn,An`) is very commonly `index × record_size` for a struct-array lookup —
+the immediate operand *is* the record size, letting you infer a struct's
+byte length without ever finding its definition. Cross-check against the
+struct fields you can already identify from other reads/writes at that
+base address.
+
 ### Searching for functions
 
 Since radare2 can't auto-detect functions in raw hunk data, search for
@@ -156,10 +172,12 @@ r2 -a m68k -b 32 -q -n -c '/x 4ef9' /tmp/code-hunk.bin
 
 ### Cross-referencing with the IRA disassembly
 
-The project has annotated IRA disassembly files in `docs/`:
-- `WarInMiddleEarth.asm` — primary, most complete (47K lines)
-- `disassembly.asm` — older capstone output
-- `vengeance.asm`, `conan-game.asm`, `conan-loader.asm`
+Check the current project's `docs/` for existing annotated IRA `.asm`
+output before disassembling from scratch (see the `ira-disasm` skill for how
+these are produced and kept current). Example from middilgard:
+`docs/WarInMiddleEarth.asm` (WIME, primary), `vengeance.asm`,
+`conan-game.asm`, `conan-loader.asm` — your project's file(s) will have
+different names.
 
 Use the IRA labels (e.g., `LAB_0A11`) to find functions, then locate them
 in the CODE hunk by searching for their instruction byte patterns.

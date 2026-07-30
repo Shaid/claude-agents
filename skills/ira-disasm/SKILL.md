@@ -132,7 +132,10 @@ LAB_0A11:
 
 ## Cross-Referencing
 
-The project maintains annotated IRA output in `docs/`:
+Check the current project's `docs/` for existing annotated IRA output before
+disassembling from scratch — the whole point of committing `.asm` files is
+to make them a durable, greppable asset (see the refine-and-repeat loop
+above). Example from middilgard (your project's filenames will differ):
 
 | File | Game | Lines |
 |------|------|-------|
@@ -143,18 +146,20 @@ The project maintains annotated IRA output in `docs/`:
 
 ### Finding functions
 
+Substitute your project's actual `.asm` path for `TARGET.asm` below:
+
 ```bash
 # By label name
-grep -n 'LAB_0A11:' docs/WarInMiddleEarth.asm
+grep -n 'LAB_0A11:' docs/TARGET.asm
 
 # By caller
-grep -n 'JSR.*LAB_0A11\|BSR.*LAB_0A11' docs/WarInMiddleEarth.asm
+grep -n 'JSR.*LAB_0A11\|BSR.*LAB_0A11' docs/TARGET.asm
 
 # By instruction pattern
-grep -n 'LINK.*A5.*-8' docs/WarInMiddleEarth.asm | head -10
+grep -n 'LINK.*A5.*-8' docs/TARGET.asm | head -10
 
-# By data reference
-grep -n 'SECSTRT_0-25110.*A0' docs/WarInMiddleEarth.asm
+# By data reference (example displacement — use your own)
+grep -n 'SECSTRT_0-25110.*A0' docs/TARGET.asm
 ```
 
 ## IRA vs Radare2
