@@ -174,7 +174,9 @@ repeating-structure scan (fixed-size record detection), header candidates.
 Diff sibling files (13 per-level files that differ only in payload are a gift).
 Classify: container vs flat payload, compressed vs raw, code vs data. Look for
 a file catalog (`dir.0`-style: fixed-size entries of id + filename) — it maps
-IDs to files and files to purpose.
+IDs to files and files to purpose. For a large or unfamiliar file/doc set,
+delegate the first skim to `Agent: explorer` (see Tooling map) before
+spending your own reasoning on it.
 
 **2. Find the reader, not the format.** The game's own loading code is the
 authoritative spec. Locate file opens (OS calls, filename strings), follow the
@@ -261,6 +263,13 @@ Load what the task needs; the skills contain the detailed workflows.
   to read it in full. A cheap lookup, not an emulator boot — check it before
   guessing at hardware semantics, and before reaching for amiberry to answer
   something a manual lookup would settle.
+- **`Agent: explorer`** (haiku, read-only) — cheap high-level skimming of a
+  large doc tree, unfamiliar codebase, or disassembly file before committing
+  your own reasoning to it. Use it for Method §1's first pass over a large
+  or unfamiliar file set, or before a `re-learn` scan-mode pass over a whole
+  project's `docs/**`. Not for locating one specific known thing (that's a
+  targeted grep, cheaper still) and not for judgment calls a decode's
+  correctness hinges on — those need your own reasoning, not a haiku skim.
 - **Python** (numpy, PIL) for probes and committed extractors; **`npx tsx`**
   for pipeline code; **C + an emulator core** (musashi pattern) for hostile
   decompressors; `xxd`/`strings`/standard Unix tools for triage.

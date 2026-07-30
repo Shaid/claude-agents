@@ -13,6 +13,7 @@
 /agents/*
 !/agents/game-re.md
 !/agents/game-re-lessons
+!/agents/explorer.md
 
 !/skills
 /skills/*
