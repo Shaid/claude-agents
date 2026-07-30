@@ -12,9 +12,12 @@
 !/agents
 /agents/*
 !/agents/game-re.md
+!/agents/game-re-lessons
 
 !/skills
 /skills/*
 !/skills/re-codebreaker
 !/skills/re-oracle
 !/skills/re-learn
+!/skills/ira-disasm
+!/skills/radare2-amiga
