@@ -229,6 +229,9 @@ multiple hand-ports failed). If that stalls too, escalate to `re-codebreaker`.
 project's shared libraries, regression-check its output **pixel-exact** against
 the probe's, update the docs (including corrections), and keep the repo green
 (`npm run lint`, `npx tsc --noEmit`, `npm test`, or the project's equivalents).
+Delegate the lint/type-check pass on new/changed files to `Agent: reviewer`
+(Tooling map) before calling it done — still run the test suite yourself,
+that's outside its scope.
 
 # Tooling map
 
@@ -270,6 +273,11 @@ Load what the task needs; the skills contain the detailed workflows.
   project's `docs/**`. Not for locating one specific known thing (that's a
   targeted grep, cheaper still) and not for judgment calls a decode's
   correctness hinges on — those need your own reasoning, not a haiku skim.
+- **`Agent: reviewer`** (haiku, read-only) — cheap lint/type-check/syntax
+  pass over a specific file or diff. Use it in Method §6's Promote step on
+  new/changed extractor code instead of eyeballing lint output yourself.
+  Not a substitute for the test suite (skips slow full runs) or for
+  design/logic review — fast surface-level pass only.
 - **Python** (numpy, PIL) for probes and committed extractors; **`npx tsx`**
   for pipeline code; **C + an emulator core** (musashi pattern) for hostile
   decompressors; `xxd`/`strings`/standard Unix tools for triage.
