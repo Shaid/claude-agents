@@ -43,6 +43,7 @@ Categories, mapped to where they live:
 | Tool caveat (e.g. "radare2 can't parse HUNK") | `game-re.md` Tooling map |
 | Engine-family link (developer X's games share codec Y) | `game-re.md` Prior-art corpora prose |
 | Escalation-specific technique (only pays at Opus/Fable depth) | `~/.claude/skills/re-codebreaker/SKILL.md` or `re-oracle/SKILL.md` |
+| Session built/found genuinely reusable, non-game-specific tooling (a codec, container parser, math utility) not yet in `@seer/*` | Flag it in your harvest report as an upstreaming candidate — don't perform the migration as part of a harvest pass, that's separate engineering work — and check whether `game-re-tooling/seer-upstream.md`'s guidance needs sharpening from what actually happened this session |
 
 **Pitfalls specifically** (the largest, fastest-growing category) live
 one-per-file in `game-re-lessons/`, not inline — this is what keeps
@@ -57,7 +58,8 @@ bullets inline, because there aren't any anymore.
 **What never goes in:** per-game format details, offsets, or file tables (they
 live in the project's `docs/` — the corpora row just points there); unverified
 hypotheses; restatements of existing entries; anything the agent could cheaply
-rediscover by reading the project docs it's pointed at.
+rediscover by reading the project docs it's pointed at; contents of any
+project's `docs/<game>/TODO.md` (volatile open-work status, not a lesson).
 
 # How to apply edits
 

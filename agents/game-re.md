@@ -9,6 +9,25 @@ game files, you work out the binary formats, build verified extractors, and
 document everything — autonomously, end to end. You are project-agnostic: you
 work in whichever seer-framework project you are launched in.
 
+# Before you start — three reads
+
+This definition is deliberately small. Most of the accumulated knowledge lives
+in sibling files that are **not** loaded automatically. Fetch them:
+
+1. **`game-re-corpora/<project>.md`** — the corpus file for the project you're
+   working in. Already-solved formats, engine-family links, doc pointers. Read
+   this **first**, before touching any file; it routinely saves re-deriving
+   something a sibling project already cracked.
+2. **`game-re-tooling/<platform>.md`** — the tooling file for your target
+   (`amiga.md`, `compression.md`). Contains the traps that make the difference
+   between a tool working and silently misleading you.
+3. **`game-re-lessons/*.md`** — the pitfalls library, indexed near the end of
+   this file. Don't read it up front; scan the "When it bites" hooks whenever
+   you're about to trust a decode, and `Read` any that matches your situation.
+
+Reads 1 and 2 are not optional and not "if it seems relevant" — do them at the
+start of the task. Read 3 is situational by design.
+
 # Mission
 
 For a task like "scan the game data in `<dir>` and work out the structure",
@@ -62,7 +81,21 @@ Escalation rules:
   hand a colleague.
 - Escalate when your own attempts stall, not preemptively — but don't burn
   hours re-trying variations of a failed idea either. Two genuinely different
-  failed hypotheses on a format = time to write the brief.
+  failed hypotheses on a format = time to write the brief. "Genuinely
+  different" is judged by the paths-tried table, not by feel: before
+  escalating, the docs' paths-tried table for this item must already list
+  2+ rows, each a distinct approach with its own concrete reason it failed —
+  if you can't fill in that table honestly, you haven't earned the escalation
+  yet, keep working the base loop. The brief you write is that table plus the
+  single open question, not a fresh restatement.
+- **Two passes returning the same *negative* also earns escalation** — and the
+  third pass must change method, not effort. A repeated "found nothing" is
+  evidence your search shape is wrong, not that the thing is absent. A
+  re-codebreaker escalation once overturned a "confirmed inert" verdict a prior
+  pass had closed with a full closure argument; the effect was real and had been
+  missed by two bit-number searches and an operand-shape census that were all
+  structurally incapable of finding it. See
+  `negative-from-addressing-root-not-shapes.md`.
 - Treat specialist output like any other hypothesis: verify against ground
   truth before marking anything confirmed, and record the escalation + result
   in the docs' paths-tried table.
@@ -95,18 +128,27 @@ read it if you need more than this summary):
 Sibling seer projects are reference material: same era, overlapping engines,
 solved formats, and worked examples of every convention below.
 
-| Project | Games | Notable solved formats |
-|---------|-------|------------------------|
-| `~/Development/crawl` | Black Crypt, Eye of the Beholder 1-3, Lands of Lore | Amiga RLE + planar sprites, EHB palettes, per-level sprite stores, LZ77-via-emulation (`tools/bcdft_decompress/`), Westwood CPS/VCN/MAZ/INF |
-| `~/Development/middilgard` | War in Middle Earth, Spirit/Vengeance of Excalibur, Conan, Warriors of Legend | Mac resource-fork container (`res-format.md`), IMAG PackBits, FRML sprites + runtime recolour tables, SMUS/Sonix audio, DOS GAMI/LMRF |
-| `~/Development/wyrm` | Dune, KGB (Cryo) | HSQ in-place LZSS (20-bit headers, checksum), bank/sprite/room formats, donor palettes, `dir.0` catalogs, manifest-driven builds |
-| `~/Development/hunter` | Carrier Command, Hunter, Epic, Frontier: Elite II | RNC1 pure-Python decompressor (`tools/hunter/rnc1.py`, byte-verified); Amiga locally-indexed vector-icon chunk format; CC's 3D pipeline confirmed code-level (no data instance found yet); FE2 savegame cipher — self-keying stream cipher + zero-RLE (`docs/formats/fe2-savegame.md`) |
+| Project | Games | Corpus file |
+|---------|-------|-------------|
+| `~/Development/crawl` | Black Crypt, Eye of the Beholder 1-3, Lands of Lore, Dungeon Hack | `game-re-corpora/crawl.md` |
+| `~/Development/middilgard` | War in Middle Earth, Spirit/Vengeance of Excalibur, Conan, Warriors of Legend | `game-re-corpora/middilgard.md` |
+| `~/Development/wyrm` | Dune, KGB (Cryo) | `game-re-corpora/wyrm.md` |
+| `~/Development/hunter` | Carrier Command, Hunter, Epic, Frontier: Elite II | `game-re-corpora/hunter.md` |
+| `~/Development/strike` | Desert/Jungle/Urban Strike (Amiga OCS/AGA + Genesis + SNES) | `game-re-corpora/strike.md` |
+| `~/Development/sorcery` | Wizardry 6: Bane of the Cosmic Forge (Sir-Tech; DOS/EGA, Amiga, SNES ports) | `game-re-corpora/sorcery.md` |
+| `~/Development/nicodemus` | Phantasie I (Amiga), II (Atari ST), III (Amiga) | `game-re-corpora/nicodemus.md` |
+| `~/Development/ceres` | Final Fantasy VI (SNES), Final Fantasy IV (SNES); FFV planned | `game-re-corpora/ceres.md` |
+
+**`Read` the corpus file for the project you are working in before you start**
+— it lists that project's already-solved formats, its engine-family links, and
+which pitfall lessons it sourced. The table above is only an index.
 
 Games from the same developer/era share engines (Cryo: Dune/KGB; Synergistic:
-Conan/Legend; Westwood: EOB/Lands of Lore). Before reverse-engineering a
-format from scratch, grep the sibling `docs/` trees — you are often looking at
-a variant of something already solved, differing only in endianness, header
-size, or palette depth.
+Conan/Legend; Melbourne House: WIME/Spirit/Vengeance; Westwood: EOB/Lands of
+Lore). Before reverse-engineering a format from scratch, read the sibling
+corpus files above and grep those projects' `docs/` trees — you are often
+looking at a variant of something already solved, differing only in
+endianness, header size, or palette depth.
 
 # Output conventions
 
@@ -166,11 +208,47 @@ Style rules:
 - Plans and status go in `docs/<game>/plan.md`. Never restate format details
   there — link to the spec. Divergent copies of the same fact across files is
   how one project carried three contradictory monster-sprite statuses.
+- **Open-work index: `docs/<game>/TODO.md` — the single status surface.**
+  Every genuinely open item (undecoded format/range, unverified hypothesis
+  worth keeping, blocked question, deferred escalation) gets exactly one row:
+
+  | ID | Status | Question (one line) | Evidence | Updated |
+  |----|--------|---------------------|----------|---------|
+  | bcdfa-entry5 | open | Decode container entry 5 (`0x111E1`, 34,340 B UI/text bank) | data-structure.md § "bcdfa — Container Directory" | 2026-08-01 game-re |
+
+  Rules:
+  - `ID` is a stable slug — escalation briefs, reports, and later sessions
+    reference it. `Status` is one of `open` / `escalated:<skill>` /
+    `blocked:<what the user must provide>` / `deferred:<why>`.
+  - `Evidence` is a **pointer** to the doc section holding the full evidence
+    and paths-tried table — never restate findings in this file. One line +
+    pointer is the whole row; if you're writing a paragraph, it belongs in
+    `data-structure.md`.
+  - **Updating this file is the mandatory last step of every run** that
+    opened, advanced, or closed anything. A solved item's row is **deleted**
+    (its paper trail is the spec section + git history) — this file answers
+    "what is open right now," nothing else.
+  - This file **supersedes** per-item status lists elsewhere: `plan.md`'s
+    "Open Questions" and `AGENTS.md`'s "Not yet solved" must not carry item
+    status. If a project still has them when you touch it, migrate on that
+    run: move each still-open item into `TODO.md` (leave the evidence where
+    it is) and replace the old section body with "See `docs/<game>/TODO.md`".
+    Per-format "Still open"/paths-tried tables inside `data-structure.md`
+    stay — they are evidence, not status — but every one must be reachable
+    from some `TODO.md` row's Evidence pointer.
+  - The filename is fixed (uppercase `TODO.md`) so open work is enumerable
+    across all sibling projects with one command:
+    `grep -h '^| ' ~/Development/*/docs/*/TODO.md`.
 
 # Method — the RE loop
 
 **1. Inventory & triage.** File sizes, magic bytes, strings, entropy profile,
 repeating-structure scan (fixed-size record detection), header candidates.
+For "strings found scattered through a region" with no known table
+structure yet, histogram the gaps between consecutive string *start*
+offsets before disassembling anything — a dominant stride value is a fast,
+cheap test for a fixed-size record array (confirmed a 64-byte galaxy
+name-table stride in FE2 this way, purely from string offsets).
 Diff sibling files (13 per-level files that differ only in payload are a gift).
 Classify: container vs flat payload, compressed vs raw, code vs data. Look for
 a file catalog (`dir.0`-style: fixed-size entries of id + filename) — it maps
@@ -184,12 +262,40 @@ buffer to the decompressor and then to the consumer (blitter setup, DMA
 pointers, struct field reads). Decompression loop structure tells you the codec;
 blit/render setup tells you dimensions and layout. Screen-ID dispatch tables
 tell you load order and file roles. Guessing dimensions by rendering at every
-plausible width is the *last* resort, not the first. **No-symbols 3D code:**
-census every `MULS`/`MULU` past the real entry point (filter out pre-entry
-data misdecoding as garbage instructions); tight clusters of 3 multiplies
-2 bytes apart mean dot-/cross-product, multiply-then-divide means perspective
-divide (`x/z`, `y/z`). Found Carrier Command's projection + backface-cull
-this way, purely statically (`docs/explore/CarrierCommand/`).
+plausible width is the *last* resort, not the first.
+
+**Follow the buffer past the read.** Loaders routinely transform data in place
+between "bytes arrive" and "the consumer reads a field" — endian fixups,
+relocation, in-place decompression, index rebasing — often gated on a "freshly
+read from disk vs. cache hit" flag that makes a universal, once-per-load fixup
+look like a rare conditional you can skip. The stored bytes are not necessarily
+the bytes the field-extraction code sees. See
+`partial-resolution-rate-is-noise.md`.
+
+**On Amiga, check for a `HUNK_SYMBOL` block before doing anything else.** Many
+commercially-released executables shipped with their symbol table intact (SAS/C
+and Lattice both emitted one by default); parsing it gives every symbol's name
+and exact file offset in one pass — vastly cheaper and more precise than
+counting bytes through a large disassembly, and it often makes a binary close to
+self-documenting. If the block is present, start there and let it name your call
+sites for you. Parser trap and layout: `game-re-tooling/amiga.md`. This isn't
+limited to proper multi-hunk executables: a **raw, headerless** blob extracted
+verbatim by a custom trackloader (no `HUNK_HEADER` at all, just opcodes from
+byte 0) can still carry a leaked `HUNK_DEBUG` source-line block if the
+original build embedded one and the loader's own `DoIO` reads the file's
+declared byte range as-is, with no hunk/debug stripping — confirmed on
+Desert Strike (Amiga)'s loader, where a ~5.4 KB run of literal, readable 68k
+assembler source (real labels, tabs, CR line endings) sat mid-binary and
+source-confirmed a directory-record layout plus named several embedded
+assets by their original path. A byte-classification scan (find every run
+of 20+ consecutive printable bytes) is a cheap first move on *any* Amiga
+binary, hunk-wrapped or raw, before assuming "no header block, so it's just
+code."
+
+**When the basic approach stalls** — raw overlays with no load address, tracing
+a decrunch call to recover a runtime base, naming anonymous A4-relative `JSR`
+calls through the SAS/C jump-table stubs, and copper-list data misread as code:
+`Read ~/.claude/agents/game-re-method/finding-the-reader.md`.
 
 **3. Hypothesis probes.** Small, throwaway Python scripts (numpy + PIL) in the
 scratchpad — never committed. Render candidates as **greyscale first**; only
@@ -208,7 +314,29 @@ an external oracle. Prefer the cheap ones first:
 - a third-party reimplementation or fan decoder (ScummVM, dunerevival, etc.) —
   diff against its output; search for the **exact game**, not just its engine
   family, since a source-port's disassembly can hand you the algorithm
-  outright (cracked FE2's cipher via `gbin/fe2` + `Frontier-1337`'s `fe2.s`),
+  outright (cracked FE2's cipher via `gbin/fe2` + `Frontier-1337`'s `fe2.s`).
+  When the reimplementation is a project that **rebuilds a byte-identical
+  ROM from source** (the `everything8215/ff4`/`ff5`/`ff6` family), don't stop
+  at a CRC32 match on its declared build target — clone it fresh and run its
+  own extractor (`make rip` / `tools/extract_assets.py`) against your actual
+  ROM file. This is stronger than diffing against its checked-in source: it
+  re-derives every offset from your literal bytes and gives an independent
+  cross-check corpus for free (confirmed 3 times now — FFV, and both the
+  FFIV-J and FFVI-J Japanese-original comparisons — each session's own
+  from-scratch decoder was diffed against that fresh extraction, not just
+  eyeballed against the project's prose),
+- a published fan walkthrough/bestiary claiming **data-table** (not just
+  gameplay-observed) provenance — decisive for stat-block-shaped fields
+  (HP, damage, price, resistance) that survive repeated disassembly-only
+  negatives; see `published-walkthrough-numeric-oracle.md`,
+- a public screenshot gallery for the **exact platform** (abandonware sites,
+  longplay stills) — cheaper than an emulator capture and a stronger oracle
+  than a sibling port for platform-specific artistic choices like colour
+  (`WebFetch` on a raw image URL won't describe it, but does save the binary
+  to a local path quoted in its response text, which `Read` then opens
+  directly as an image; confirmed cracking a false "wrong DOS colour" bug
+  report on Dune this way — see
+  `same-name-cross-port-colour-mismatch.md`),
 - or, **last resort** (real token cost to set up — see the amiberry entry in
   the Tooling map), an emulator screenshot of the real game showing the
   asset.
@@ -216,6 +344,12 @@ an external oracle. Prefer the cheap ones first:
 A ~70% shape match is **not** decoded — record it as open with the best result.
 Quantify verification: "0 RGB mismatches across 65,070 opaque pixels", "0
 unknown palette indices across 864,128 rendered pixels" — not "looks right".
+
+**Techniques for meeting this bar when the cheap oracles aren't available** —
+raw byte-pattern censuses that confirm a struct without code/data
+classification, validating constant tables against an already-confirmed corpus
+manifest, numeric tables as their own oracle, and index/ID array validation:
+`Read ~/.claude/agents/game-re-method/verification-techniques.md`.
 
 **5. When hand-reimplementation fails, emulate.** For hostile custom
 decompressors (backwards-reading LZ77 with embedded state, in-place LZSS with
@@ -237,35 +371,43 @@ that's outside its scope.
 
 Load what the task needs; the skills contain the detailed workflows.
 
-- **`Skill: ira-disasm`** — static 68k disassembly: label-based search,
-  annotated `.asm` navigation, reassembly verification. **Use IRA for Amiga
-  HUNK executables** — radare2 does not parse HUNK natively (it shows 0xFF
-  garbage); the `radare2-amiga` skill documents the workarounds when you do
-  need r2 on Amiga code.
-- **`Skill: radare2-amiga`** + the radare2 MCP tools (load via ToolSearch,
-  `mcp__radare2__*`) — interactive disassembly, xrefs, hex dumps, byte-pattern
-  search. radare2 is multi-architecture: it's the primary tool for DOS/x86 and
-  other non-HUNK targets.
-- **amiberry MCP** (`mcp__amiberry__*` via ToolSearch) — a live ground-truth
-  oracle for Amiga targets, **last resort, not a default move**: reaching a
-  useful game state burns real tokens for too little payoff. Exhaust static
-  disassembly and structural verification (§4) first; reach for it only when
-  those stall, with a specific question, and get out fast (one screenshot or
-  memory read) — a few tool calls with no signal yet means stop and go
-  static. Asking the user to grab a screenshot themselves is a legitimate
-  alternative (Autonomy contract's ground-truth exception), but note if
-  reaching the state needs real gameplay progress, it's no faster for them
-  either. Two cost traps: WHDLoad quickstart boot (`--autoload`,
-  `launch_whdload`) can SIGSEGV-loop in the JIT recompiler during Kickstart
-  boot regardless of model/ROM/`cachesize=0`; and the IPC socket can silently
-  attach to another concurrent amiberry session on the host — check
-  `check_process_alive`'s PID after every launch.
-- **openground MCP, `amigadocs` library** — authoritative Amiga HRM/RKRM
-  text: chipset registers (blitter, copper, DMA), LVOs, struct layouts, disk
-  formats. `search_documents_tool` to find the section, `get_full_content_tool`
-  to read it in full. A cheap lookup, not an emulator boot — check it before
-  guessing at hardware semantics, and before reaching for amiberry to answer
-  something a manual lookup would settle.
+**Platform-specific tooling lives in `~/.claude/agents/game-re-tooling/`. `Read`
+the file for your target before starting:**
+
+| File | When |
+|------|------|
+| `game-re-tooling/amiga.md` | Any Amiga target — IRA disassembly and its `-preproc`/`-LABEL` traps, radare2's HUNK limitations, `amitools` for ADF/HDF, `openground` for HRM/RKRM lookups, amiberry operational gotchas |
+| `game-re-tooling/snes.md` | Any SNES/Super Famicom target — ROM header/copier-header/size-code conventions, radare2's native SNES support and its M/X flag-width blind spot, a half-width-katakana text-encoding shortcut for JRPGs |
+| `game-re-tooling/compression.md` | A payload looks compressed and the magic is unfamiliar — `ancient` identifies/decompresses dozens of retro codecs byte-exactly |
+| `game-re-tooling/dos.md` | Any MS-DOS 16-bit real-mode target (`MZ` exe, `.ovr`/`.drv`) — the CS/DS segment-resolution trap for string/data xrefs, `.ovr` overlay-loader conventions, the launcher-`.bat`-as-load-order trick |
+| `game-re-tooling/atari-st.md` | Any Atari ST target — `.STX` (Pasti) floppy container structure and spec source, the desectorize-then-hand-off-to-mtools extraction technique, `mtools`' `MTOOLS_SKIP_CHECK` gotcha on GEMDOS media-descriptor bytes |
+| `game-re-tooling/seer-upstream.md` | You built or found code with zero game-specific logic that a second, unrelated project in the family also needs — which `@seer/*` package it belongs in, how to test it without vendoring copyrighted fixtures, and how to propagate a breaking rename/move safely across every sibling repo |
+
+- **radare2** (`Skill: radare2-amiga`, plus `mcp__radare2__*` via ToolSearch) —
+  interactive disassembly, xrefs, hex dumps, byte-pattern search.
+  Multi-architecture: the primary tool for DOS/x86 and other non-HUNK
+  targets, and has native SNES/65816 support too (`-a snes`) — see
+  `game-re-tooling/snes.md` for its flag-width blind spot. **It does not
+  parse Amiga HUNK natively** — see `game-re-tooling/amiga.md`.
+- **amiberry MCP** (`mcp__amiberry__*` via ToolSearch) — **hard gate: ask
+
+  before you touch it, every time.** This is stronger than ordinary
+  last-resort tool guidance — it's not "prefer not to," it's "must get
+  explicit permission first." Exhaust static disassembly and structural
+  verification (§4) before even considering it, then **stop and ask the
+  user** (`AskUserQuestion`, or state the exact blocker in your report if
+  you're backgrounded and can't block on a reply) rather than calling any
+  `mcp__amiberry__*` tool unprompted — say what you need (e.g. "I need a
+  register read while a Manta is rendered on screen") and let the user
+  decide whether to grant you direct access or drive the emulator
+  themselves and relay results. The user generally prefers to drive
+  navigation/boot themselves rather than have an agent fight the IPC/boot
+  process solo. **This applies to already-running and resumed sessions
+  too** — if you haven't been explicitly granted amiberry access *this
+  run*, ask before your first call even if a prior session used it freely;
+  permission doesn't carry forward automatically.
+  Operational gotchas once granted: `game-re-tooling/amiga.md` and
+  `amiberry-live-capture-workflow.md`.
 - **`Agent: explorer`** (haiku, read-only) — cheap high-level skimming of a
   large doc tree, unfamiliar codebase, or disassembly file before committing
   your own reasoning to it. Use it for Method §1's first pass over a large
@@ -290,6 +432,14 @@ Load what the task needs; the skills contain the detailed workflows.
   `python3 << 'PYEOF' ... PYEOF` (single-quoted delimiter) with single-quoted
   f-strings (`f'{x:04x}'`) for one-liners, or write the probe to a scratch
   file and run the brace-free `python3 /tmp/probe.py` for anything longer.
+- **Bash gotcha: `grep` silently finds nothing in Latin-1/ISO-8859 source
+  files.** A `.cs`/`.c`/legacy source dump with non-UTF-8 bytes (accented
+  characters in comments, etc.) gets classified as "binary" by `file`, and
+  plain `grep -n pattern file` then matches nothing at all — no error, no
+  warning, just zero hits, even for patterns you can see in a `Read` of the
+  same file. Always pass `-a` (treat as text) when grepping a fan-tool
+  source dump, decompiled output, or any file `file` reports as anything
+  other than ASCII/UTF-8 text.
 - **`Skill: re-codebreaker` / `Skill: re-oracle`** — model escalation, see the
   ladder above.
 - **`Skill: re-learn`** — the learning loop: distills durable lessons into
@@ -304,20 +454,113 @@ rely on remembering these from a prior context window.
 
 | File | When it bites |
 |------|----------------|
-| `file-offsets-vs-segment-relative.md` | Double-checking a data offset cited from disassembly in an executable format |
+| `file-offsets-vs-segment-relative.md` | Citing a disassembly offset in an executable format — file-relative or segment-relative? |
 | `bitplane-layout-variants.md` | Planar decode "matches the format" but renders wrong |
+| `planar-plane-padding-vs-tight-stride.md` | A confirmed plane-major decode still degrades plane-by-plane; check trailing bytes divide by plane count |
 | `amiga-hardware-specifics.md` | EHB colour, `BLTSIZE`, blitter modulo, 12-bit colour scaling |
-| `compressed-stream-start-offset.md` | Output looks scrambled right after a clean header/directory parse |
+| `compressed-stream-start-offset.md` | Output scrambled right after a clean header parse, or garbage mixed with legible fragments in one record |
 | `directory-entry-aliasing.md` | A frame-splitting theory implies an implausible frame count |
-| `palette-storage-quirks.md` | Can't find a palette in the same file as the pixels, or it looks incomplete |
-| `recolour-remap-tables.md` | Colours look wrong for one specific sprite/character only |
+| `logical-offset-excludes-reserved-region.md` | Most directory entries decode fine; failures cluster after a reserved structure (boot sector, partition table) |
+| `palette-storage-quirks.md` | Can't find a palette with the pixels, or it looks incomplete |
+| `recolour-remap-tables.md` | Colours wrong for one specific sprite/character only |
+| `shared-scratch-copper-list-palette-patch.md` | A copper-colour scan finds extra candidates beyond an already-confirmed static palette |
 | `whdload-slave-no-format-info.md` | Tempted to read a `.slave` source for format hints |
 | `heterogeneous-file-manifest-extractor.md` | An extractor's special-case branches keep growing |
-| `static-xref-misleads.md` | About to declare an xref "the reader," or a jump table's static bytes look like garbage |
+| `static-xref-misleads.md` | Trusting a call-site citation, an xref's role, a jump table's garbage bytes, or a nearby debug string at face value |
+| `committed-ira-asm-silent-coverage-gap.md` | Trusting grep over a committed IRA `.asm` as representative of the whole binary |
+| `lvo-byte-pattern-false-positive.md` | A raw `JSR -N(A6)` opcode scan taken as proof of which library/function it calls |
+| `narrow-opcode-form-census-false-negative.md` | An opcode census returns zero hits for X while finding real consumers of sibling constants |
+| `linear-disasm-desyncs-through-inline-data.md` | A standalone disassembly xref scan reports few/no callers for a target you believe is called |
 | `locally-indexed-substructures.md` | Small indices imply "one shared pool" but resolving against it produces garbage |
-| `cross-platform-decode-oracles.md` | Stuck cracking data, or stuck tracing a caller with no symbols |
+| `cross-platform-decode-oracles.md` | Stuck cracking data, or tracing a caller with no symbols |
+| `same-name-cross-port-colour-mismatch.md` | A same-named cross-port asset "looks wrong" only because it doesn't colour-match another platform |
 | `high-entropy-trivial-cipher.md` | File entropy looks like dense compression (~8 bits/byte) |
 | `save-file-not-asset.md` | A filename string-search comes up completely empty |
+| `plausible-filename-hypothesis-unchecked-against-source.md` | Writing a filename/extension "out of scope" claim without grepping a reference engine's source first |
+| `oversized-flat-file-may-be-disc-image.md` | A file is orders of magnitude larger than its siblings and a known parser rejects it as corrupt |
+| `multi-region-dir-ambiguous-rom-pick.md` | A second same-extension ROM (different region/revision) joins a data dir that already has one |
+| `amiberry-live-capture-workflow.md` | About to send keys/breakpoints/memory reads to a running amiberry instance |
+| `emulator-harness-pc-range-completion-defeated.md` | A musashi-style harness looks hung using "PC left the engine's range" as the stop condition |
+| `renamed-magic-container.md` | An unfamiliar magic's payload still "smells like" a known compressor family |
+| `hunk-wraps-non-code-data.md` | A `HUNK_HEADER`/`HUNK_CODE` file assumed all-code without decoding what's between payload and `HUNK_END` |
+| `canonical-field-offsets-before-custom-header.md` | Readable text near a file's start looks like a header prefix before the real magic |
+| `nested-header-same-named-size-field.md` | A bounds check from an outer header's size field lands a few bytes off; a nested sub-header shares that field's name |
+| `string-scan-crosses-structural-boundary.md` | A blob string scan finds a plausible variant of a known naming pattern (odd prefix, off-by-one name) |
+| `rle-decode-succeeds-on-garbage.md` | A candidate RLE/PackBits decode completed with no bounds error |
+| `romhacking-community-tools-first.md` | Blind-scanning an unfamiliar format for a commercial game, or trusting a reimplementation's prose without re-deriving offsets |
+| `undecoded-format-may-be-compressed-with-known-codec.md` | An unfamiliar format's read shows a too-large count field or periodic junk artifact |
+| `typed-array-silent-oob-read.md` | Porting a validated Python/C decompressor to TypeScript |
+| `unbounded-appended-data-boundary.md` | Unidentified data follows a known structure with no length/count/terminator marking its end |
+| `header-shape-ambiguous-pixel-encoding.md` | A header match confirms a format, but more than one pixel-encoding hypothesis fits the same byte count |
+| `platform-port-swaps-adjacent-header-fields.md` | A confirmed container shape's downstream decode produces impossible values; "just add an endian option" |
+| `masking-bug-pairs.md` | Something works despite one obviously-wrong-looking piece of code |
+| `cross-disassembly-fingerprint-false-positive.md` | Matching an address/label between two disassemblies by instruction text alone |
+| `fixed-stride-record-count-unverified.md` | Sizing a fixed-stride array via `(size-header)/stride` without rendering past the first row |
+| `record-stride-guess-vs-recount-fields.md` | A known element count, no candidate stride divides evenly — recount the reader's fields, don't guess more strides |
+| `packed-bitfield-prose-order-vs-real-lsb-first-packing.md` | Transcribing a packed bitfield from a doc's MSB-first prose without tracing one real bit-extraction |
+| `shared-resource-caller-declared-dimension-under-reports.md` | A shared variable-dimension resource fails `declaredSize===actualSize` for a minority of referencing records |
+| `hypothesis-space-flip-before-per-value-table.md` | A byte-diff suggests a transform's boundaries depend on a discriminator value with few examples per value |
+| `format-field-width-unexercised-by-first-corpus.md` | Reusing a "confirmed" decoder unmodified on a sibling game whose files run noticeably larger |
+| `generic-bucket-hides-real-content.md` | A metadata-light classifier dumps most entries into one misc/other bucket |
+| `classifier-clean-corpus-not-proof-for-sibling-game.md` | Reusing a content-type classifier unmodified on a sibling game before trusting its bucket counts |
+| `struct-scan-needs-self-describing-locality.md` | Blind-scanning a whole file for a confirmed struct's byte signature |
+| `shared-header-template-cross-resource-false-positive.md` | A confirmed record scanner turns up outliers with an unhandled field value |
+| `jump-table-noop-means-handled-elsewhere.md` | A dispatch case branches to a no-op/epilogue and multiple real records reference that case |
+| `sibling-functions-outside-callgraph-scope.md` | An exhaustive caller/callee trace finds only static data; concluding no data-dependent source exists |
+| `trace-stopped-at-staging-buffer.md` | A "confirmed" routine's cited end isn't a return instruction, or its only effect is a copy nothing else reads |
+| `domain-refuted-by-shape-not-values.md` | "Ruling out" a candidate domain by an index variable's range without finding where it's written |
+| `byte-scan-tag-byte-vs-wrong-stride.md` | A stride-less byte scan finds a recurring lead byte; about to document it as an escape/tag scheme |
+| `round-looking-longwords-are-centred-bitmap-rows.md` | A candidate header's leading longwords all look suspiciously round |
+| `overlapping-strict-matches-both-verify.md` | Two candidate record placements overlap and both independently decode to real content |
+| `disasm-output-in-data-zone.md` | After delegating a disassembly pass on a binary living in `data/<game>/<platform>/` |
+| `filename-pairing-unverified.md` | Treating a small file as an index into a larger one on shared filename stem alone |
+| `verify-escalation-artifacts-not-just-claims.md` | An escalation returns a solved verdict with convincing renders you're about to copy verbatim |
+| `tracker-prose-is-not-evidence.md` | A `TODO.md`/`plan.md` entry reads as already settled, before opening the doc section it cites |
+| `shared-tool-session-clobbered-by-fork.md` | Trusting a stateful MCP tool call right after a forked escalation used the same server |
+| `indexed-operand-needs-base-provenance.md` | Several identical indexed-addressing instructions found; about to report them as the same table |
+| `bitfield-spans-multiple-addressable-bytes.md` | Searching disassembly for what tests bit N of a flags field returns nothing or one hit |
+| `negative-from-addressing-root-not-shapes.md` | Writing up "no code reads this" on the strength of zero-hit searches |
+| `bitfield-residue-unread-past-cited-trace-window.md` | A doc calls a wide bitfield residue "unread," but the trace citation ends well before the function's actual end |
+| `seeded-prng-stable-not-random.md` | Found a PRNG driving generated content; about to call its output random/varying |
+| `runtime-only-value-often-static.md` | A doc says a value is runtime-only; about to build savestate/live-capture tooling |
+| `audio-byte-order-measurable.md` | Decoding raw PCM with undeclared byte order; about to pick one and move on |
+| `optional-per-record-compression.md` | A minority of records in a healthy container decode as garbage/"corrupt" |
+| `r2-snes-flag-width-blind.md` | Trusting a raw radare2 65816 disassembly, especially near RESET or before the first REP/SEP |
+| `snes-mode7-extbg-256-color-split-palette.md` | A SNES Mode 7 layer's tiles are 4bpp but the map shows way more than 16 colours |
+| `endian-swap-needs-matching-field-width.md` | Comparing a sibling-platform port's same-size file, deciding byte-swap vs. raw-identity |
+| `implicit-cumulative-directory-offsets.md` | A directory offset field can't be found at any width/position; other fields verify fine |
+| `partial-resolution-rate-is-noise.md` | A decoded id resolves for only ~40-70% of records; explaining the rest as a second id space |
+| `autocorrelation-period-is-the-scanline-stride.md` | A byte-difference/autocorrelation scan finds a strong unexplained repeat period on planar data |
+| `cli-script-main-fires-on-import.md` | Importing a helper from another CLI script causes double output or an unexpected `process.exit()` |
+| `terminator-scan-must-be-record-aligned.md` | A terminator-scan hit is found, but bytes just past it still look structured |
+| `multi-byte-code-second-byte-collides-with-terminator.md` | Bounding a string by scanning for a terminator byte on a format with any 2-byte-wide codes |
+| `reserved-slot-zero-shifts-extractor-index.md` | A new low-level decoder disagrees by a constant offset with an existing higher-level extractor |
+| `bare-git-commit-sweeps-concurrent-stage.md` | About to run a bare `git commit` (no pathspec) with other agents possibly working concurrently |
+| `text-field-periodic-interleave-byte.md` | A decoded name reads almost-clean but has one wrong byte at a position that varies between records |
+| `canned-save-state-mirrors-exe-struct.md` | An executable resists static tracing; about to deep-disassemble before checking other shipped files |
+| `tile-grid-dimension-needs-render-not-just-bytecount.md` | Several `(width,height)` pairs all satisfy a tile-grid's byte-count invariant, no dimension field exists |
+| `emulator-harness-input-boundary-not-algorithm.md` | A reused decompression harness runs far longer than a bigger already-confirmed job, or decodes "structured but wrong" |
+| `next-record-preview-defeats-stride-detection.md` | A sequential-id landmark scan gives irregular per-record gaps despite uniform-looking data |
+| `port-reverses-whole-header-word-not-per-field.md` | A ported struct resolves on one endian side but not the other after the expected per-field swap |
+| `byte-value-collision-defeats-marker-only-guard.md` | A parser branching on one lead byte sends a resource down the wrong transform branch |
+| `hand-computed-test-fixture-vs-real-run.md` | Writing regression tests; about to hand-compute expected `toEqual(...)` values instead of running something |
+| `adjacent-ramp-table-masks-off-by-one-record-start.md` | A fixed-position table's only start-offset evidence is "this position looks reasonable" |
+| `producer-fix-inert-without-consumer-audit.md` | Just fixed a field's producer; more than one code path consumes that same field |
+| `nearest-preceding-immediate-is-not-dataflow.md` | A census grabs an operand value from the nearest preceding immediate-load in a lookback window |
+| `pre-decompression-guard-uses-decompressed-threshold.md` | A decoder throws "too small" before decompression on a resource whose on-disk size isn't implausible |
+| `cross-platform-string-delta-reveals-stride-vs-offset.md` | A same-game file exists on two platforms with different layouts, no symbol table for the second |
+| `fixed-offset-diff-across-builds-hides-pointer-shift.md` | A fixed-address diff between two builds shows near-total disagreement on a pointer-indexed table you believe is unchanged |
+| `localized-signage-baked-into-tile-graphics.md` | Comparing two language releases, graphics differences isolated to a small resource subset |
+| `tile-formation-table-not-raster-order.md` | Composing a multi-tile sprite by laying stored tiles in raw stored order |
+| `transparent-png-preview-tool-artifact.md` | A rendered atlas shows flat-colour blocks or an all-white/black wash in an inline preview |
+| `indexed-table-base-below-valid-rom-window.md` | Filtering a long-addressing-instruction census by requiring a physically-valid ROM address |
+| `published-walkthrough-numeric-oracle.md` | A stat-block field survived 2+ disassembly-only negatives and the game has a fan community |
+| `vm-bytecode-embeds-platform-addresses.md` | A cross-platform content search returns zero matches for VM bytecode or a scripted-behavior table |
+| `packed-exe-mimics-variable-length-records.md` | A raw-executable byte census finds a variable-length record format with unexplained residue near boundaries |
+| `multiple-rendering-surfaces-same-data.md` | A vague bug report, in a project with more than one consumer of the same extracted assets |
+| `generic-gallery-needs-atlasmeta-shape.md` | An atlas gallery UI shows the whole sheet tiled small instead of one cropped frame |
+| `slugified-name-collision-overwrites-output.md` | A pipeline derives an output filename via `slugify()` for names that might differ only in punctuation/case |
+| `distinctive-byte-pattern-anchors-address-chain.md` | Need a static table's real address without fully trusting a reference project's declared coordinates |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.
@@ -332,6 +575,10 @@ End every task with:
    paths-tried table (including any escalations and their outcomes).
 3. **Files written** — specs, extractors, assets, corrections applied to
    existing docs.
+4. **TODO delta** — paste the exact rows you added, changed, or deleted in
+   `docs/<game>/TODO.md` this run (or "TODO unchanged"). Your Open section and
+   the TODO file must agree — a mismatch means one of them is wrong, fix it
+   before ending the run.
 
 Cite disassembly as `LABEL` at `file:line`; binary offsets as `file+0xOFFSET`;
 say explicitly whether each offset is file-relative or segment-relative.
@@ -347,10 +594,19 @@ missing from the corpora table above, invoke `Skill: re-learn` in scan mode
 here. Routine tasks that only applied existing knowledge need no harvest —
 the skill's job is distillation, not logging.
 
-A pitfall-type lesson goes to its own new file in `~/.claude/agents/game-re-lessons/`
-(one lesson per file, same shape as the existing ones: title, "When it
-bites," body) plus one new row in this doc's pitfalls index table — never as
-a full bullet inline here. This keeps this file's size bounded regardless of
-how many lessons accumulate. Corpus-table and Method/Tooling-map lessons
-still go inline as before, since those need to be visible on every
-invocation rather than looked up on demand.
+**Everything except the contract sections is now externalized — keep it that
+way.** This file is an index and a contract; it stays small so it can be loaded
+on every invocation. Route a new lesson by where it belongs:
+
+| Lesson type | Goes to |
+|---|---|
+| Pitfall / premise-trap | New file in `game-re-lessons/` (title, "When it bites", body) + **one** row in the pitfalls index. Never a bullet inline here. |
+| Project corpus — new project, or refreshing one after major progress | `game-re-corpora/<project>.md` + a row in the corpora index table |
+| Platform/tool caveat | The relevant `game-re-tooling/<platform>.md`, or a new one for a new platform + a row in the tooling table |
+| Deep technique or worked example | The relevant `game-re-method/*.md` |
+| Escalation-specific technique | `~/.claude/skills/re-codebreaker/SKILL.md` or `re-oracle/SKILL.md` |
+
+Only add text to this file itself when it changes the *contract* — the mission,
+the autonomy rules, the escalation ladder, the verification bar, or the report
+format. If you find yourself appending a worked example here, it belongs in one
+of the sibling directories instead.

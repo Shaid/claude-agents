@@ -17,7 +17,11 @@ conventions. This file adds only what changes in escalation mode.
   context beyond the brief text. If the brief is missing something you need
   (paths, offsets, what was tried), your first move is to rebuild that context
   from the repo — the docs' paths-tried tables and `data-structure.md` are
-  where the caller was required to record it. Do not ask the user.
+  where the caller was required to record it. Do not ask the user. If you had
+  to reconstruct material context the brief should have included, say so
+  plainly in your Return format's Paths-tried section — a thin brief that
+  forces an Opus-tier fork to redo cheap-model legwork is a process failure
+  the caller needs to see and fix next time, not something to silently absorb.
 - **Scope discipline.** Answer the brief's question. Don't re-run the whole
   project loop, don't refactor extractors, don't rewrite docs outside your
   finding. You may (and should) update the relevant spec section and
@@ -26,9 +30,12 @@ conventions. This file adds only what changes in escalation mode.
   failed — which means an inherited assumption is probably wrong. Before
   generating new hypotheses, re-verify the brief's givens against the bytes:
   the stream start, the record size, the claimed offsets, the palette, the
-  "known" dimensions. The 214-byte-raw-table and hunk-header-offset bugs both
-  masqueraded as deeper problems for weeks; both would have fallen to a
-  premise audit.
+  "known" dimensions. Wrong-premise bugs (a mis-measured record stride taken
+  on faith, a file offset quoted as segment-relative or vice versa) have
+  repeatedly masqueraded as deeper problems for weeks before a premise audit
+  cracked them in minutes — see `game-re.md`'s pitfalls index, e.g.
+  `fixed-stride-record-count-unverified.md` and
+  `file-offsets-vs-segment-relative.md`, for the general shape of this trap.
 
 # Escalation-grade technique
 
@@ -45,6 +52,29 @@ Beyond the standard loop, lean on the heavier tools that justify your cost:
   decoded buffer from a live emulator session (amiberry
   `runtime_read_memory` at a breakpoint after the loader runs). A live memory
   dump of the decompressed data is simultaneously the answer and the oracle.
+- **Symbolic execution with selective branch-forking**, for a function too
+  long to hand-transcribe but too branchy for a plain byte-pattern scanner —
+  a switch/dispatch body with many cases, internal conditionals, and runtime
+  (PRNG/state-dependent) branches. Write a small interpreter (~20-30
+  instruction forms is usually enough for a hand-rolled 68k/x86 routine) that
+  executes the *actual disassembly text* directly rather than a re-typed
+  copy, and DFS-fork the run **only** at conditionals whose operand traces
+  back to an unresolved runtime input (an unpinned RNG draw, an unread
+  argument) — not at every branch. This keeps path counts tractable (a few
+  hundred, not exponential) because most of a real function is straight-line
+  struct writes; only the handful of state-dependent tests fork. Cross-check
+  the executor against an independent hand-written reference model, and mine
+  the executor's own per-instruction-class write-site trace for undocumented
+  mechanisms the brief never asked about (a second calling argument reused as
+  an out-parameter, a cursor/index that can rewind or reset rather than only
+  append, a return-value determination) — an exhaustive "every write site of
+  opcode class X is reached by some path, and no path writes outside that
+  census" check surfaces these for free. Confirmed solving WIME's
+  `SynthSceneObjects` (31-case switch, 9-terrain shared handler with 3-way
+  PRNG branching, cross-object reads) after four prior static-tracing
+  sessions had progressively found more dynamism without ever reaching a
+  complete model — 276 paths enumerated, 0 mismatches against the reference
+  model, and 3 previously-undocumented mechanisms found this way.
 - **Invariant mining.** Enumerate structural invariants across the whole file
   set (offset arithmetic, size relations, terminator positions, checksums)
   before proposing layouts. One invariant that holds with zero deviation
@@ -75,6 +105,10 @@ Your final message is consumed by the calling agent. Return:
 5. **Paths tried** — new dead ends with reasons, ready to paste into the
    docs' paths-tried table.
 6. **Files touched** — probes left in scratch, doc sections updated.
+7. **TODO delta** — the row you added/updated in the project's
+   `docs/<game>/TODO.md` for the briefed item (status + Evidence pointer, per
+   `game-re.md`'s Documentation conventions), pasted verbatim. If the brief's
+   ID has no existing row, add one.
 
 If the problem still won't crack, say what you'd try next with a bigger
 budget — that recommendation feeds the caller's decision to escalate to
