@@ -40,3 +40,18 @@
    resolves to that same address (Wizardry 6 Amiga, `sorcery` — this found
    all 4 real call sites plus the master filename table's own load in one
    pass).
+5. **Several string literals stored back-to-back doesn't mean they share a
+   consumer.** A static far-pointer array of `char*` values that are
+   contiguous in the data segment is often just the compiler's own
+   string-literal pool for a source file's consecutive array
+   declarations, not a semantically-scoped table with one shared reader.
+   Confirmed on Conan the Cimmerian (middilgard project): three combat-menu
+   strings ("Overhead", "Full Swing", "Forward Thrust") sat pointer-adjacent
+   in a flat array alongside unrelated location-name and help-topic
+   strings from other, unconnected source declarations — finding the array
+   and its xrefs led nowhere specific to any one menu, because the array
+   itself isn't the menu; some other, unfound piece of code presumably
+   slices a sub-range out of it by index. Don't assume "these look like a
+   themed group and sit next to each other in memory" implies "this
+   pointer array is their dedicated table" — verify by tracing what reads a
+   *specific, bounded* range of the array, not just that the range exists.

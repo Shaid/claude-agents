@@ -50,3 +50,34 @@ same-platform-cross-port case already covered by
 architecture") to the narrower, same-binary-format case of "two builds of
 the identical container format, one resource resized, need the *records*
 compared, not the table's own base address."
+
+**The same cancellation recurs one level deeper, inside a single resource's
+own internal numbering, not just across a pointer table** — confirmed a
+second time on the same FFVI US/JP comparison. A field-map raw tile bank
+had one new tile inserted mid-bank in the JP release, shifting every later
+tile's byte position by one tile-width; the paired tile-formation
+("meta-tile") table's `tileNum` references into that same bank were
+correspondingly bumped by exactly +1 for every affected reference (found by
+printing the differing meta-tile entries directly — every one was a pure
+`tileNum+1` with identical palette/flip/priority bits, not a coincidence).
+A naive raw-byte diff of the tile bank, and a naive per-entry diff of the
+tile-formation table, both looked substantially different (dozens of
+differing entries out of a few hundred). But resolving *both* through the
+real decode pipeline — each ROM's own tile bank together with that same
+ROM's own tile-formation table — produced **pixel-identical** rendered
+output (0 diff pixels across a 1024x1024 map render) for the two map
+screens checked: the insertion and the renumbering exactly cancel out. Same
+lesson, one more layer down: when a data table shows a byte/index-level
+diff that has a plausible size-driven cause (one inserted tile, one added
+string, one resized sub-record), check whether every other reference *into
+or after* the changed region was correspondingly renumbered by the build
+process before concluding the raw diff represents real content change —
+the only reliable way to know is to render/resolve through the real
+pipeline (both ROMs' own paired tables), not to eyeball the raw byte or
+index diff in isolation. (A decoder itself — not just a manual diff — can
+also fall victim to this same shift if it embeds one release's *code*
+address as a bare constant; see
+`decoder-address-reuse-across-rom-release.md` for that specific angle, and
+`known-differences-list-not-exhaustive-without-full-diff.md` for why a
+"known differences" list from targeted checks like these shouldn't be
+assumed complete.)

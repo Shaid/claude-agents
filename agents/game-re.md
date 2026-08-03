@@ -551,7 +551,10 @@ rely on remembering these from a prior context window.
 | `cross-platform-string-delta-reveals-stride-vs-offset.md` | A same-game file exists on two platforms with different layouts, no symbol table for the second |
 | `fixed-offset-diff-across-builds-hides-pointer-shift.md` | A fixed-address diff between two builds shows near-total disagreement on a pointer-indexed table you believe is unchanged |
 | `localized-signage-baked-into-tile-graphics.md` | Comparing two language releases, graphics differences isolated to a small resource subset |
+| `decoder-address-reuse-across-rom-release.md` | Reusing an already-confirmed decoder against a second ROM release/revision/region dump when its constants point into game code, not just data |
+| `known-differences-list-not-exhaustive-without-full-diff.md` | About to treat a doc's already-enumerated cross-release/cross-port "known differences" list as complete, especially for a localization/censorship-style comparison |
 | `tile-formation-table-not-raster-order.md` | Composing a multi-tile sprite by laying stored tiles in raw stored order |
+| `sprite-frame-geometry-reveals-animation-segments.md` | Need a frame-index → named-animation (idle/walk/attack/death) mapping within a multi-frame sprite resource and the driving executable can't be traced |
 | `transparent-png-preview-tool-artifact.md` | A rendered atlas shows flat-colour blocks or an all-white/black wash in an inline preview |
 | `indexed-table-base-below-valid-rom-window.md` | Filtering a long-addressing-instruction census by requiring a physically-valid ROM address |
 | `published-walkthrough-numeric-oracle.md` | A stat-block field survived 2+ disassembly-only negatives and the game has a fan community |
