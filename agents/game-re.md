@@ -138,6 +138,7 @@ solved formats, and worked examples of every convention below.
 | `~/Development/sorcery` | Wizardry 6: Bane of the Cosmic Forge (Sir-Tech; DOS/EGA, Amiga, SNES ports) | `game-re-corpora/sorcery.md` |
 | `~/Development/nicodemus` | Phantasie I (Amiga), II (Atari ST), III (Amiga) | `game-re-corpora/nicodemus.md` |
 | `~/Development/ceres` | Final Fantasy VI (SNES), Final Fantasy IV (SNES); FFV planned | `game-re-corpora/ceres.md` |
+| `~/Development/flower` | Drakengard 3 (PS3, UE3), Dragon's Crown (PS3+PS4, not yet touched) | `game-re-corpora/flower.md` |
 
 **`Read` the corpus file for the project you are working in before you start**
 — it lists that project's already-solved formats, its engine-family links, and
@@ -381,7 +382,39 @@ the file for your target before starting:**
 | `game-re-tooling/compression.md` | A payload looks compressed and the magic is unfamiliar — `ancient` identifies/decompresses dozens of retro codecs byte-exactly |
 | `game-re-tooling/dos.md` | Any MS-DOS 16-bit real-mode target (`MZ` exe, `.ovr`/`.drv`) — the CS/DS segment-resolution trap for string/data xrefs, `.ovr` overlay-loader conventions, the launcher-`.bat`-as-load-order trick |
 | `game-re-tooling/atari-st.md` | Any Atari ST target — `.STX` (Pasti) floppy container structure and spec source, the desectorize-then-hand-off-to-mtools extraction technique, `mtools`' `MTOOLS_SKIP_CHECK` gotcha on GEMDOS media-descriptor bytes |
+| `game-re-tooling/ps3.md` | Any PS3 target — classic-retail-PKG vs. Vita-"finalized"-PKG header confusion (why `pkg2zip` fails on genuine PS3 pkgs), the from-scratch AES-128-CTR decrypt algorithm + fixed key, NPDRM `.EDAT`/RAP-file decryption |
 | `game-re-tooling/seer-upstream.md` | You built or found code with zero game-specific logic that a second, unrelated project in the family also needs — which `@seer/*` package it belongs in, how to test it without vendoring copyrighted fixtures, and how to propagate a breaking rename/move safely across every sibling repo |
+
+## Recompilation landscape (native-port stretch goals)
+
+If a task's stretch goal extends past asset extraction to a **native
+recompiled port**, don't re-derive the landscape from scratch — a growing
+survey series already covers it, one doc per platform plus two
+cross-platform technique docs, all in `~/Development/seer/docs/`:
+
+| Platform / topic | Doc | Verdict |
+|---|---|---|
+| PS3 | `ps3-recomp.md` | Cell BE/SPUs are the hard part; `ps3recomp` is early-but-real general prior art |
+| PS2 | `ps2-recomp.md` | OpenGOAL/Jak trilogy is a real success but franchise-specific; VU1 is the general blocker |
+| PSX | `psx-recomp.md` | Most tractable of the "hard" platforms; mature per-title decompilation scene, no general tool |
+| PS4 | `ps4-recomp.md` | Not a CPU problem (already x86-64/GCN) — Orbis OS/GNM is the obstacle; HLE emulation (shadPS4), not recompilation. Includes a Bloodborne case study |
+| Amiga | `amiga-recomp.md` | Essentially unstarted; custom chipset (Copper/Blitter) undercuts the payoff |
+| SNES | `snes-recomp.md` | Cartridge coprocessors (SuperFX/SA-1/DSP-1) are the hard part; `SNESRecomp` exists (alpha) |
+| Genesis/Mega Drive | `megadrive-recomp.md` | Ahead of Amiga despite sharing 68k; `SegaGenesisRecomp` is real |
+| Saturn | `saturn-recomp.md` | Likely behind even Amiga — Saturn's own accurate emulation is still unsettled |
+| GBA | `gba-recomp.md` | Most tractable 32-bit platform surveyed; the `pret` decomp scene is extremely mature |
+| Nintendo DS | `nds-recomp.md` | Rides GBA's momentum on decomp; behind on binary recompilation (dual CPU + real 3D engine) |
+| GameCube / Wii | `gamecube-wii-recomp.md` | Likely the strongest decomp scene in the series — the original CodeWarrior compiler still runs |
+| 3DS | `3ds-recomp.md` | Essentially unstarted; post-Citra-shutdown, mature emulation removes the incentive |
+| Wii U | `wiiu-recomp.md` | Essentially unstarted despite the PPC lineage — CodeWarrior advantage doesn't transfer; Cemu's success suppresses the need |
+| Switch | `switch-recomp.md` | First real ARM64 target in the series; also the most legally fraught platform (Yuzu/Ryujinx shutdowns) |
+| Arcade (all eras) | `arcade-recomp.md` | Mostly a crosswalk to the docs above (same silicon as many home platforms); hardware-encryption CPUs and the JOTEGO/MiSTer FPGA scene are the genuinely arcade-specific parts |
+| Engine-based porting (Unreal/Unity, any platform) | `engine-based-porting.md` | Technique doc, not platform-specific — rehost recovered assets/scripts on a real PC engine build instead of lifting binary code |
+
+This only matters when the project's own corpus file
+(`game-re-corpora/<project>.md`) says a recompilation stretch goal applies —
+most tasks are pure asset-extraction work where none of this is relevant,
+and this table isn't part of the mandatory-reads in §"Before you start."
 
 - **radare2** (`Skill: radare2-amiga`, plus `mcp__radare2__*` via ToolSearch) —
   interactive disassembly, xrefs, hex dumps, byte-pattern search.
@@ -469,10 +502,12 @@ rely on remembering these from a prior context window.
 | `static-xref-misleads.md` | Trusting a call-site citation, an xref's role, a jump table's garbage bytes, or a nearby debug string at face value |
 | `committed-ira-asm-silent-coverage-gap.md` | Trusting grep over a committed IRA `.asm` as representative of the whole binary |
 | `lvo-byte-pattern-false-positive.md` | A raw `JSR -N(A6)` opcode scan taken as proof of which library/function it calls |
+| `boring-resolved-call-can-be-a-real-noop.md` | A resolved jump-table/library call looks semantically irrelevant, tempting you to distrust the resolution itself |
 | `narrow-opcode-form-census-false-negative.md` | An opcode census returns zero hits for X while finding real consumers of sibling constants |
 | `linear-disasm-desyncs-through-inline-data.md` | A standalone disassembly xref scan reports few/no callers for a target you believe is called |
 | `locally-indexed-substructures.md` | Small indices imply "one shared pool" but resolving against it produces garbage |
 | `cross-platform-decode-oracles.md` | Stuck cracking data, or tracing a caller with no symbols |
+| `disc-dump-may-sidestep-console-drm-entirely.md` | Starting console digital-storefront PKG/NPDRM decryption work for a title that also shipped on physical disc |
 | `same-name-cross-port-colour-mismatch.md` | A same-named cross-port asset "looks wrong" only because it doesn't colour-match another platform |
 | `high-entropy-trivial-cipher.md` | File entropy looks like dense compression (~8 bits/byte) |
 | `save-file-not-asset.md` | A filename string-search comes up completely empty |
@@ -498,6 +533,7 @@ rely on remembering these from a prior context window.
 | `fixed-stride-record-count-unverified.md` | Sizing a fixed-stride array via `(size-header)/stride` without rendering past the first row |
 | `record-stride-guess-vs-recount-fields.md` | A known element count, no candidate stride divides evenly — recount the reader's fields, don't guess more strides |
 | `packed-bitfield-prose-order-vs-real-lsb-first-packing.md` | Transcribing a packed bitfield from a doc's MSB-first prose without tracing one real bit-extraction |
+| `adjacent-subfield-roles-swapped-despite-correct-bit-boundaries.md` | A packed argument's sub-fields have correct bit boundaries but decoding real data gives implausible/unchanging output |
 | `shared-resource-caller-declared-dimension-under-reports.md` | A shared variable-dimension resource fails `declaredSize===actualSize` for a minority of referencing records |
 | `hypothesis-space-flip-before-per-value-table.md` | A byte-diff suggests a transform's boundaries depend on a discriminator value with few examples per value |
 | `format-field-width-unexercised-by-first-corpus.md` | Reusing a "confirmed" decoder unmodified on a sibling game whose files run noticeably larger |
@@ -517,9 +553,10 @@ rely on remembering these from a prior context window.
 | `verify-escalation-artifacts-not-just-claims.md` | An escalation returns a solved verdict with convincing renders you're about to copy verbatim |
 | `tracker-prose-is-not-evidence.md` | A `TODO.md`/`plan.md` entry reads as already settled, before opening the doc section it cites |
 | `shared-tool-session-clobbered-by-fork.md` | Trusting a stateful MCP tool call right after a forked escalation used the same server |
-| `indexed-operand-needs-base-provenance.md` | Several identical indexed-addressing instructions found; about to report them as the same table |
+| `indexed-operand-needs-base-provenance.md` | Several identical indexed-addressing instructions (or a plain grep by a bare struct byte offset) found; about to report them as the same table/field |
 | `bitfield-spans-multiple-addressable-bytes.md` | Searching disassembly for what tests bit N of a flags field returns nothing or one hit |
 | `negative-from-addressing-root-not-shapes.md` | Writing up "no code reads this" on the strength of zero-hit searches |
+| `addresses-landing-in-reserved-region-means-wrong-boundary-model.md` | Real call/jump targets keep resolving inside a region you believe is off-limits/reserved |
 | `bitfield-residue-unread-past-cited-trace-window.md` | A doc calls a wide bitfield residue "unread," but the trace citation ends well before the function's actual end |
 | `seeded-prng-stable-not-random.md` | Found a PRNG driving generated content; about to call its output random/varying |
 | `runtime-only-value-often-static.md` | A doc says a value is runtime-only; about to build savestate/live-capture tooling |
@@ -554,7 +591,7 @@ rely on remembering these from a prior context window.
 | `decoder-address-reuse-across-rom-release.md` | Reusing an already-confirmed decoder against a second ROM release/revision/region dump when its constants point into game code, not just data |
 | `known-differences-list-not-exhaustive-without-full-diff.md` | About to treat a doc's already-enumerated cross-release/cross-port "known differences" list as complete, especially for a localization/censorship-style comparison |
 | `tile-formation-table-not-raster-order.md` | Composing a multi-tile sprite by laying stored tiles in raw stored order |
-| `sprite-frame-geometry-reveals-animation-segments.md` | Need a frame-index → named-animation (idle/walk/attack/death) mapping within a multi-frame sprite resource and the driving executable can't be traced |
+| `sprite-frame-geometry-reveals-animation-segments.md` | Need a frame-index → named-animation (idle/walk/attack/death) mapping within a multi-frame sprite resource, whether or not the driving executable can be traced |
 | `transparent-png-preview-tool-artifact.md` | A rendered atlas shows flat-colour blocks or an all-white/black wash in an inline preview |
 | `indexed-table-base-below-valid-rom-window.md` | Filtering a long-addressing-instruction census by requiring a physically-valid ROM address |
 | `published-walkthrough-numeric-oracle.md` | A stat-block field survived 2+ disassembly-only negatives and the game has a fan community |
@@ -564,6 +601,7 @@ rely on remembering these from a prior context window.
 | `generic-gallery-needs-atlasmeta-shape.md` | An atlas gallery UI shows the whole sheet tiled small instead of one cropped frame |
 | `slugified-name-collision-overwrites-output.md` | A pipeline derives an output filename via `slugify()` for names that might differ only in punctuation/case |
 | `distinctive-byte-pattern-anchors-address-chain.md` | Need a static table's real address without fully trusting a reference project's declared coordinates |
+| `traced-calling-convention-unverified-against-corpus.md` | An instruction-level calling-convention trace is complete and cited; about to document the fields it reads as confirmed data-model semantics without checking real corpus values first |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.
