@@ -244,6 +244,42 @@ ROM bytes) — when it exists, it is both cheaper and just as strong an
 oracle, since the extractor's own correctness depends on that data file's
 accuracy for the project's rebuild-and-diff workflow to succeed at all.
 
+## A community script's fixed byte offsets can be correct even when its full per-entry walk logic diverges — check whether it assumes different upstream preprocessing
+
+A community reference script that reads a format's header via fixed
+`readInt32BE`-style offsets is not all-or-nothing evidence: its scalar
+field *positions* and its per-entry *walk logic* are separable claims, and
+one can be right while the other is wrong for a structural reason that has
+nothing to do with the field positions being wrong. Confirmed on
+Drakengard 3 (PS3, UE3 packages, `flower` project): a community modding
+tool's Node.js importer script read `nameCount`/`nameOffset`/
+`exportCount`/`exportOffset` at fixed offsets `0x19`/`0x1D`/`0x21`/`0x25`
+in a `.xxx` package file. Cross-checking `nameCount`/`exportCount`/
+`importCount` against an independent, authoritative third-party parser's
+own reported values (running the real `umodel` tool against the same file
+and comparing its printed `Names: N Exports: N Imports: N` summary) showed
+all three counts matched exactly — real, working, structural confirmation
+of the field *positions*. But the script's own per-name walk (`len(4) +
+string + 8` trailing bytes per entry, iterated from `nameOffset`) produced
+garbage after the first 1-2 entries when run directly against the raw file
+bytes. The likely reason (not fully confirmed, but consistent with every
+observation): the script's documented workflow runs a separate upstream
+decompression/unpacking tool (the same author's own "Unreal Package
+Decompressor," distinct from the extractor script itself) *before* this
+script ever sees the bytes — so the script's fixed offsets are correct for
+its *actual* intended input, which is not the same byte layout as the raw
+file tested here.
+
+**The fix**: don't discard a community script's offset evidence just
+because a direct trial-run of its full logic fails end-to-end — check
+whether the failure is isolated to logic that depends on an assumption
+(a prior processing step, a different input shape) the script's own
+documented usage instructions state but that wasn't reproduced in your
+test. Confirming the parts that *do* cross-check against an independent
+oracle (three count fields matching umodel's own output here) is real,
+keepable evidence even when the parts that don't cross-check point at a
+missing precondition rather than a wrong offset.
+
 One trap specific to this technique: a rip definition's address/`range`
 fields are still **unmapped CPU addresses**, not pre-resolved file offsets,
 even when a given value coincidentally looks like a plausible raw file

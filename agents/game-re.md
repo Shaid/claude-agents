@@ -602,6 +602,10 @@ rely on remembering these from a prior context window.
 | `slugified-name-collision-overwrites-output.md` | A pipeline derives an output filename via `slugify()` for names that might differ only in punctuation/case |
 | `distinctive-byte-pattern-anchors-address-chain.md` | Need a static table's real address without fully trusting a reference project's declared coordinates |
 | `traced-calling-convention-unverified-against-corpus.md` | An instruction-level calling-convention trace is complete and cited; about to document the fields it reads as confirmed data-model semantics without checking real corpus values first |
+| `legacy-32bit-binary-missing-shared-lib.md` | A prebuilt community RE tool binary fails to launch with a missing/obsolete shared library (32-bit-only, or a retired soname) |
+| `wildcard-batch-tool-aborts-on-first-bad-file.md` | A directory-wide wildcard/glob invocation of a batch extraction tool dies partway through an unvetted corpus |
+| `all-zero-stub-file-inflates-failure-count.md` | A batch decode run's success rate is noticeably below 100% and failures cluster in whole-prefix file groups |
+| `step-runs-standalone-but-not-pipeline-registered.md` | A pipeline step script works when run directly but the real CLI entrypoint reports "not registered in config — skipping" |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.
