@@ -341,6 +341,15 @@ an external oracle. Prefer the cheap ones first:
 - or, **last resort** (real token cost to set up — see the amiberry entry in
   the Tooling map), an emulator screenshot of the real game showing the
   asset.
+- when the *output* format is a standard interchange format (glTF, PNG, WAV)
+  rather than something game-specific, run its own reference validator as a
+  free structural conformance check before calling the conversion done —
+  e.g. `npx @gltf-transform/cli validate <file>.gltf` (Khronos's own
+  validator, zero project dependency) caught a real umodel-sourced
+  `ACCESSOR_MIN_MISMATCH` bug (declared accessor bounds were a lower-
+  precision reparse of the exact float32 buffer values) that a "does it
+  render" visual check alone wouldn't have surfaced (Drakengard 3 mesh→glTF
+  pipeline, `flower` project).
 
 A ~70% shape match is **not** decoded — record it as open with the best result.
 Quantify verification: "0 RGB mismatches across 65,070 opaque pixels", "0
@@ -383,6 +392,7 @@ the file for your target before starting:**
 | `game-re-tooling/dos.md` | Any MS-DOS 16-bit real-mode target (`MZ` exe, `.ovr`/`.drv`) — the CS/DS segment-resolution trap for string/data xrefs, `.ovr` overlay-loader conventions, the launcher-`.bat`-as-load-order trick |
 | `game-re-tooling/atari-st.md` | Any Atari ST target — `.STX` (Pasti) floppy container structure and spec source, the desectorize-then-hand-off-to-mtools extraction technique, `mtools`' `MTOOLS_SKIP_CHECK` gotcha on GEMDOS media-descriptor bytes |
 | `game-re-tooling/ps3.md` | Any PS3 target — classic-retail-PKG vs. Vita-"finalized"-PKG header confusion (why `pkg2zip` fails on genuine PS3 pkgs), the from-scratch AES-128-CTR decrypt algorithm + fixed key, NPDRM `.EDAT`/RAP-file decryption |
+| `game-re-tooling/unreal-engine3-umodel.md` | Any UE1/UE2/UE3 target parsed via Gildor's umodel — why its `-export -gltf` CLI batch path can never embed animation data (a deliberate limitation, not a bug), the `.psa` (ActorX) headless workaround + its own distinct coordinate convention, and why AnimSet↔SkeletalMesh association needs bone-name-overlap ranking, not filename-convention guessing |
 | `game-re-tooling/seer-upstream.md` | You built or found code with zero game-specific logic that a second, unrelated project in the family also needs — which `@seer/*` package it belongs in, how to test it without vendoring copyrighted fixtures, and how to propagate a breaking rename/move safely across every sibling repo |
 
 ## Recompilation landscape (native-port stretch goals)
@@ -606,6 +616,8 @@ rely on remembering these from a prior context window.
 | `wildcard-batch-tool-aborts-on-first-bad-file.md` | A directory-wide wildcard/glob invocation of a batch extraction tool dies partway through an unvetted corpus |
 | `all-zero-stub-file-inflates-failure-count.md` | A batch decode run's success rate is noticeably below 100% and failures cluster in whole-prefix file groups |
 | `step-runs-standalone-but-not-pipeline-registered.md` | A pipeline step script works when run directly but the real CLI entrypoint reports "not registered in config — skipping" |
+| `blocking-execfilesync-defeats-promise-all-pool.md` | A Node.js batch pipeline's `runPool`/`Promise.all` concurrency claims a "large real speedup" over shelling out per-item, and nobody has timed it |
+| `vite-dev-server-enospc-large-cache-dir.md` | `npm run dev` crashes with `ENOSPC: System limit for number of file watchers reached` after a full-corpus offline pipeline run |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.
