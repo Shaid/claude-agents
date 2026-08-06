@@ -618,6 +618,7 @@ rely on remembering these from a prior context window.
 | `step-runs-standalone-but-not-pipeline-registered.md` | A pipeline step script works when run directly but the real CLI entrypoint reports "not registered in config — skipping" |
 | `blocking-execfilesync-defeats-promise-all-pool.md` | A Node.js batch pipeline's `runPool`/`Promise.all` concurrency claims a "large real speedup" over shelling out per-item, and nobody has timed it |
 | `vite-dev-server-enospc-large-cache-dir.md` | `npm run dev` crashes with `ENOSPC: System limit for number of file watchers reached` after a full-corpus offline pipeline run |
+| `multiformat-cli-silent-extension-fallback.md` | A multi-format CLI decoder (vgmstream, ffmpeg, a generic container-sniffing tool) is run against a file whose real on-disk extension doesn't match the target format's usual one, and "works" for most of a batch |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.
