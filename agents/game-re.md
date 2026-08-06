@@ -619,6 +619,8 @@ rely on remembering these from a prior context window.
 | `blocking-execfilesync-defeats-promise-all-pool.md` | A Node.js batch pipeline's `runPool`/`Promise.all` concurrency claims a "large real speedup" over shelling out per-item, and nobody has timed it |
 | `vite-dev-server-enospc-large-cache-dir.md` | `npm run dev` crashes with `ENOSPC: System limit for number of file watchers reached` after a full-corpus offline pipeline run |
 | `multiformat-cli-silent-extension-fallback.md` | A multi-format CLI decoder (vgmstream, ffmpeg, a generic container-sniffing tool) is run against a file whose real on-disk extension doesn't match the target format's usual one, and "works" for most of a batch |
+| `manifest-scale-needs-lazy-category-load-plus-virtualization.md` | A project's `manifest.json` crosses tens of thousands of entries and the offline viewer is reported as slow to load/interact with |
+| `unconstrained-nav-element-starves-flex-scrollable-list.md` | A Playwright click on a scrollable list item fails with "outside of viewport"/"intercepts pointer events"/"detached, retrying," especially right after adding a new variable-height nav element above the list |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.
