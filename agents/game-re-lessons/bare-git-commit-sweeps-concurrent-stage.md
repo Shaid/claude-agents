@@ -48,3 +48,18 @@ if it's still ahead) to confirm your changes are present and correct, note
 the misattribution transparently in your own report, and move on — the
 repo state is fine, only the commit message/grouping is imperfect, and
 that's a cosmetic cost worth accepting over touching someone else's commit.
+
+**Concurrent modification isn't limited to git's index, and isn't limited
+to commits.** Confirmed on `flower` (Drakengard 3): mid-task, `git status`
+showed `package.json`/`package-lock.json`/a viewer source file modified
+that this session never touched — a different concurrent agent adding an
+unrelated dependency/feature — and the shared scratchpad directory already
+contained several dozen files from what was evidently that same concurrent
+session (matching filenames like `verify_audio_bar.mjs` tied to the
+package it was editing). No commit was even in play here; this was pure
+`git status`/report-scoping hygiene: before writing a final "files
+changed" summary, run `git status`/`git diff --stat` scoped to (or
+manually filtered to) only the paths your own task actually touched, and
+never assume a scratchpad directory is exclusively yours mid-task — use a
+task-unique filename prefix there rather than trusting the directory to
+be empty or session-private.

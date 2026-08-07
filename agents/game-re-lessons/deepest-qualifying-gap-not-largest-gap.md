@@ -32,3 +32,38 @@ fixed constant. Verify the algorithm against the exact real distribution
 that was originally eyeballed by hand — reproducing that known-good cutoff
 is the cheapest available oracle before trusting the algorithm on new,
 unseen distributions.
+
+**A second, different blind spot in the same function — found by
+auditing distributions the first fix's own function had *declined* as
+"not confident," not assumed fixed after one pass**: don't pre-filter
+the candidate list down to a "confidence floor" (e.g. ratio >= 0.5)
+*before* the gap scan starts. Confirmed on the same corpus/project, a
+later audit pass: the original floor-then-scan implementation discarded
+every value below the floor before computing any gaps — so when a
+distribution had **exactly one** distinct value clearing the floor,
+there were zero pairs left to diff, and the function unconditionally
+reported "no gap," even when that single surviving value had an
+enormous, unambiguous drop-off immediately below it (the *cleanest*
+possible signal — a sheer cliff, not a shallow slope). Real evidence
+this mattered: 9 real clusters (including a 56-joint creature with a
+dedicated 63-sequence AnimSet) were being wrongly declined this way —
+every one's sole floor-clearing candidate turned out, on inspection, to
+be an exact, dedicated match. **Fix**: scan the *full*, unfiltered
+distribution for gaps, but keep the floor as a **post-hoc guard on the
+accepted threshold** — only accept a gap whose resulting cutoff
+(typically the pair's midpoint) itself still clears the floor. This
+still can never accept a candidate below the floor; it just stops
+conflating "candidates below the floor don't count as matches" with
+"values below the floor can't be used to measure how isolated the top
+tier is." Re-verify every already-confirmed distribution reproduces its
+exact prior threshold after this change (a distribution with ≥2
+floor-clearing values is mathematically unaffected by this fix, so it's
+a cheap, strong regression check).
+
+**The general shape of both blind spots**: any "find the natural break"
+algorithm that only ever compares a candidate against its immediate
+neighbor in a pre-processed list is not proven bug-free for a
+distribution shape it wasn't stress-tested against, even after one real
+fix. Treat "why did the algorithm decline these specific real cases" as
+its own separate verification pass, not something the first fix
+automatically covers.
