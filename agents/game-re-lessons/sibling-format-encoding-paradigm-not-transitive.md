@@ -31,6 +31,29 @@ would have been spending a long stretch trying to reinterpret ordinary
 struct fields as fragments of a hardware packet stream because "the other
 format in this engine does that."
 
+**Second confirmed instance — and it runs the other direction, which is the
+sharper trap.** A later session on the same two games found a genuinely new
+DG2-only *sub-format* of `CSFg` itself (identified by a header sentinel,
+tag names all beginning `VU1`) that turned out to embed literal PS2 VIF1
+DMA source chains (`STCYCL`/`UNPACK`/`FLUSH`/`MSCAL` sequences, real
+GIFtags forwarded to the GS) — i.e. the *exact* hardware-packet paradigm
+this lesson's own headline finding had just ruled out for `CSFg`. Both
+conclusions are correct simultaneously: ordinary `CSFg` (97.6% of the
+corpus) is still a plain struct with zero hardware packets, and this
+narrower `VU1` sub-format (2.4% of the corpus, a distinct on-disk shape
+sharing only the outer magic) genuinely does use the paradigm. The
+takeaway isn't "the first refutation was wrong" — it's that **ruling the
+paradigm out for a format's dominant/first-discovered shape doesn't rule
+it out for every variant sharing that format's magic.** When a sizeable
+minority of a format's corpus fails a "confirmed" decoder (here, 231-304
+of ~2,700-12,900 depending on how the population was counted — see
+`shallow-magic-scan-undercounts-sibling-magic-corpus.md` for why that
+count itself needed correcting), don't assume the failures are more of the
+same struct with a bug; check whether they're structurally distinguishable
+(a header sentinel, here) and re-open the hardware-packet hypothesis for
+*that specific subset*, independent of what was already concluded about
+the format's main shape.
+
 **A related trap surfaced while re-deriving the correct struct reading for
 `CSFg` after the packet hypothesis was dropped:** a fixed-size buffer
 holding a NUL-terminated tag string followed by a NUL-terminated name
