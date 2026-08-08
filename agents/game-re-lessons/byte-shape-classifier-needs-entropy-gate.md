@@ -1,11 +1,14 @@
-# A byte-shape/range classifier needs an entropy gate before it, or all-zero padding wins by default
+# A byte-shape/range classifier needs an entropy gate before it, or all-zero padding wins by default — and even gated, it can still misclassify a genuinely different structured format
 
 **When it bites:** you build a soft structural heuristic that classifies a
 byte block by checking whether small sub-fields fall inside a plausible
 range (e.g. "is this ADPCM-shaped: does the shift nibble read `<=12`, the
 predictor nibble `<=4`, the flag byte `<=7`?"), and you're about to trust
 its positive hits without checking what the heuristic does on trivial
-all-zero or single-byte-repeat data first.
+all-zero or single-byte-repeat data first — **or**, even after adding an
+entropy gate, a whole bucket of "positive" hits turns out on direct
+inspection to be a real but *different* structured format that happens to
+also satisfy the same narrow shape test.
 
 Near-all-zero (or any near-single-value-repeat) data trivially satisfies
 almost any "small field, small range" shape test, because zero (or any
@@ -36,3 +39,26 @@ bounds, struct-field sanity checks) is vulnerable the same way whenever
 zero is a valid value inside the accepted range — which is nearly always.
 Always check what your shape heuristic reports on a deliberately
 constructed all-zero input before trusting its corpus-wide positive rate.
+
+**A second, distinct false-positive mode survives the entropy-gate fix
+above — genuinely different structured (non-padding, non-zero) data that
+still satisfies the shape test.** Confirmed on the *same* Chaos Legion
+classifier, one pass later: even after the entropy gate above was added
+and correctly stopped the all-zero false positives, **33 of its remaining
+135 `adpcm-like` hits (89% of the bucket's bytes) turned out on direct
+byte inspection to be real 3D model-package data, not audio at all** — a
+packed per-vertex `(u, v, 1.0, alpha)` float32 attribute quad's leading
+byte happened to land inside the same `shift<=12, predict<=4, flag<=7`
+acceptance window often enough to read as a strong positive signal. This
+data has real, non-trivial entropy (nothing like all-zero padding), so no
+entropy gate could have screened it out — the shape test itself is simply
+too narrow relative to the space of real-world structured binary data
+sharing a similar small-value-nibble profile. **The fix here isn't a
+better gate, it's not fully trusting a byte-shape classifier's bucket
+without directly opening and inspecting a sample of its largest members**
+— exactly the discovery method that found the mesh data in the first
+place (per Method §1's "classify... code vs data" being a *starting*
+hypothesis, not a final verdict). A classifier's positive rate is evidence
+worth investigating, not evidence a decode attempt should trust blindly
+before checking whether a completely different format explains the hits
+better.
