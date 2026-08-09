@@ -13,6 +13,16 @@
 /agents/*
 !/agents/game-re.md
 !/agents/game-re-lessons
+!/agents/game-re-tooling
+# ...but not the third-party reference mirrors kept alongside the authored
+# tooling notes. fullsnes.txt (nocash's SNES specs, extracted from no$sns)
+# and genesis-reference/ (Exodus techdocs, Plutiedev/Kabuto hardware notes)
+# are other people's copyrighted documentation, mirrored locally for offline
+# lookup -- versioning them here would be redistribution. snes.md and
+# genesis.md reference them by path; on a fresh clone those references are
+# dangling until the files are fetched again from their upstreams.
+/agents/game-re-tooling/fullsnes.txt
+/agents/game-re-tooling/genesis-reference/
 !/agents/explorer.md
 !/agents/reviewer.md
 
@@ -23,3 +33,4 @@
 !/skills/re-learn
 !/skills/ira-disasm
 !/skills/radare2-amiga
+!/skills/seer-website
