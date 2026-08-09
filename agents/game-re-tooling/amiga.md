@@ -175,6 +175,28 @@ RELOC32 data, silently desyncing the whole rest of the stream while still
 returning plausible-looking (wrong) hunk sizes for the first hunk, purely
 by coincidence. `amitools` already handles every trap on this page.
 
+> **But do NOT use `HunkReader` for a relocation-table census — its
+> `reloc` field silently loses entries.** A `HUNK_ABSRELOC32` block is a
+> *sequence* of `{count, targetHunk, count × offset}` groups, and nothing
+> stops the same `targetHunk` appearing in many groups within one block.
+> `HunkReader` flattens each block into a `{targetHunk: [offsets]}`
+> **dict**, so every repeat of a target hunk **overwrites** the previous
+> group's list. Confirmed on nicodemus/Phantasie I's `game` (240 hunks):
+> hunk 77's single reloc block has 57 groups but only 19 distinct target
+> hunks — target hunk 236 alone appears in **27** separate groups, of
+> which `HunkReader` keeps one. Whole-file damage: **203 of 6,389
+> relocation entries (3.2%), across 15 hunks, silently missing** — and
+> the loss is invisible, since the surviving entries are all correct.
+> This cost a full escalation: a whole-binary "who calls `_LoadRGB4`"
+> scan returned **zero callers** for a program that obviously sets
+> palettes, purely because the one `jsr _LoadRGB4` slot lived in a
+> dropped group. Any question of the form "enumerate every caller of X"
+> or "every reference into region Y" needs its own ~60-line raw walker
+> that keeps relocs as a **flat list of `(offset, targetHunk)` pairs**;
+> use `HunkReader` for hunk boundaries and `HUNK_SYMBOL` only. Cheap
+> self-check either way: compare your total reloc count against a raw
+> re-walk before trusting any negative result.
+
 **Mask `& 0x3FFFFFFF` on BOTH the header's size-table longwords AND every
 in-stream hunk-type tag longword**, not just one or the other. Some
 linkers (Desert Strike Amiga's, confirmed) embed the `MEMF_CHIP`/
@@ -289,6 +311,40 @@ table," not "referenced at all."
   to read it in full. A cheap lookup, not an emulator boot — check it before
   guessing at hardware semantics, and before reaching for amiberry to answer
   something a manual lookup would settle.
+
+## Original game manuals — a naming oracle
+
+`~/Development/amigadocs/game-manuals/` holds a large local archive of scanned
+Amiga game manuals, named
+`Title (Year)(Publisher)[tags][id].pdf` — with language markers where they
+exist (`(DE)`, `(FR)`, `(US)`, `(M3)`/`(M4)` for multi-language editions) and
+tags like `[budget]`, `[compilation ...]`, `[construction kit]`. Several games
+have more than one entry (different releases, or a separate clue book).
+
+**Why it matters:** a manual is often the only ground truth for *names* — items,
+spells, monsters, characters, stats — that exist nowhere in the shipped data.
+Black Crypt's monster names came from exactly this route (manual + clue book +
+ending text), and `Black Crypt - Manual & Clue Book (en).pdf` is in here.
+Check for the target's manual **before** concluding a name table doesn't exist,
+and before inventing labels.
+
+**Two practical traps:**
+
+- **Most are image-only scans, not text.** Roughly two in five carry embedded
+  text; the rest are pure JPEG page images. The cheap test is whether the file
+  contains `/Font` — no `/Font` means nothing to grep, and a text search will
+  return silence that looks like "the name isn't in the manual" when in fact
+  nothing was ever searched.
+- **No OCR tooling is installed** (no `pdftotext`, `tesseract` or `ocrmypdf`),
+  so for scans, *read the PDF pages directly* — the `Read` tool takes a `pages`
+  range and renders them, which is usually faster than setting up OCR for the
+  two or three pages that actually carry the table you want. Manuals put
+  item/spell/creature lists in appendices, so skim the contents page first
+  rather than paging from the front.
+
+The archive is grown periodically, so absence today is not proof; re-check if a
+game was missing on an earlier pass.
+
 
 ## Static recompilation (native-port stretch goal)
 

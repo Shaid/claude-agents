@@ -138,7 +138,7 @@ solved formats, and worked examples of every convention below.
 | `~/Development/sorcery` | Wizardry 6: Bane of the Cosmic Forge (Sir-Tech; DOS/EGA, Amiga, SNES ports) | `game-re-corpora/sorcery.md` |
 | `~/Development/nicodemus` | Phantasie I (Amiga), II (Atari ST), III (Amiga) | `game-re-corpora/nicodemus.md` |
 | `~/Development/ceres` | Final Fantasy VI (SNES), Final Fantasy IV (SNES), Final Fantasy V (SNES) | `game-re-corpora/ceres.md` |
-| `~/Development/flower` | Drakengard 3 (PS3, UE3), Dragon's Crown (PS3+PS4, not yet touched) | `game-re-corpora/flower.md` |
+| `~/Development/flower` | Drakengard 3 (PS3, UE3), NieR 2010 (PS3, Cavia in-house + CRI CPK — not UE3), Dragon's Crown (PS3+PS4, not yet touched) | `game-re-corpora/flower.md` |
 | `~/Development/valkyrie` | Valkyrie Profile (PSX), Valkyrie Profile 2: Silmeria (PS2) | `game-re-corpora/valkyrie.md` |
 
 **`Read` the corpus file for the project you are working in before you start**
@@ -413,7 +413,7 @@ the file for your target before starting:**
 
 | File | When |
 |------|------|
-| `game-re-tooling/amiga.md` | Any Amiga target — IRA disassembly and its `-preproc`/`-LABEL` traps, radare2's HUNK limitations, `amitools` for ADF/HDF, `openground` for HRM/RKRM lookups, amiberry operational gotchas |
+| `game-re-tooling/amiga.md` | Any Amiga target — IRA disassembly and its `-preproc`/`-LABEL` traps, radare2's HUNK limitations, `amitools` for ADF/HDF, `openground` for HRM/RKRM lookups, amiberry operational gotchas, and the local scanned-manual archive that is often the only source of in-game *names* |
 | `game-re-tooling/snes.md` | Any SNES/Super Famicom target — ROM header/copier-header/size-code conventions, radare2's native SNES support and its M/X flag-width blind spot, a half-width-katakana text-encoding shortcut for JRPGs |
 | `game-re-tooling/compression.md` | A payload looks compressed and the magic is unfamiliar — `ancient` identifies/decompresses dozens of retro codecs byte-exactly |
 | `game-re-tooling/ghidra-loaders.md` | Ghidra/IDA can't parse your target's executable container, or a raw-binary import is losing segment layout, relocations or symbols — one loader per platform (PSX/PS2/PS3/PS4/PS5/PSP/Vita/Saturn/GC-Wii/DS/N64/Switch/Xbox), plus which platforms have no loader at all |
@@ -426,6 +426,7 @@ the file for your target before starting:**
 | `game-re-tooling/ps2.md` | Any PS2 target — `xorriso`/`7z` ISO9660 parsing (often no UDF bridge), `SYSTEM.CNF`/EE-ELF/IOP-module conventions, and the tri-Ace raw-LBA-archive pattern |
 | `game-re-tooling/psx.md` | Any PSX target — raw CD-XA MODE2/2352 sector layout (Form1 vs Form2 via the submode byte), radare2's native zero-config `PS-X EXE` auto-detection, and a reminder that Node's built-in `TextDecoder('shift_jis')` needs no extra package |
 | `game-re-tooling/seer-upstream.md` | You built or found code with zero game-specific logic that a second, unrelated project in the family also needs — which `@seer/*` package it belongs in, how to test it without vendoring copyrighted fixtures, and how to propagate a breaking rename/move safely across every sibling repo |
+| `game-re-tooling/browser-viewer-testing.md` | Need to live-verify a fix/feature via Playwright against a seer project's dev server (live engine or `tools/viewer`) — no MCP playwright tool is usually registered and the project itself often has no `playwright` dependency; where to find a prior session's leftover install, and how to click a custom pan/zoom map/scene canvas reliably (screenshot-then-click, re-navigate before every click) |
 
 ## Recompilation landscape (native-port stretch goals)
 
@@ -573,11 +574,14 @@ rely on remembering these from a prior context window.
 | `main-chunk-role-masks-own-unopened-payload.md` | A still-missing sub-format (geometry/text/animation data) hasn't turned up after surveying every *other* chunk type in an already-solved container; the largest/first chunk already has a container-level role name assigned |
 | `canonical-field-offsets-before-custom-header.md` | Readable text near a file's start looks like a header prefix before the real magic |
 | `nested-header-same-named-size-field.md` | A bounds check from an outer header's size field lands a few bytes off; a nested sub-header shares that field's name |
+| `named-field-base-offset-mimics-second-crypto-layer.md` | A directory's own header/table decodes cleanly, but every payload it points at (via a plausibly-named offset field) looks like uniform high-entropy garbage across every file type sampled |
 | `repeating-chunk-descriptor-mistaken-for-flat-header.md` | A confirmed fixed-size header/descriptor leaves a large byte-identical "template" region unexplained, or a byte-exact-consistent field defies semantic explanation as a single flat header |
 | `string-scan-crosses-structural-boundary.md` | A blob string scan finds a plausible variant of a known naming pattern (odd prefix, off-by-one name) |
 | `rle-decode-succeeds-on-garbage.md` | A candidate RLE/PackBits decode completed with no bounds error |
 | `bytecode-trace-in-range-result-can-still-be-noise.md` | A bounded per-record bytecode-VM trace terminates via a real terminator with every collected value in-range, across a multi-record corpus where at least one sibling record's expected output is already independently confirmed |
 | `romhacking-community-tools-first.md` | Blind-scanning an unfamiliar format for a commercial game, or trusting a reimplementation's prose without re-deriving offsets; a community disassembly declares a resource but greps for its symbol name turn up zero consumer xrefs |
+| `shared-scratchpad-has-sibling-agent-tooling.md` | A sibling agent is concurrently working the same binary and the next step is building a disassembler, extracting a code/data blob, or writing an opcode table from scratch — check the shared scratchpad for what they have already built first |
+| `reader-side-may-still-be-export-target-math.md` | About to port formula/math from a fan MIDI/soundfont-conversion tool's *reader*-side source (not its exporter) as ground truth for a bit-accurate hardware decode |
 | `reference-tool-incompleteness-mistaken-for-game-ambiguity.md` | A project doc frames a reference tool's own internal inconsistency (declared display string vs. what its interpreter actually implements) as an open question about the *real game's* behavior |
 | `websearch-cited-repo-may-not-exist.md` | About to spend real effort (clone, download, read as ground truth) on a repo `WebSearch` cited as prior art for the exact game/format |
 | `undecoded-format-may-be-compressed-with-known-codec.md` | An unfamiliar format's read shows a too-large count field or periodic junk artifact |
@@ -594,7 +598,7 @@ rely on remembering these from a prior context window.
 | `adjacent-subfield-roles-swapped-despite-correct-bit-boundaries.md` | A packed argument's sub-fields have correct bit boundaries but decoding real data gives implausible/unchanging output |
 | `shared-resource-caller-declared-dimension-under-reports.md` | A shared variable-dimension resource fails `declaredSize===actualSize` for a minority of referencing records |
 | `hypothesis-space-flip-before-per-value-table.md` | A byte-diff suggests a transform's boundaries depend on a discriminator value with few examples per value |
-| `format-field-width-unexercised-by-first-corpus.md` | Reusing a "confirmed" decoder unmodified on a sibling game whose files run noticeably larger |
+| `format-field-width-unexercised-by-first-corpus.md` | Reusing a "confirmed" decoder unmodified on a sibling game whose files run noticeably larger, or whose header/version field takes a value the first game's corpus never exercised |
 | `generic-bucket-hides-real-content.md` | A metadata-light classifier dumps most entries into one misc/other bucket |
 | `classifier-clean-corpus-not-proof-for-sibling-game.md` | Reusing a content-type classifier unmodified on a sibling game before trusting its bucket counts |
 | `struct-scan-needs-self-describing-locality.md` | Blind-scanning a whole file for a confirmed struct's byte signature |
@@ -734,6 +738,9 @@ rely on remembering these from a prior context window.
 | `constant-valued-field-poisons-shared-wellformedness-gate.md` | Adding a new field to an existing "every referenced index in range" well-formedness/validity gate, especially one whose value comes from a shared/game-wide table position rather than the specific record's own size |
 | `r2-string-heuristic-hides-instruction.md` | A register-flow narrative from an r2 disassembly listing doesn't add up (e.g. an impossible call-argument value), and a short `.string` literal sits right after a `jal`/`bl`/`call` or before a small aligned boundary inside a function body |
 | `point-projection-gte-usage-can-be-real-effect-geometry.md` | A PSX/GTE-era opcode census finds only single-vertex projection (`RTPS`) with 0 polygon-shaped ops, and the write-up is trending toward "just UI/anchor placement, not real 3D" — especially right before redirecting the search to a different code region for "the real" geometry; also when a real billboard/particle renderer is confirmed and a plausible semantic label (which game system it belongs to) is about to be written up from the render path alone |
+| `decompose-quaternion-non-unit-needs-normalize.md` | Building a glTF/TRS joint rotation by decomposing a real game-sourced transform matrix (e.g. `THREE.Matrix4.decompose()`) |
+| `engine-3d-consumer-needs-types-three-separately.md` | Wiring `@seer-project/engine-3d` (or importing `three` directly) into a project for the first time and `tsc` can't find `three`'s declaration file |
+| `corpus-wide-render-reveals-trigger-scope-not-decode-bug.md` | A user-reported bad instance of an already-confirmed decode/dispatch table came from a *newly-added* UI feature layered on top of it; about to debug the table/mapping itself rather than the feature's trigger condition |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.

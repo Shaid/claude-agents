@@ -32,6 +32,20 @@ recognize as yours. Never run a bare `git commit` after `git add` in a
 shared working directory — pass the exact pathspec to `git commit` itself,
 every time, even when you're confident you only staged your own files.
 
+**A `git diff --stat` check is not enough for a shared doc file — you must
+diff full content.** Confirmed on `valkyrie` (Valkyrie Profile): an agent
+staging its own doc changes spot-checked `TODO.md`/`plan.md` by reading
+their real diffs, but for a third shared file (`data-structure.md`) only
+looked at `git diff --stat`'s line-count summary before staging — a
+plausible-looking insertion count gave no signal that a *different* agent
+had already written its own new, not-yet-reviewed section into the exact
+same file (both agents were actively appending to the same doc
+concurrently), and it got swept into the first agent's commit. `--stat`
+answers "how much changed," not "whose content is this" — on a file more
+than one concurrent agent is actively writing to, always run the full
+`git diff <file>` (not `--stat`) before staging it, the same as you would
+for a file you suspect might hold someone else's edits.
+
 **The mirror direction — it happens *to* you, not just *by* you.** In a
 heavily concurrent session (3-4 agents committing on the same branch), a
 different agent's bare commit can just as easily sweep up files *you*
