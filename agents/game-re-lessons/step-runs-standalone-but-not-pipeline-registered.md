@@ -9,7 +9,7 @@ skipping` and does nothing — easy to miss if you only ever tested the
 direct-invocation path (a natural first step while iterating) and never
 ran the real CLI before calling the work done.
 
-The seer pipeline framework (`@seer/pipeline`'s `runPipeline`) does not
+The seer pipeline framework (`@seer-project/pipeline`'s `runPipeline`) does not
 discover step scripts by filename or convention — it calls
 `config.exportGameData`/`config.buildAssets` as **function references
 explicitly assigned on the platform's config object** in

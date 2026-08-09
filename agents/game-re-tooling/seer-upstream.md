@@ -1,4 +1,4 @@
-# Upstreaming reusable tooling to `@seer/*`
+# Upstreaming reusable tooling to `@seer-project/*`
 
 **When it bites:** you built or found code in a project's `tools/`/`src/`
 that has **zero game-specific logic** — a generic compression codec, a
@@ -7,7 +7,7 @@ plausibly recur in another seer-family project. The signal that confirms
 "plausibly" isn't theoretical: it's a *second* unrelated project in the
 family independently hitting the same thing. (Real example: a TypeScript
 LZEXE v0.91 decompressor, ported while tracing Vengeance of Excalibur's DOS
-VGA executable, moved to `@seer/pipeline` once Conan the Cimmerian — a
+VGA executable, moved to `@seer-project/pipeline` once Conan the Cimmerian — a
 different game, different developer, same era — turned out to need the
 identical decompression. One project needing it is a maybe; two confirms it.)
 
@@ -15,7 +15,7 @@ identical decompression. One project needing it is a maybe; two confirms it.)
 
 Read the target package's own README and skim its `src/` — don't assume
 from the package name alone. A near-miss (same idea, slightly different
-signature) should usually be *extended*, not duplicated alongside. `@seer/core`
+signature) should usually be *extended*, not duplicated alongside. `@seer-project/core`
 already picked up an `AtlasMeta`/`AtlasFrame` type and a `cyclePalette()`
 utility this way, after both were found independently redeclared (one of
 them *wrongly*) across multiple consumer projects' scaffolded templates.
@@ -24,14 +24,20 @@ them *wrongly*) across multiple consumer projects' scaffolded templates.
 
 | Kind of code | Package |
 |---|---|
-| Browser-safe, zero/minimal deps (binary readers, asset-loading, generic shape types) | `@seer/core` |
-| Node-only offline pipeline utility (file I/O, PNG/WAV writers, decompressors, hex-dump) | `@seer/pipeline` |
-| Generic IFF-85 container parsing | `@seer/iff` |
-| SMUS/Sonix audio format + synthesis | `@seer/smus` |
+| Browser-safe, zero/minimal deps (binary readers, asset-loading, generic shape types) | `@seer-project/core` |
+| Node-only offline pipeline utility (file I/O, PNG/WAV writers, decompressors, hex-dump) | `@seer-project/pipeline` |
+| Generic IFF-85 container parsing | `@seer-project/iff` |
+| SMUS/Sonix audio format + synthesis | `@seer-project/smus` |
+| ProTracker MOD replay | `@seer-project/tracker` |
+| Format-agnostic real-time audio primitives (resampling, voice mixdown, block-render driver) | `@seer-project/audio-dsp` |
+| Shared audio transport-bar UI driving a `PlaybackEngine` | `@seer-project/audio-ui` |
+| PixiJS 2D viewport, camera, input | `@seer-project/engine-2d` (peer-deps `pixi.js`) |
+| three.js 3D viewport, glTF/polygon model adapters | `@seer-project/engine-3d` (peer-deps `three`) |
+| First-person grid-dungeon walking, view geometry, indexed compositing | `@seer-project/dungeon` |
 | Something that needs its **own** heavy, unrelated runtime dependency | **a new package**, not a bolt-on to an existing one |
 
-The last row matters: `@seer/engine` was renamed to `@seer/engine-2d` (freeing
-the name for a planned `@seer/engine-3d`) specifically so a PixiJS-based 2D
+The last row matters: `engine` was renamed to `engine-2d` (freeing the name
+for `engine-3d`, which now exists) specifically so a PixiJS-based 2D
 engine and a Three.js-based 3D engine stay separate packages — folding both
 into one would mean every 2D-only consumer's `npm install` also pulls in
 `three`, for nothing. Prefer a new package over merging incompatible

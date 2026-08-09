@@ -120,7 +120,7 @@ read it if you need more than this summary):
 
 - Game/platform identifiers live in `src/game-id.ts`. Pipeline registration
   lives in the project's game config (typically `tools/shared/game-config.ts`)
-  via `@seer/pipeline`'s `defineGameConfig` (`exportGameData` + `buildAssets`
+  via `@seer-project/pipeline`'s `defineGameConfig` (`exportGameData` + `buildAssets`
   hooks per platform).
 
 ## Prior-art corpora — check these before decoding anything "new"
@@ -425,7 +425,7 @@ the file for your target before starting:**
 | `game-re-tooling/unreal-engine3-uelib.md` | Need actual readable UnrealScript source (not just confirmed-exists bytecode) from a UE1/UE2/UE3 `Class`/`Function`/`State` export — umodel can't decompile these at all; EliotVU/Unreal-Library (UELib) ships its own headless CLI (no Wine/Mono/GUI needed), but needs a forced `CookerPlatform=Console` and a cross-package native-function-table merge with a real eager-caching ordering trap |
 | `game-re-tooling/ps2.md` | Any PS2 target — `xorriso`/`7z` ISO9660 parsing (often no UDF bridge), `SYSTEM.CNF`/EE-ELF/IOP-module conventions, and the tri-Ace raw-LBA-archive pattern |
 | `game-re-tooling/psx.md` | Any PSX target — raw CD-XA MODE2/2352 sector layout (Form1 vs Form2 via the submode byte), radare2's native zero-config `PS-X EXE` auto-detection, and a reminder that Node's built-in `TextDecoder('shift_jis')` needs no extra package |
-| `game-re-tooling/seer-upstream.md` | You built or found code with zero game-specific logic that a second, unrelated project in the family also needs — which `@seer/*` package it belongs in, how to test it without vendoring copyrighted fixtures, and how to propagate a breaking rename/move safely across every sibling repo |
+| `game-re-tooling/seer-upstream.md` | You built or found code with zero game-specific logic that a second, unrelated project in the family also needs — which `@seer-project/*` package it belongs in, how to test it without vendoring copyrighted fixtures, and how to propagate a breaking rename/move safely across every sibling repo |
 | `game-re-tooling/browser-viewer-testing.md` | Need to live-verify a fix/feature via Playwright against a seer project's dev server (live engine or `tools/viewer`) — no MCP playwright tool is usually registered and the project itself often has no `playwright` dependency; where to find a prior session's leftover install, and how to click a custom pan/zoom map/scene canvas reliably (screenshot-then-click, re-navigate before every click) |
 
 ## Recompilation landscape (native-port stretch goals)

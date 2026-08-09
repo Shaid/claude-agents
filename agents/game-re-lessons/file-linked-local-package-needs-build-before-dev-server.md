@@ -10,7 +10,7 @@ visible in the UI at all) because the whole module graph failed to load,
 not because of any data/manifest problem — don't start debugging the
 manifest or pipeline output before checking the dev server's own log.
 
-A local `file:` dependency (the seer framework's `@seer/*`/`@seer-project/*`
+A local `file:` dependency (the seer framework's `@seer-project/*`/`@seer-project/*`
 packages are exactly this shape) is a **source** package, not a published
 build artifact — its `package.json` declares `"main": "./dist/index.js"`,
 but nothing automatically produces `dist/` just because `node_modules/`
@@ -32,7 +32,7 @@ succeed instantly but produces nothing — `rm` the `.tsbuildinfo` file (or
 pass `--force`) before trusting an "up to date, 0 files changed" build.
 
 **Fix, confirmed on the `flower` project's `@seer-project/audio-ui` (which
-itself depends on `@seer/core`, both hit this)**: `cd` into the sibling
+itself depends on `@seer-project/core`, both hit this)**: `cd` into the sibling
 package's real source directory and run its own `npm run build` (deleting a
 stale `tsconfig.build.tsbuildinfo` first if the build claims "up to date"
 with no `dist/` present), then restart the dev server. `dist/` is normally
