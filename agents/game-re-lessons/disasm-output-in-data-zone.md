@@ -23,3 +23,14 @@ project's `docs/` root, and never `data/`) as the canonical home for
 disassembly artifacts (`.asm`, `.cnf`), and relocate anything a sub-agent
 left elsewhere once you notice it, updating any doc that references the old
 path.
+
+**Same failure mode, no sub-agent involved:** running IRA yourself with an
+`-info`-only invocation and no explicit `TARGET` argument (e.g.
+`ira -info data/<game>/<platform>/Foo`, just checking hunk sizes before the
+real disassembly pass) still writes `Foo.asm` next to `SOURCE` by default —
+confirmed on Embryo (Amiga): a first `-info` call with only `SOURCE` given
+left `Embryo.asm` sitting in `data/explore/EmbryoHr/data/` even though the
+*real* disassembly pass moments later correctly wrote to `docs/.../Embryo.asm`
+because that one specified `TARGET` explicitly. Always pass an explicit
+`TARGET` path (into `docs/<game>/<platform>/`) on *every* IRA invocation,
+including throwaway `-info` checks — not just the final disassembly pass.

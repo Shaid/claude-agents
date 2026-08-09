@@ -115,3 +115,50 @@ escalation's *specific* claims one at a time rather than spot-checking
 only the headline number — a correct-sounding aggregate can still carry
 a false, over-specific detail sitting right next to it, and the two
 don't get caught by the same check.
+
+Sixth instance, a variant worth its own note: the escalation's *own*
+corpus-wide verification can have a real coverage gap disguised as a
+clean percentage, when the check is implemented as a **manual per-
+observed-kind branch list rather than generic/exhaustive code**. Valkyrie
+Profile 2 (PS2)'s character-mesh escalation reported "778,245/778,461
+(99.97%) unit-length normals" as if it were a corpus-wide check — but its
+verifier's unit-length test only had explicit `if`/`elif` branches for 2
+of the 4 real vertex-normal encodings actually present in the corpus
+(`V4-16` and `V3-32`), silently skipping `V3-16` (the single *most
+common* real encoding, ~84% of all normal-bearing batches) and a rare
+`V1-8` outlier shape entirely — the reported percentage only ever
+described the 2 branches someone thought to write, not the corpus. The
+`V1-8` case turned out to be a genuine bug magnet: it's a 1-component
+stream, not a real 3D normal, and reading it as 3 components produces
+literal `NaN`. This was only caught because the downstream integrator
+ported the escalation's reference decoder to a second language with
+*generic* code (no per-kind branch list to inherit the blind spot from)
+and ran it against the full real corpus — which naturally exercised every
+encoding actually present, including the ones the original census's
+if/elif chain never touched. The general check: when re-deriving an
+escalation's verification independently (per the pattern above), don't
+just re-run the same check shape on the same claimed inputs — ask whether
+the check's own implementation enumerates cases exhaustively (a switch
+over every value actually observed in the data) or by hand (branches for
+whichever cases the person happened to write), since the latter can
+report a seemingly-precise "N/M passed" number that quietly excludes
+everything it didn't think to branch on.
+
+Seventh instance, and a reminder this applies to any specialist subagent's
+returned disassembly claims, not only formal `re-codebreaker`/`re-oracle`
+escalations: on Phantasie I (Amiga, `nicodemus` project), two separate
+`amiga-disasm` subagent traces (a `GetStat`/`SetStat` character-stat
+routine, then a combat hit/miss/damage-application routine) each returned
+~5-10 specific "file offset `0xNNNN` contains bytes `XX XX XX XX`,
+disassembling to `INSTRUCTION`" claims. The cheapest possible check — read
+the real target file directly at each claimed offset and byte-compare
+against the claimed hex, in a few lines of Python, no re-disassembly
+needed — caught zero errors across both traces (every claim matched
+exactly), but took under a minute total and is what makes "the subagent
+traced this" become "this is confirmed," the same distinction the
+instances above draw for formal escalations. Do this before writing a
+subagent's claimed addresses into project docs as confirmed, not only
+when a claim feels suspicious — it's cheap enough to be routine, and a
+byte-level disassembly claim is exactly the kind of thing that's trivial
+to silently get wrong (an off-by-a-few-bytes offset, a transposed hex
+digit) while still producing a plausible-reading final report.

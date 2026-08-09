@@ -37,6 +37,22 @@ stride matches that table's record size. Two independent signals agreeing is the
 bar; the instruction bytes alone are not evidence of anything. If you cannot
 resolve the base, the hit is unclassified — not a match.
 
+**The same failure mode hits a plain literal-offset text grep, not just a raw
+opcode-encoding census.** Confirmed on Vengeance of Excalibur (`middilgard`):
+having traced the exact struct byte offset (`+43`) a bytecode-VM instruction
+uses as its "current program counter" field, a `grep`-style search for every
+`MOVE.B ...,43(A0)`/`43(A1)` write across the whole 75,000-line disassembly
+turned up ~120 hits, ~50 with literal immediates in named gameplay functions
+(`_GetItem`, `_DropItem`, `_UseItem`, `_DoCombAction`, `_FightDone`, `_Trade`,
+…). None of them touch the VM's PC — every one operates on a completely
+different C struct (an item/inventory-list record) that happens to place an
+unrelated field at the identical small numeric offset. A bare offset number,
+grepped as text, carries exactly as little provenance as a raw indexed-
+addressing opcode encoding does — in both cases the fix is the same: resolve
+what register/pointer is being indexed at each hit (here, what the
+preceding `MOVEA.L`/argument load actually assigns to `A0`) before counting
+a hit as evidence about a specific struct's field.
+
 This is the false-*positive* face of the same shape-based-evidence failure that
 produces false negatives in
 `bitfield-spans-multiple-addressable-bytes.md` (a bit test you cannot find

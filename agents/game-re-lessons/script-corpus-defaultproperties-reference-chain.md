@@ -43,6 +43,12 @@ that stores `<Type> <Package>.<Object>` strings, or an equivalent handle
 table) offers the same two-hop technique once its bytecode/script is
 readable at all.
 
+**A second trap, found later**: the reference's `Package` segment
+(`prm_bs04` above) isn't reliably a separate file to open — see
+`ue3-object-reference-package-not-a-filename.md` for a real case where the
+identical reference syntax instead named an asset inlined into the
+*referencing* file itself.
+
 **The trap**: don't assume a numeric-id coincidence between two different
 naming schemes is itself proof. The class registry's own encounter-order
 numbering (`Bs00`..`Bs16`) looked at first like it might map 1:1 onto the

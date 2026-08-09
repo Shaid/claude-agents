@@ -133,12 +133,13 @@ solved formats, and worked examples of every convention below.
 | `~/Development/crawl` | Black Crypt, Eye of the Beholder 1-3, Lands of Lore, Dungeon Hack | `game-re-corpora/crawl.md` |
 | `~/Development/middilgard` | War in Middle Earth, Spirit/Vengeance of Excalibur, Conan, Warriors of Legend | `game-re-corpora/middilgard.md` |
 | `~/Development/wyrm` | Dune, KGB (Cryo) | `game-re-corpora/wyrm.md` |
-| `~/Development/hunter` | Carrier Command, Hunter, Epic, Frontier: Elite II | `game-re-corpora/hunter.md` |
+| `~/Development/hunter` | Carrier Command, Hunter, Epic, Frontier: Elite II, Wings, Gunship 2000 AGA, Midwinter, Embryo | `game-re-corpora/hunter.md` |
 | `~/Development/strike` | Desert/Jungle/Urban Strike (Amiga OCS/AGA + Genesis + SNES) | `game-re-corpora/strike.md` |
 | `~/Development/sorcery` | Wizardry 6: Bane of the Cosmic Forge (Sir-Tech; DOS/EGA, Amiga, SNES ports) | `game-re-corpora/sorcery.md` |
 | `~/Development/nicodemus` | Phantasie I (Amiga), II (Atari ST), III (Amiga) | `game-re-corpora/nicodemus.md` |
-| `~/Development/ceres` | Final Fantasy VI (SNES), Final Fantasy IV (SNES); FFV planned | `game-re-corpora/ceres.md` |
+| `~/Development/ceres` | Final Fantasy VI (SNES), Final Fantasy IV (SNES), Final Fantasy V (SNES) | `game-re-corpora/ceres.md` |
 | `~/Development/flower` | Drakengard 3 (PS3, UE3), Dragon's Crown (PS3+PS4, not yet touched) | `game-re-corpora/flower.md` |
+| `~/Development/valkyrie` | Valkyrie Profile (PSX), Valkyrie Profile 2: Silmeria (PS2) | `game-re-corpora/valkyrie.md` |
 
 **`Read` the corpus file for the project you are working in before you start**
 — it lists that project's already-solved formats, its engine-family links, and
@@ -149,7 +150,15 @@ Conan/Legend; Melbourne House: WIME/Spirit/Vengeance; Westwood: EOB/Lands of
 Lore). Before reverse-engineering a format from scratch, read the sibling
 corpus files above and grep those projects' `docs/` trees — you are often
 looking at a variant of something already solved, differing only in
-endianness, header size, or palette depth.
+endianness, header size, or palette depth. **This isn't limited to a single
+developer's own titles**: platform-era streaming/audio middleware can be
+shared across *unrelated* studios too — the `SShd`/`SSbd` PS2 streaming-
+audio chunk pair first documented in Cavia/Square's Drakengard corpus
+turned up byte-identical (tag shape, not sample rate) in Capcom's Chaos
+Legion, an unrelated developer/engine on the same console generation — so
+a format found in one project's FMV/audio corpus is worth grep-checking
+against *any* same-platform-era sibling project, not just same-developer
+ones.
 
 # Output conventions
 
@@ -310,8 +319,26 @@ an external oracle. Prefer the cheap ones first:
   every file with zero deviation — or a blind, boundary-agnostic forward walk
   (accept each chunk only if its own internal indices/counts are
   self-consistent, no lookahead) that independently reproduces a boundary
-  already confirmed by a code xref found some other way,
-- the same asset from another platform's port,
+  already confirmed by a code xref found some other way. A monotonically-
+  incrementing-by-exactly-1 integer field inside a repeating block is an
+  unusually strong version of this signal specifically for keyframe/
+  frame-sequence animation data (unlike vertex/palette/index arrays, whose
+  fields don't predictably increment) — scanning for the longest run where
+  that field starts at 0 and increments by 1 each block finds the real
+  keyframe array's start/length without knowing a variable-size header in
+  advance, and correctly returns "no animation here" (zero-length) rather
+  than garbage when a candidate block has no such run (confirmed on
+  Valkyrie Profile 2 (PS2)'s per-bone quaternion keyframe arrays),
+- the same asset from another platform's port, **or from an earlier session's
+  own live capture** — a newly-decoded static structural format (e.g. a
+  face/topology list) applied directly to real coordinate/field data an
+  earlier, unrelated session already captured live, checked for zero
+  degenerate output (repeated indices, zero-area triangles) and a plausible
+  resulting shape, confirms both the new static decode and the old capture
+  without a further live session (Carrier Command, Amiga: a static BSP-tree
+  face list found a session after amiberry access was withdrawn was applied
+  to a prior session's already-captured 60 real ship vertices, 0 degenerate/
+  zero-area triangles, plausible hull silhouette),
 - a third-party reimplementation or fan decoder (ScummVM, dunerevival, etc.) —
   diff against its output; search for the **exact game**, not just its engine
   family, since a source-port's disassembly can hand you the algorithm
@@ -389,10 +416,15 @@ the file for your target before starting:**
 | `game-re-tooling/amiga.md` | Any Amiga target — IRA disassembly and its `-preproc`/`-LABEL` traps, radare2's HUNK limitations, `amitools` for ADF/HDF, `openground` for HRM/RKRM lookups, amiberry operational gotchas |
 | `game-re-tooling/snes.md` | Any SNES/Super Famicom target — ROM header/copier-header/size-code conventions, radare2's native SNES support and its M/X flag-width blind spot, a half-width-katakana text-encoding shortcut for JRPGs |
 | `game-re-tooling/compression.md` | A payload looks compressed and the magic is unfamiliar — `ancient` identifies/decompresses dozens of retro codecs byte-exactly |
+| `game-re-tooling/ghidra-loaders.md` | Ghidra/IDA can't parse your target's executable container, or a raw-binary import is losing segment layout, relocations or symbols — one loader per platform (PSX/PS2/PS3/PS4/PS5/PSP/Vita/Saturn/GC-Wii/DS/N64/Switch/Xbox), plus which platforms have no loader at all |
+| `game-re-tooling/format-discovery.md` | An unidentified blob with no hypothesis yet — where to search for existing prior art on the exact game (QuickBMS/XeNTaX/binary-template corpora), the scriptable `reversebox` pixel-format + swizzle sweep, and the visualize-as-pixels / relative-search techniques worth reimplementing rather than reaching for a GUI. Also records which platforms the general "awesome game format" lists do **not** cover |
 | `game-re-tooling/dos.md` | Any MS-DOS 16-bit real-mode target (`MZ` exe, `.ovr`/`.drv`) — the CS/DS segment-resolution trap for string/data xrefs, `.ovr` overlay-loader conventions, the launcher-`.bat`-as-load-order trick |
 | `game-re-tooling/atari-st.md` | Any Atari ST target — `.STX` (Pasti) floppy container structure and spec source, the desectorize-then-hand-off-to-mtools extraction technique, `mtools`' `MTOOLS_SKIP_CHECK` gotcha on GEMDOS media-descriptor bytes |
 | `game-re-tooling/ps3.md` | Any PS3 target — classic-retail-PKG vs. Vita-"finalized"-PKG header confusion (why `pkg2zip` fails on genuine PS3 pkgs), the from-scratch AES-128-CTR decrypt algorithm + fixed key, NPDRM `.EDAT`/RAP-file decryption |
 | `game-re-tooling/unreal-engine3-umodel.md` | Any UE1/UE2/UE3 target parsed via Gildor's umodel — why its `-export -gltf` CLI batch path can never embed animation data (a deliberate limitation, not a bug), the `.psa` (ActorX) headless workaround + its own distinct coordinate convention, and why AnimSet↔SkeletalMesh association needs bone-name-overlap ranking, not filename-convention guessing |
+| `game-re-tooling/unreal-engine3-uelib.md` | Need actual readable UnrealScript source (not just confirmed-exists bytecode) from a UE1/UE2/UE3 `Class`/`Function`/`State` export — umodel can't decompile these at all; EliotVU/Unreal-Library (UELib) ships its own headless CLI (no Wine/Mono/GUI needed), but needs a forced `CookerPlatform=Console` and a cross-package native-function-table merge with a real eager-caching ordering trap |
+| `game-re-tooling/ps2.md` | Any PS2 target — `xorriso`/`7z` ISO9660 parsing (often no UDF bridge), `SYSTEM.CNF`/EE-ELF/IOP-module conventions, and the tri-Ace raw-LBA-archive pattern |
+| `game-re-tooling/psx.md` | Any PSX target — raw CD-XA MODE2/2352 sector layout (Form1 vs Form2 via the submode byte), radare2's native zero-config `PS-X EXE` auto-detection, and a reminder that Node's built-in `TextDecoder('shift_jis')` needs no extra package |
 | `game-re-tooling/seer-upstream.md` | You built or found code with zero game-specific logic that a second, unrelated project in the family also needs — which `@seer/*` package it belongs in, how to test it without vendoring copyrighted fixtures, and how to propagate a breaking rename/move safely across every sibling repo |
 
 ## Recompilation landscape (native-port stretch goals)
@@ -416,7 +448,8 @@ cross-platform technique docs, all in `~/Development/seer/docs/`:
 | Nintendo DS | `nds-recomp.md` | Rides GBA's momentum on decomp; behind on binary recompilation (dual CPU + real 3D engine) |
 | GameCube / Wii | `gamecube-wii-recomp.md` | Likely the strongest decomp scene in the series — the original CodeWarrior compiler still runs |
 | 3DS | `3ds-recomp.md` | Essentially unstarted; post-Citra-shutdown, mature emulation removes the incentive |
-| Wii U | `wiiu-recomp.md` | Essentially unstarted despite the PPC lineage — CodeWarrior advantage doesn't transfer; Cemu's success suppresses the need |
+| Wii U | `wiiu-recomp.md` | Near-unstarted despite the PPC lineage — CodeWarrior advantage doesn't transfer; Cemu's success suppresses the need. One 11-commit proof of concept (`nWiiURecomp`) does exist |
+| MS-DOS | `dos-recomp.md` | **Ahead of Amiga** and the most tractable substrate in the series — `M-HT/SR` ships four native commercial-game ports (Albion, both X-COMs, Warcraft) via LLVM. Real technique, no scene. Absent from GitHub's `static-recompilation` topic, which is why topic-only scans miss it |
 | Switch | `switch-recomp.md` | First real ARM64 target in the series; also the most legally fraught platform (Yuzu/Ryujinx shutdowns) |
 | Arcade (all eras) | `arcade-recomp.md` | Mostly a crosswalk to the docs above (same silicon as many home platforms); hardware-encryption CPUs and the JOTEGO/MiSTer FPGA scene are the genuinely arcade-specific parts |
 | Engine-based porting (Unreal/Unity, any platform) | `engine-based-porting.md` | Technique doc, not platform-specific — rehost recovered assets/scripts on a real PC engine build instead of lifting binary code |
@@ -498,6 +531,7 @@ rely on remembering these from a prior context window.
 | File | When it bites |
 |------|----------------|
 | `file-offsets-vs-segment-relative.md` | Citing a disassembly offset in an executable format — file-relative or segment-relative? |
+| `boot-upload-blob-delta-not-driver-wide.md` | Reusing an address<->file-offset delta anchored inside one boot-DMA'd code/data blob for an ARAM address that belongs to a *different* uploaded block from the same boot upload table |
 | `bitplane-layout-variants.md` | Planar decode "matches the format" but renders wrong |
 | `planar-plane-padding-vs-tight-stride.md` | A confirmed plane-major decode still degrades plane-by-plane; check trailing bytes divide by plane count |
 | `amiga-hardware-specifics.md` | EHB colour, `BLTSIZE`, blitter modulo, 12-bit colour scaling |
@@ -505,6 +539,7 @@ rely on remembering these from a prior context window.
 | `directory-entry-aliasing.md` | A frame-splitting theory implies an implausible frame count |
 | `logical-offset-excludes-reserved-region.md` | Most directory entries decode fine; failures cluster after a reserved structure (boot sector, partition table) |
 | `palette-storage-quirks.md` | Can't find a palette with the pixels, or it looks incomplete |
+| `familiar-extension-not-proof-of-standard-format.md` | A file's extension matches a well-known interchange format (`.LBM`, `.PCX`, `.WAV`...) and you're about to parse or document it as that format without having checked its actual magic bytes |
 | `recolour-remap-tables.md` | Colours wrong for one specific sprite/character only |
 | `shared-scratch-copper-list-palette-patch.md` | A copper-colour scan finds extra candidates beyond an already-confirmed static palette |
 | `whdload-slave-no-format-info.md` | Tempted to read a `.slave` source for format hints |
@@ -520,22 +555,35 @@ rely on remembering these from a prior context window.
 | `disc-dump-may-sidestep-console-drm-entirely.md` | Starting console digital-storefront PKG/NPDRM decryption work for a title that also shipped on physical disc |
 | `same-name-cross-port-colour-mismatch.md` | A same-named cross-port asset "looks wrong" only because it doesn't colour-match another platform |
 | `high-entropy-trivial-cipher.md` | File entropy looks like dense compression (~8 bits/byte) |
+| `patterned-fill-defeats-naive-entropy-scan.md` | A nonzero%/unique-byte-count entropy sweep flags an unidentified disk/archive tail or gap region as "real data continues here" |
+| `reversed-text-fragment-anti-strings-trick.md` | A bundled non-game-data utility's `strings` output is full of short scrambled-looking runs rather than real words or clearly random noise |
+| `encrypted-directory-defeats-structural-scan.md` | A structural/entropy scan for a resource directory/TOC comes back empty across every signature tried, in a huge single-file container with no ISO9660-level directory tree |
+| `per-resource-subset-alphabet-defeats-corpus-scan.md` | Hunting for a dialogue/script text format; a whole-disc plaintext/known-encoding scan finds nothing, or a small-alphabet byte-value filter passes almost everything and discriminates nothing |
 | `save-file-not-asset.md` | A filename string-search comes up completely empty |
 | `plausible-filename-hypothesis-unchecked-against-source.md` | Writing a filename/extension "out of scope" claim without grepping a reference engine's source first |
 | `oversized-flat-file-may-be-disc-image.md` | A file is orders of magnitude larger than its siblings and a known parser rejects it as corrupt |
+| `iso9660-tree-near-empty-check-raw-lba-toc.md` | A disc image parses as valid ISO9660 but its catalogued directory tree is tiny relative to the disc's actual size |
+| `catalogued-file-scan-misses-raw-lba-gap.md` | About to trust a "scanned every catalogued file, zero format-X hits" negative on a disc/archive with more than one catalogued container file — check catalogued files' LBA ranges actually cover 100% of the container first |
 | `multi-region-dir-ambiguous-rom-pick.md` | A second same-extension ROM (different region/revision) joins a data dir that already has one |
 | `amiberry-live-capture-workflow.md` | About to send keys/breakpoints/memory reads to a running amiberry instance |
 | `emulator-harness-pc-range-completion-defeated.md` | A musashi-style harness looks hung using "PC left the engine's range" as the stop condition |
 | `renamed-magic-container.md` | An unfamiliar magic's payload still "smells like" a known compressor family |
 | `hunk-wraps-non-code-data.md` | A `HUNK_HEADER`/`HUNK_CODE` file assumed all-code without decoding what's between payload and `HUNK_END` |
+| `hunk-data-shorter-than-declared-is-merged-bss.md` | A `HUNK_RELOC32`-resolved reference into a `HUNK_DATA` hunk never lands on plausible content no matter the base tried, especially if that hunk's `HUNK_HEADER`-declared size disagrees with its own `HUNK_DATA` block's stored size |
+| `main-chunk-role-masks-own-unopened-payload.md` | A still-missing sub-format (geometry/text/animation data) hasn't turned up after surveying every *other* chunk type in an already-solved container; the largest/first chunk already has a container-level role name assigned |
 | `canonical-field-offsets-before-custom-header.md` | Readable text near a file's start looks like a header prefix before the real magic |
 | `nested-header-same-named-size-field.md` | A bounds check from an outer header's size field lands a few bytes off; a nested sub-header shares that field's name |
+| `repeating-chunk-descriptor-mistaken-for-flat-header.md` | A confirmed fixed-size header/descriptor leaves a large byte-identical "template" region unexplained, or a byte-exact-consistent field defies semantic explanation as a single flat header |
 | `string-scan-crosses-structural-boundary.md` | A blob string scan finds a plausible variant of a known naming pattern (odd prefix, off-by-one name) |
 | `rle-decode-succeeds-on-garbage.md` | A candidate RLE/PackBits decode completed with no bounds error |
-| `romhacking-community-tools-first.md` | Blind-scanning an unfamiliar format for a commercial game, or trusting a reimplementation's prose without re-deriving offsets |
+| `bytecode-trace-in-range-result-can-still-be-noise.md` | A bounded per-record bytecode-VM trace terminates via a real terminator with every collected value in-range, across a multi-record corpus where at least one sibling record's expected output is already independently confirmed |
+| `romhacking-community-tools-first.md` | Blind-scanning an unfamiliar format for a commercial game, or trusting a reimplementation's prose without re-deriving offsets; a community disassembly declares a resource but greps for its symbol name turn up zero consumer xrefs |
+| `reference-tool-incompleteness-mistaken-for-game-ambiguity.md` | A project doc frames a reference tool's own internal inconsistency (declared display string vs. what its interpreter actually implements) as an open question about the *real game's* behavior |
+| `websearch-cited-repo-may-not-exist.md` | About to spend real effort (clone, download, read as ground truth) on a repo `WebSearch` cited as prior art for the exact game/format |
 | `undecoded-format-may-be-compressed-with-known-codec.md` | An unfamiliar format's read shows a too-large count field or periodic junk artifact |
 | `typed-array-silent-oob-read.md` | Porting a validated Python/C decompressor to TypeScript |
 | `unbounded-appended-data-boundary.md` | Unidentified data follows a known structure with no length/count/terminator marking its end |
+| `bootstrap-catalog-boundary-not-content-boundary.md` | A resource named in a small, verified boot-time/quickload catalog shows recognizable content still forming right at the catalog's declared end |
 | `header-shape-ambiguous-pixel-encoding.md` | A header match confirms a format, but more than one pixel-encoding hypothesis fits the same byte count |
 | `platform-port-swaps-adjacent-header-fields.md` | A confirmed container shape's downstream decode produces impossible values; "just add an endian option" |
 | `masking-bug-pairs.md` | Something works despite one obviously-wrong-looking piece of code |
@@ -558,6 +606,7 @@ rely on remembering these from a prior context window.
 | `byte-scan-tag-byte-vs-wrong-stride.md` | A stride-less byte scan finds a recurring lead byte; about to document it as an escape/tag scheme |
 | `round-looking-longwords-are-centred-bitmap-rows.md` | A candidate header's leading longwords all look suspiciously round |
 | `overlapping-strict-matches-both-verify.md` | Two candidate record placements overlap and both independently decode to real content |
+| `second-record-type-shifts-primary-counts.md` | Wiring a newly-cracked second record type into an existing resync loop, about to assume it's purely additive to the already-confirmed primary record count |
 | `disasm-output-in-data-zone.md` | After delegating a disassembly pass on a binary living in `data/<game>/<platform>/` |
 | `filename-pairing-unverified.md` | Treating a small file as an index into a larger one on shared filename stem alone |
 | `verify-escalation-artifacts-not-just-claims.md` | An escalation returns a solved verdict with convincing renders you're about to copy verbatim |
@@ -571,18 +620,31 @@ rely on remembering these from a prior context window.
 | `seeded-prng-stable-not-random.md` | Found a PRNG driving generated content; about to call its output random/varying |
 | `runtime-only-value-often-static.md` | A doc says a value is runtime-only; about to build savestate/live-capture tooling |
 | `audio-byte-order-measurable.md` | Decoding raw PCM with undeclared byte order; about to pick one and move on |
+| `redundant-transmission-needs-correlation-not-diff.md` | A container's records carry a 2-valued toggle/parity field alongside near-identical payload; deciding "distinct channel" vs. "redundant duplicate copy" |
+| `cross-stat-correlation-refutes-index-hypothesis.md` | A record field's values always fall in-range against a candidate name/item table but resolved names skew thematically wrong for part of the corpus |
+| `sparse-table-creates-spurious-multibyte-field.md` | A mostly-zero sparse record table shows a specific byte value repeatedly adjacent to `0x00` in a couple of sample rows, tempting a fixed-position multi-byte-field reading |
+| `generic-demuxer-misses-custom-pes-audio.md` | `ffprobe`/`ffmpeg`'s default probe reports zero (or a wrong-codec) audio stream on an MPEG-PS/PES game movie, especially a single title/logo-loop sample checked first |
+| `byte-shape-classifier-needs-entropy-gate.md` | A soft byte-range/shape classifier (ADPCM shape, opcode range, struct-field sanity check) reports a suspiciously high or clean corpus-wide positive rate |
+| `sibling-magic-may-be-same-struct-zeroed-field.md` | A rare sibling-magic format (one letter/digit different from an already-solved base format) is assumed to need a new pixel/compression decoder, especially when only one instance exists to diff against |
+| `same-magic-different-format-by-referencing-context.md` | An already-solved magic turns up again behind a different referencing tag/pointer/directory-entry type, and you're about to reuse the old decoder without checking the new bytes against its confirmed field layout first |
+| `struct-analogy-needs-pointer-target-census.md` | A newly-found record's shape (field count/positions, esp. "N internal pointers patched at load") coarsely matches an already-confirmed format from a sibling project or engine family, and the temptation is to assign it the same semantic role on shape alone |
 | `optional-per-record-compression.md` | A minority of records in a healthy container decode as garbage/"corrupt" |
 | `r2-snes-flag-width-blind.md` | Trusting a raw radare2 65816 disassembly, especially near RESET or before the first REP/SEP |
+| `ca65-label-suffix-address-arithmetic-mx-flag-blind.md` | Hand-computing an unlabeled 65816 instruction's address from a ca65 source disassembly by summing assumed opcode byte-widths from a nearby local label |
 | `snes-mode7-extbg-256-color-split-palette.md` | A SNES Mode 7 layer's tiles are 4bpp but the map shows way more than 16 colours |
 | `endian-swap-needs-matching-field-width.md` | Comparing a sibling-platform port's same-size file, deciding byte-swap vs. raw-identity |
 | `implicit-cumulative-directory-offsets.md` | A directory offset field can't be found at any width/position; other fields verify fine |
+| `trailer-offset-locates-real-header.md` | A family of same-purpose container files shows no recognizable magic/directory at offset 0 in any of them |
+| `self-consistent-chain-wrong-unit.md` | A running-sum offset/length chain shows 0 internal deviations; about to declare its fields confirmed as byte offset/length without checking the chain's terminal value against an independent boundary |
 | `partial-resolution-rate-is-noise.md` | A decoded id resolves for only ~40-70% of records; explaining the rest as a second id space |
 | `autocorrelation-period-is-the-scanline-stride.md` | A byte-difference/autocorrelation scan finds a strong unexplained repeat period on planar data |
 | `cli-script-main-fires-on-import.md` | Importing a helper from another CLI script causes double output or an unexpected `process.exit()` |
 | `terminator-scan-must-be-record-aligned.md` | A terminator-scan hit is found, but bytes just past it still look structured |
 | `multi-byte-code-second-byte-collides-with-terminator.md` | Bounding a string by scanning for a terminator byte on a format with any 2-byte-wide codes |
+| `escape-code-parameter-bytes-silently-misdecoded.md` | A transcribed control-code table has a `:b`/`:w`-suffixed entry name, or a decode's unmapped-byte-escape rate is low-but-nonzero rather than exactly zero |
 | `reserved-slot-zero-shifts-extractor-index.md` | A new low-level decoder disagrees by a constant offset with an existing higher-level extractor |
 | `bare-git-commit-sweeps-concurrent-stage.md` | About to run a bare `git commit` (no pathspec) with other agents possibly working concurrently |
+| `absolute-path-silently-escapes-isolated-worktree.md` | Running in an isolated git worktree and about to `Read`/`Bash`/`Grep`/`Glob` an absolute path — especially one stated as a bare "project root" in the task prompt rather than built from the worktree's own root |
 | `text-field-periodic-interleave-byte.md` | A decoded name reads almost-clean but has one wrong byte at a position that varies between records |
 | `canned-save-state-mirrors-exe-struct.md` | An executable resists static tracing; about to deep-disassemble before checking other shipped files |
 | `tile-grid-dimension-needs-render-not-just-bytecount.md` | Several `(width,height)` pairs all satisfy a tile-grid's byte-count invariant, no dimension field exists |
@@ -592,7 +654,9 @@ rely on remembering these from a prior context window.
 | `byte-value-collision-defeats-marker-only-guard.md` | A parser branching on one lead byte sends a resource down the wrong transform branch |
 | `hand-computed-test-fixture-vs-real-run.md` | Writing regression tests; about to hand-compute expected `toEqual(...)` values instead of running something |
 | `adjacent-ramp-table-masks-off-by-one-record-start.md` | A fixed-position table's only start-offset evidence is "this position looks reasonable" |
+| `leading-header-equal-to-field-offset-masks-record-start.md` | A fixed-stride record array's start offset is "confirmed" only by variable-length content landing on `base+stride*k+N`, and a leading region could alternatively be a same-size separate header rather than record 0's own early fields |
 | `producer-fix-inert-without-consumer-audit.md` | Just fixed a field's producer; more than one code path consumes that same field |
+| `sibling-field-comment-as-free-semantic-oracle.md` | About to trust a documented enum/state-value direction at face value, especially one restated identically across several files with no independent evidence cited |
 | `nearest-preceding-immediate-is-not-dataflow.md` | A census grabs an operand value from the nearest preceding immediate-load in a lookback window |
 | `pre-decompression-guard-uses-decompressed-threshold.md` | A decoder throws "too small" before decompression on a resource whose on-disk size isn't implausible |
 | `cross-platform-string-delta-reveals-stride-vs-offset.md` | A same-game file exists on two platforms with different layouts, no symbol table for the second |
@@ -602,25 +666,74 @@ rely on remembering these from a prior context window.
 | `known-differences-list-not-exhaustive-without-full-diff.md` | About to treat a doc's already-enumerated cross-release/cross-port "known differences" list as complete, especially for a localization/censorship-style comparison |
 | `tile-formation-table-not-raster-order.md` | Composing a multi-tile sprite by laying stored tiles in raw stored order |
 | `sprite-frame-geometry-reveals-animation-segments.md` | Need a frame-index → named-animation (idle/walk/attack/death) mapping within a multi-frame sprite resource, whether or not the driving executable can be traced |
+| `plausible-render-not-semantic-label.md` | About to write a confident semantic label ("standing", "idle", direction/state name) for a table entry whose render looks plausible for that label, but whose actual in-game frame-selection code was never traced |
 | `transparent-png-preview-tool-artifact.md` | A rendered atlas shows flat-colour blocks or an all-white/black wash in an inline preview |
 | `indexed-table-base-below-valid-rom-window.md` | Filtering a long-addressing-instruction census by requiring a physically-valid ROM address |
 | `published-walkthrough-numeric-oracle.md` | A stat-block field survived 2+ disassembly-only negatives and the game has a fan community |
 | `vm-bytecode-embeds-platform-addresses.md` | A cross-platform content search returns zero matches for VM bytecode or a scripted-behavior table |
 | `packed-exe-mimics-variable-length-records.md` | A raw-executable byte census finds a variable-length record format with unexplained residue near boundaries |
+| `bytecode-residue-recurring-groups.md` | A data-file record parser's leftover residue keeps reproducing the same short word groups verbatim at different offsets |
+| `reaudit-base-grammar-before-new-record-type.md` | A second (or third) "there's another record type in the gaps" hypothesis still leaves residue after a partial fix |
 | `multiple-rendering-surfaces-same-data.md` | A vague bug report, in a project with more than one consumer of the same extracted assets |
 | `generic-gallery-needs-atlasmeta-shape.md` | An atlas gallery UI shows the whole sheet tiled small instead of one cropped frame |
+| `texture-manifest-entry-needs-atlas-sidecar.md` | A new pipeline step's `type: "texture"` manifest entries show "Failed to load atlas metadata" in the viewer with zero console errors |
 | `slugified-name-collision-overwrites-output.md` | A pipeline derives an output filename via `slugify()` for names that might differ only in punctuation/case |
 | `distinctive-byte-pattern-anchors-address-chain.md` | Need a static table's real address without fully trusting a reference project's declared coordinates |
 | `traced-calling-convention-unverified-against-corpus.md` | An instruction-level calling-convention trace is complete and cited; about to document the fields it reads as confirmed data-model semantics without checking real corpus values first |
 | `legacy-32bit-binary-missing-shared-lib.md` | A prebuilt community RE tool binary fails to launch with a missing/obsolete shared library (32-bit-only, or a retired soname) |
 | `wildcard-batch-tool-aborts-on-first-bad-file.md` | A directory-wide wildcard/glob invocation of a batch extraction tool dies partway through an unvetted corpus |
 | `all-zero-stub-file-inflates-failure-count.md` | A batch decode run's success rate is noticeably below 100% and failures cluster in whole-prefix file groups |
+| `partial-zero-fill-dropout-vs-corrupt-decode.md` | A decoder fails on one file out of an otherwise-healthy corpus, and the file isn't fully all-zero but contains a large, suspiciously round/sector-aligned zero-fill run somewhere inside it |
 | `step-runs-standalone-but-not-pipeline-registered.md` | A pipeline step script works when run directly but the real CLI entrypoint reports "not registered in config — skipping" |
+| `unwired-enrichment-stage-lost-on-producer-rerun.md` | An automated pipeline producer step is about to be re-run (for any reason) on a project where a separate, standalone/un-wired step also enriches that same output artifact in place |
 | `blocking-execfilesync-defeats-promise-all-pool.md` | A Node.js batch pipeline's `runPool`/`Promise.all` concurrency claims a "large real speedup" over shelling out per-item, and nobody has timed it |
 | `vite-dev-server-enospc-large-cache-dir.md` | `npm run dev` crashes with `ENOSPC: System limit for number of file watchers reached` after a full-corpus offline pipeline run |
+| `session-scratchpad-tmpfs-exhaustion.md` | A Bash call fails with "the temp filesystem at .../tasks is full (0MB free)", including for trivial commands, especially mid-session after a fork/subagent/earlier pass has run substantial work |
 | `multiformat-cli-silent-extension-fallback.md` | A multi-format CLI decoder (vgmstream, ffmpeg, a generic container-sniffing tool) is run against a file whose real on-disk extension doesn't match the target format's usual one, and "works" for most of a batch |
 | `manifest-scale-needs-lazy-category-load-plus-virtualization.md` | A project's `manifest.json` crosses tens of thousands of entries and the offline viewer is reported as slow to load/interact with |
 | `unconstrained-nav-element-starves-flex-scrollable-list.md` | A Playwright click on a scrollable list item fails with "outside of viewport"/"intercepts pointer events"/"detached, retrying," especially right after adding a new variable-height nav element above the list |
+| `content-signature-source-must-predate-pipeline-mutation.md` | Computing a byte-identity/dedup hash from an asset pipeline's promoted/final output file, when another stage of the same pipeline writes into that file in place afterward (e.g. animation baking) |
+| `deepest-qualifying-gap-not-largest-gap.md` | Turning a human's by-eye "clean natural gap" cutoff on a ratio/score distribution into an unattended algorithm |
+| `resolved-edge-case-may-be-wrong-header-width-artifact.md` | A doc calls a header-field/sentinel behavior "unexplained," and ground truth (disassembly/escalation) later gives a different byte width for the same header |
+| `decoded-classified-blob-never-tried-as-pixels.md` | Hunting for a visual asset format across unexplored containers while an already-decoded, already-named byte blob nearby has only an indirect-evidence hypothesis attached, never a render attempt |
+| `per-run-injection-cap-not-idempotent-across-reruns.md` | A batch/injection pipeline stage with a per-run "add up to N" cap and a dedup-by-name/key check is about to be (or was just) run more than once against the same already-processed output |
+| `tied-primary-signal-needs-orthogonal-secondary-signal.md` | Two or more top candidates score *identically* under a primary matching metric (not just close) — lowering the threshold won't break a true tie |
+| `container-boundary-scoped-pairing-misses-cross-boundary-adjacency.md` | A "pair by proximity" search scopes grouping to an already-confirmed higher-level container boundary (TOC slot, directory entry, chunk) and returns zero or near-zero matches despite individually-correct data |
+| `file-linked-local-package-needs-build-before-dev-server.md` | A consuming project's dev server 500s on every request with "Failed to resolve import" for a `file:`-linked local/monorepo dependency, especially right after a fresh checkout/worktree |
+| `vite-dev-server-stale-public-dir-listing.md` | A file just written by a pipeline into `public/` returns HTTP 200 from an already-running dev server but the body is the wrong content (SPA-fallback `index.html`), right after that dev server was started before the pipeline ran |
+| `recurring-exact-size-may-be-encoder-output-not-shared-content.md` | Several exact decoded/decompressed sizes recur across many unrelated resources, tempting a "these share content/a template" theory before any bytes at those sizes have been decoded |
+| `asset-name-string-mining-beats-empty-localization-table.md` | A game's obvious string-table/localization container decodes cleanly but the section that should hold this game's own text is empty; about to fall back straight to external wiki inference |
+| `standard-codec-delegate-to-trusted-decoder-not-hand-reimplementation.md` | A confirmed container is a standard, publicly-documented (non-game-specific) codec, and a hand-reimplementation attempt is about to start, or has just hit a real decode/parse failure on real content |
+| `working-tree-may-already-solve-a-docs-open-item.md` | Starting RE work on a format/item the docs (or `TODO.md`) currently call open — before writing a probe script |
+| `confirmed-call-target-off-instruction-boundary.md` | A byte-exact-verified JSR/BSR target doesn't land on an instruction boundary under linear disassembly from any known-good neighbor, or before concluding a load base is correct because a handful of call targets disassemble as clean code |
+| `confirmed-subroutine-does-not-bound-its-caller.md` | About to close out "nothing more nearby" on a caller once its callee is fully confirmed — check whether the caller's disassembly was read past the call site |
+| `crack-redirects-io-to-resident-loader-stub.md` | A byte-level OS-trap/hardware-register census across an executable that obviously does file I/O comes back completely empty, on a cracked/trainer-patched disk image |
+| `content-addressed-manifest-merge-needs-source-precedence.md` | A second content source (DLC/expansion/patch/sibling release) is about to be (or was just) merged into an already-populated content-addressed manifest via the pipeline's ordinary upsert-by-name convention |
+| `subprocess-export-leaves-truncated-output-file.md` | A downstream step parses a per-object subprocess export's output file with fixed-offset binary reads and no size/magic validation, especially right after wiring a new caller of an already-"proven" reader helper |
+| `unflagged-cluster-beats-flagged-subset.md` | A task hands you 1-2 prior-flagged candidate clusters within a much larger "unrecognized" population, and the plan is to spend the session only re-testing those |
+| `eager-factory-caches-before-late-config-assignment.md` | Driving a vendored decompiler/parser with a "assign this config before use" field whose surrounding code shape suggests laziness; config assigned late produces default/empty behavior even after loading everything first |
+| `vendored-decompiler-swallows-per-token-exceptions.md` | Batch-quantifying a vendored decompiler/parser's success rate via a bare try/catch around the call site; corpus-wide 0-error result you're about to trust as proof of clean output |
+| `script-corpus-defaultproperties-reference-chain.md` | A working scripting-VM decompile exists (UnrealScript/UELib or equivalent) and asset-name string mining has already named some but not all domain objects — before mining class names alone, or trusting a numeric-id coincidence between two different naming schemes as proof |
+| `disambiguation-rule-must-precede-shared-key-fallback.md` | A first-match-wins alias/rule table needs to express two different results for two instances sharing one structural key value (e.g. two named forms of one character on the identical bone signature) |
+| `jump-table-longword-entries-misdisassembled-as-branches.md` | Hand-deriving an indirect jump table of raw absolute-address entries from a committed disassembly listing, and two or more slots show *different* branch-instruction target labels |
+| `trampoline-role-guessed-not-resolved.md` | Reusing a doc's claim about what an indirect/trampoline call does when its evidence is only argument shape or a nearby constant, not the resolved target function's own disassembled body; or about to read a `JSR $0.L`/shared-zero-offset call site's mnemonic text as proof of which of two-or-more *already-known* targets it reaches |
+| `helper-name-guess-vs-instruction-shape.md` | A helper function's documented behavior was inferred from its name or call-site context ("approximately X") rather than a full instruction trace of its own body, especially one containing a loop with a divide and a small-delta convergence check |
+| `length-invariant-blind-to-copy-semantics.md` | An LZ-style decoder is "CONFIRMED" on a corpus-wide "0 bytes left over" length-conservation check alone; a second, differently-shaped oracle built on top of it keeps failing on a majority of a structurally-sound population |
+| `resume-entry-citation-drops-setup-arithmetic.md` | A cited label loads/uses a value with no apparent transform, and that same label is also reachable via a conditional branch from a few instructions earlier in the same routine (a resume/retry/short-circuit re-entry pattern) |
+| `ps2-inhouse-texture-embeds-gs-register-packets.md` | An unfamiliar in-house PS2 texture container resists struct-offset field guessing for width/height/pixel-format |
+| `sibling-format-encoding-paradigm-not-transitive.md` | One format in an engine turns out to embed hardware packets/microcode, and a still-unsolved sibling format from the same engine is about to be assumed to follow suit |
+| `byte-exact-adpcm-needs-exact-integer-sequence.md` | A hand-reimplemented ADPCM-family codec diffs "close but not identical" against a trusted reference decoder — small, slowly-growing sample deviations rather than garbage |
+| `vertex-normals-as-winding-topology-oracle.md` | A mesh format's triangle topology is otherwise fully decoded but no field encodes strip/triangle winding order, and no bit pattern correlates with which strips render front-face |
+| `centroid-spread-blind-to-rigid-transform-candidates.md` | Testing candidate matrix/direction readings (row vs. column-major, forward vs. inverse) against grouped points by measuring each group's spread from its own recomputed centroid, and every candidate scores identically |
+| `shallow-magic-scan-undercounts-sibling-magic-corpus.md` | A per-asset format instance looks "missing" (no skeleton/animation/etc. for an otherwise-normal asset), or you're about to publish a whole-corpus "N/N decoded" figure from a raw magic-byte scan rather than a container-directory walk |
+| `variable-length-record-padding-at-end-not-interior.md` | A per-record byte-alignment computation for a `[count][sparse array][value array]`-shaped record is off by a small constant that correlates with the count field's parity |
+| `vendored-parser-hang-needs-committed-source-patch.md` | A vendored third-party parser/decompiler invocation runs far longer than any sibling file with no crash and no output, especially only surfacing at full-corpus scale |
+| `single-working-consumer-hides-second-container-subformat.md` | A container/compression format "confirmed byte-exact" via one working consumer tool fails when a second tool/pipeline stage parses the same file *kind* by raw bytes directly |
+| `ue3-object-reference-package-not-a-filename.md` | Resolving a UE3 `Type'Package.Group.Name'` object-reference literal, about to open `Package` as a separate file without checking the referencing file's own export table first |
+| `single-outlier-defeats-bbox-camera-fit.md` | Rendering/screenshotting many real composed transforms via a bounding-box-fit camera/viewport as a visual verification step, and the result "looks broken" (everything collapsed to one point) right after wiring up a new per-instance transform/scale field |
+| `constant-valued-field-poisons-shared-wellformedness-gate.md` | Adding a new field to an existing "every referenced index in range" well-formedness/validity gate, especially one whose value comes from a shared/game-wide table position rather than the specific record's own size |
+| `r2-string-heuristic-hides-instruction.md` | A register-flow narrative from an r2 disassembly listing doesn't add up (e.g. an impossible call-argument value), and a short `.string` literal sits right after a `jal`/`bl`/`call` or before a small aligned boundary inside a function body |
+| `point-projection-gte-usage-can-be-real-effect-geometry.md` | A PSX/GTE-era opcode census finds only single-vertex projection (`RTPS`) with 0 polygon-shaped ops, and the write-up is trending toward "just UI/anchor placement, not real 3D" — especially right before redirecting the search to a different code region for "the real" geometry; also when a real billboard/particle renderer is confirmed and a plausible semantic label (which game system it belongs to) is about to be written up from the render path alone |
 
 New pitfalls from a `re-learn` harvest get their own new file here (never a
 bullet inline in this doc) plus one new index row — see Learning loop below.

@@ -40,6 +40,34 @@ near-unique) to find the equivalent routine directly — this sidesteps a
 stuck caller-tracing problem entirely. Cracked FE2's savegame cipher this way
 after a linear-disassembly caller search had failed.
 
+**Scaled-up version: map an entire subsystem in one pass with a sliding-
+window anchor index, not one routine at a time.** When both platforms share
+one compiled source (common for a small studio's in-house engine shipped on
+two 68k platforms, e.g. Amiga+Atari ST) and you already have one platform's
+binary fully confirmed, build an index of short (~8-byte) sliding windows
+from the confirmed binary — filtered to reject low-complexity/repetitive
+windows (fewer than ~4 distinct byte values; otherwise runs of zeros/0xFF
+swamp the index with noise) — then scan the *other* binary for exact window
+matches and cluster the resulting `(targetOffset - sourceOffset)` deltas per
+source region. A dominant cluster at one delta reliably marks the
+corresponding routine in the target binary, even when the two binaries
+differ substantially in overall size/layout and different subsystems
+cluster at *different* deltas within the same binary pair (shared math/
+render code at one relocation offset, a later-linked subsystem at another).
+This finds an entire family of routines — including ones you didn't already
+have a specific operand to search for — in one indexing pass, considerably
+cheaper than disassembling the second binary standalone. Confirmed on
+Hunter (Amiga vs Atari ST, both loading at base `$800`): mapped 8+ confirmed
+Amiga routines (a full 3D-object rendering subsystem: scan/setup/transform/
+bbox/edge-build/polygon-fill/line-draw/matrix-build, plus the per-object
+dispatcher) onto the Atari ST binary this way, several with full 16-byte
+exact-byte-run confirmation, and it also surfaced a previously-unfound
+header-field consumer routine that a same-binary-only search had missed
+(see `negative-from-addressing-root-not-shapes.md` for that half of the
+story). Caveat: this only finds *shared* code — platform-specific I/O
+(disk loaders, sound drivers) won't have a match to anchor off, since it's
+independently written per platform even when the game logic is shared.
+
 **A sibling platform's structurally different but already-clean encoding of
 the *same artwork* is a byte-exact pixel oracle, not just a shape check.**
 When a game ships the same asset in two unrelated pixel encodings (e.g. an
@@ -93,6 +121,34 @@ predicted `PAMM` was the *same* world terrain grid (160 columns wide, same
 byte-to-terrain-class encoding) before any dimension-guessing was needed,
 and a direct cell-by-cell diff against the Amiga corpus's own rendered
 map then confirmed it at 99.7%.
+
+**A sibling *game* by the same developer can be a decode oracle too — not
+just a sibling platform port of the same title.** The pattern in this file
+mostly assumes "port A" and "port B" are the same game; it applies just as
+well across two different titles from the same studio/era if their
+container formats share even partial magic-string naming, since studios
+routinely reuse an in-house codec across a franchise without changing its
+tag. Confirmed on tri-Ace's Valkyrie Profile (PSX, 1999) and Valkyrie
+Profile 2: Silmeria (PS2, 2006), both in the same project (`valkyrie`):
+VP1's session reverse-engineered a `"SLZ"+subtypeByte`-tagged LZSS
+container from `SLUS_011.56`'s disassembly; a *separate*, earlier VP2
+session had independently found VP2's TOC wraps sub-records tagged
+`"SL"+typeChar('Z'/'E')+versionByte` and had exhausted zlib, LZMA,
+`ancient identify`, and a ~480-combination parametric LZSS brute force
+against a real `type='E'` sample with zero success. Running VP1's
+unmodified decoder against real VP2 bytes tagged `type='Z'` (the same
+3-letter "SLZ" root, just wrapped in a differently-shaped 4-byte header)
+succeeded byte-exactly on 4/4 samples — recovering a valid ELF module and
+readable library-version strings — with **zero code changes**. The
+sibling `type='E'` ("SLE") tag, despite sharing the outer header shape,
+turned out to be a genuinely different, still-unsolved codec — so this
+technique narrows the search, it doesn't guarantee every same-prefix tag
+in the sibling game shares the codec; verify each tag family
+independently rather than assuming the whole family transfers. Before
+spending disassembly time on a blocked compression/container format,
+check whether *any* sibling game in the same project — not just other
+platform ports of the same title — has already solved something with
+overlapping magic-string naming.
 
 **Cheap structural proof a differently-grouped container is the same asset
 catalog:** when a port reorganizes N files into M files (different filenames,

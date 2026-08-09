@@ -6,6 +6,26 @@
   half-bright).
 - May live in a **different file** than the pixels — wyrm's donor-palette
   system: `dunes`→`intds`, `icone`→`onmap`.
+- **When the loader/renderer code has no CPU-driven full-palette upload
+  loop at all (checked and ruled out), check a sibling/auxiliary file
+  family for a byte-identical shared table instead of continuing to trace
+  the executable.** Confirmed on Epic (Amiga): the main executable writes
+  exactly one hardware colour register (`COLOR00`) via 16 instructions,
+  all flash/flicker effects reading a runtime variable — no loop writing a
+  full 16- or 32-entry palette to `COLOR00`-`COLOR1F` exists anywhere in
+  194KB of code (absolute-addressing writes, `LEA`-then-loop patterns, and
+  an embedded copper-list palette were all checked and ruled out). The
+  real palette turned up instead in a completely different file family
+  (`.IGD`, not the `.3D` model files or the executable): decompressing all
+  25 files in that family and comparing their first ~18 words byte-for-byte
+  showed **zero mismatches** — a 16-colour RGB4 table baked identically
+  into every one. Byte-for-byte identity across many independently-loaded
+  sibling files is itself strong positive evidence of "this is the global/
+  shared resource", found without any code tracing at all — cheaper than
+  continuing to search the executable once a direct hardware-write search
+  has already come up empty. Cross-check candidates: other files sharing
+  the same container/header shape as the asset you're decoding, not just
+  files that "look graphical."
 - May start at an unexpected offset — Dune's palette starts at byte 2, since
   the "header" bytes are actually the first palette command.
 - Sprites may carry a `pixelBase` offset into a shared palette region.

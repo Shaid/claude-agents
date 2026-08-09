@@ -13,7 +13,25 @@
    a jump-table finding just because the static bytes look wrong; the
    deciding test is whether some init routine *writes* into that address
    range at runtime. Cost two full sessions on Carrier Command's
-   entity-dispatch table before this was recognized.
+   entity-dispatch table before this was recognized. **A later session on
+   the same table found a further twist: "the bytes there aren't a valid
+   pointer array" does not mean the bytes are meaningless filler either.**
+   Disassembling straight through the `.cnf`'s coverage gap at that exact
+   address (rather than stopping at "not a valid pointer, therefore
+   runtime-populated, therefore nothing more to find here") turned up
+   ~170 bytes of clean, semantically coherent, real 68k code — an
+   entity-spawn/init routine writing to struct offsets matching the
+   project's own documented entity layout, with zero static callers
+   anywhere in the image (i.e. genuinely dead in normal flow, consistent
+   with getting overwritten by the runtime table-population step before
+   first use, but real compiled code all the same). Two separate,
+   correct-but-incomplete conclusions can both be true of the same
+   address range: "this is a runtime-populated dispatch table" (the
+   dispatch mechanism) and "this is also real, uncalled code shipped in
+   the file" (what's sitting there until it gets overwritten). Confirming
+   the first does not mean the second isn't worth checking — disassemble
+   the gap regardless of which runtime-population theory you've already
+   settled on.
 3. **Physical proximity between a debug/label string and a call site is
    not evidence they're related** — same failure shape as (1), one layer
    earlier. Wizardry 6 SNES had a build-time asset-label string

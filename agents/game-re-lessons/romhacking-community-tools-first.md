@@ -38,6 +38,42 @@ stalls — it's cheap (one WebSearch) and, when it hits, is strictly better
 evidence than anything a from-scratch static analysis pass can produce on
 its own.
 
+## A multi-game reimplementation's own signature/version-classification database identifies which variant you're looking at, byte-exact, with zero disassembly
+
+When the target is one of a *family* of closely-related formats/engine
+versions across many games (a shared sound-driver lineage, a shared
+container format with per-title quirks) and a mature multi-game
+reimplementation project exists for that family, its own source almost
+always contains a **classifier** — code that fingerprints an unlabeled
+input file well enough to pick the right game/version-specific parsing
+path automatically. That classifier's fingerprints (literal byte-pattern
+constants, whole in-memory tables) are a stronger, cheaper oracle for the
+"which variant is this" question than any disassembly, because the
+reimplementation project already had to solve exactly that problem for
+every game it supports. Confirmed on FFVI/V/IV (SNES, `~/Development/
+ceres`): `vgmtrans/vgmtrans` (an SPC-sequence-to-MIDI converter) ships a
+dedicated `AkaoSnes` format module whose scanner searches an SPC dump for
+several SPC700-instruction byte-patterns (with wildcards for game-specific
+immediate operands) and then disambiguates the exact game/build via a
+**literal 46-60 byte VCMD-argument-length table constant per title**
+(`FF4_VCMD_LEN_TABLE`, `FF6_VCMD_LEN_TABLE`, etc., in
+`AkaoSnesScanner.cpp`). Cloning the reimplementation and grepping its
+format module for these constants, then running a **plain whole-ROM
+byte-exact search** for each one (no address translation, no relocation
+math, no disassembly) gave a single, unambiguous hit for the exact title-
+specific table in each of three ROMs (FFIV -> `FF4_VCMD_LEN_TABLE`, V1;
+FFV -> `FF5_VCMD_LEN_TABLE`, V3; FFVI -> `FF6_VCMD_LEN_TABLE`, V4/FF6),
+identifying the driver family, major version, and title-specific minor
+version simultaneously, before a single instruction was disassembled —
+and each hit landed inside the ROM region a separate community bank-map
+hypothesis had already guessed was the sound driver, corroborating that
+hypothesis for free. This generalizes beyond audio drivers to any format
+family with an actively-maintained multi-game community tool (texture
+codecs, archive containers, script VMs): check whether the tool
+*classifies* inputs, not just parses a single known-good one — a
+classifier's fingerprint constants are reusable as a search oracle even
+when you have zero interest in running the tool itself.
+
 ## The full-source fan viewer/editor case
 
 The same move pays off even bigger for **record/table formats** (not just
@@ -244,6 +280,28 @@ ROM bytes) — when it exists, it is both cheaper and just as strong an
 oracle, since the extractor's own correctness depends on that data file's
 accuracy for the project's rebuild-and-diff workflow to succeed at all.
 
+**Caveat, confirmed on the same reference project in a later session:** a
+self-describing rip JSON's declared *data shape* (addresses, record
+strides, an array of named alternative templates) is usually solid, but it
+does not always declare the *selection logic* for choosing between two or
+more variants it lists — which one applies to which specific record. FFIV
+(SNES)'s `characterGraphics` entry declares two named tile-formation
+templates (`"Default"`, `"Golbez/Anna"`) across 17 characters, but nothing
+in the JSON says which characters use which template, nor gives the exact
+byte offset for the two characters whose data doesn't fit the array's own
+uniform per-record stride (their real source file is a binary `.incbin`
+not present in the disassembly clone at all). Both had to be resolved by
+reading the actual disassembly (`ReloadCharGfx`/`GetExtraCharGfxPtr`/
+`UpdateCharSpritesheet` in `everything8215/ff4`'s `btlgfx/*.asm`) — a
+`cmp #$0f; bcc` id-threshold check the JSON gives no hint of at all. The
+general shape: trust a self-describing rip JSON for *where data lives and
+how it's laid out*, but the moment a table declares more than one named
+variant/template/mode with no per-instance selector field alongside it,
+expect to need the disassembly (or a render-based empirical test, if the
+disassembly isn't available) to learn which instances use which variant —
+don't assume the declarative rip is a complete spec just because it's
+usually sufficient for plain offset/stride/pointer-table questions.
+
 ## A community script's fixed byte offsets can be correct even when its full per-entry walk logic diverges — check whether it assumes different upstream preprocessing
 
 A community reference script that reads a format's header via fixed
@@ -348,3 +406,148 @@ source code being solid doesn't make its prose docs infallible — when a
 doc cites specific verifiable values, re-derive the byte offsets from
 those values against your own files rather than trusting the doc's stated
 offsets, even from a project you otherwise trust.
+
+## Search by the exact magic bytes/constants you've already found, not just the game's name
+
+When a byte-level scan has already turned up something concrete — a 4-byte
+magic string, an unusual filename fragment glimpsed in a `strings` dump, a
+distinctive constant — search the web for **that exact token** alongside
+the platform, not just `"<game name>" <platform> file format`. Confirmed
+on Valkyrie Profile 2: Silmeria (PS2, `~/Development/valkyrie`): a generic
+`"Valkyrie Profile 2" file format QuickBMS` search returned nothing
+useful, but once raw byte-scanning had already turned up two distinctive
+3-byte container tags (`"SLZ"`, `"SLE"`) inside the disc, a follow-up
+search for `"SLZ" OR "SLE" file format PS2 tri-Ace Square Enix archive
+compression container` immediately surfaced both an XeNTaX forum thread
+titled around the exact tag and a fan tool (`CUE`'s `triAce-PS2.c`) whose
+own `#define HEADER_SLZ0`/`HEADER_SLE0` constants matched byte-for-byte.
+Do a first pass with the game-name-only search (cheap, sometimes
+sufficient on its own — see the rest of this file), but don't stop there
+if it comes up empty and a scan has already produced a concrete byte-level
+fingerprint; re-search with that fingerprint before falling back to blind
+structural analysis. This also works in the other order: if a scan turns
+up a fingerprint before a name-only search was even tried, search the
+fingerprint first — it's often the more specific, less noisy query.
+
+## When a rip-list address resolves but the format still won't crack, look for the reference project's own codec/algorithm source, not just its declarative data
+
+A self-describing rip-list (address + record stride + a named character
+table) tells you **where** a resource lives and **what alphabet** applies,
+but not always **how** to interpret a byte stream that mixes fixed- and
+variable-width codes, lookahead rules, or parameterized escape codes — that
+algorithm usually lives in a separate, reusable codec module the rip-list's
+own extractor imports, not in the rip-list JSON itself. If a resource's
+location and character table are already confirmed but the actual decode
+still won't come out right (or was previously left "located but not wired
+up"), search the reference project's own source tree for a generic
+codec/reader class the extractor calls — not just its per-resource
+declarative data.
+
+Confirmed on FFVI-J (SNES, `ceres` project): a prior session had already
+located and confirmed the JP release's MTE (word/phrase dictionary) and
+kanji tables' addresses and content via `everything8215/ff6`'s rip-list
+JSON, but left the actual dialogue-byte-stream format unsolved (no field
+in the rip-list explains how control codes, kana, kanji, and MTE codes are
+told apart in a byte stream, or what a code with a `:b`/`:w` suffix in its
+name means). The answer wasn't in the rip-list at all — it was in
+`tools/romtools/text_codec.py::TextCodec.decode()`, a ~30-line generic
+class the project's own `extract_assets.py`/`encode_text.py` both import
+and that literally *is* the format spec: a 2-byte-lookup-tried-first-then-
+1-byte-fallback discriminator, plus a rule that any code value ending
+`:b`/`:w` consumes 1/2 trailing raw bytes as a parameter (see
+`escape-code-parameter-bytes-silently-misdecoded.md` for the pitfall this
+also exposed in this project's own existing US-release decoder). Finding
+and reading this ~30-line class turned a stalled "table located, not
+wired in" TODO item into a fully verified decoder in one session, with
+zero wrong hypotheses along the way — cheaper and more precise than
+inferring the discriminator rule from byte-frequency analysis on the raw
+ROM data would have been. Look for this kind of module by name pattern
+(`*_codec`, `*Codec`, `text_codec`, `romtools`, a shared `decode()`/
+`encode()` pair) in the reference project's tooling directory whenever a
+rip-list gives you locations but not the actual byte-interpretation rule.
+
+## A magic/fourcc can be a shared toolchain convention, not a game- or engine-specific tag
+
+When a magic string search scoped to "this game" or "this developer" comes
+up empty, drop those terms and re-search with just the magic plus generic
+platform/toolchain words — the real answer may live on a completely
+unrelated title's community wiki. Confirmed on Valkyrie Profile 2: Silmeria
+(PS2, `~/Development/valkyrie`): a decoded payload started with a `"MWo3"`
+fourcc, and searches naming the game/developer (`"MWo3" tri-Ace file format
+PS2`) returned nothing. Widening to just `"MWo3" model format` (dropping
+every game-specific term) surfaced the GTAMods wiki's **"PS2 Code Overlay"**
+page — documented from a completely unrelated title (*GTA: San Andreas*'s
+PS2 port), built with the same Metrowerks CodeWarrior compiler/linker
+convention. The documented 64-byte header (fourcc, segment count, load
+address, text/data/BSS sizes, callback-array range, embedded filename)
+matched VP2's real decoded bytes exactly (`64 + textSize + dataSize ==
+totalLength`, zero deviation across 4 samples, plus real recovered overlay
+filenames) despite VP2 and GTA:SA sharing no engine, developer, or
+publisher — only a build toolchain. A magic/fourcc is sometimes a
+toolchain-era convention (a specific compiler/linker's own object/overlay
+format) that shows up verbatim across totally unrelated codebases, not
+something unique to the game or engine you're currently investigating.
+
+## A self-describing rip JSON's field-level layout can be flatly wrong for one table even when its address and every sibling table's layout are correct
+
+A rip JSON's declared record *address/count* being correct (independently
+re-verified, even reused successfully for other tables in the same session)
+is not evidence its declared *field-level layout* for that specific table is
+correct — that claim needs the same real-load-routine verification as any
+other prose source, every table, not a spot-check on one and a free pass for
+the rest. Confirmed on FFIV (SNES, `ceres` project): `everything8215/ff4`'s
+`vanilla/ff4-en-rip.json` (already used successfully, in an earlier session,
+for a dozen text/name tables' addresses and pointer-table shapes) declares
+`monsterProperties` as a flat, always-present 20-byte struct at fixed
+offsets (`attackElements@10`, `attackStatus@11-12`, etc). Reading the real
+load routine (`InitMonster`, `battle/init.asm`) showed this is wrong in two
+compounding ways the JSON gives no hint of: (1) the table is **pointer-
+indexed**, not `id * stride` — a separate `MonsterPropPtrs` table (224 x
+2-byte addresses, immediately preceding the data) gives each monster's own
+record start, and real ROM bytes confirm records **deliberately overlap**
+(sorted offsets only 10-19 bytes apart, never a clean 20, plus one exact
+alias — two different monster IDs sharing one identical record, a real
+space-saving dedup); (2) byte 9 (which the JSON labels as a fixed
+`attackElements` field) is actually a **6-bit flags byte** gating 0-3 bytes
+each of optional trailing content, which is what explains the overlap. Two
+*other* tables decoded in the same session, from the same JSON file
+(`CharProp`, `AttackProp`), turned out to be genuinely flat/fixed-stride
+exactly as declared — so the right response isn't "distrust this JSON
+generally," it's "verify each table's declared record *shape* against its
+real load routine independently, the same way you'd verify a hand-written
+bank-map's prose," because a correct table address (itself independently
+re-verifiable and often already cross-checked elsewhere) does not imply a
+correct record shape, even from an otherwise-proven-reliable rip
+definition. The tell that something was off, cheaply checkable before any
+disassembly: sorting the resolved record-start offsets from the table's own
+pointer/index array and diffing consecutive values — a genuinely
+fixed-stride table produces one constant gap; this one produced gaps
+ranging 10-19, immediately falsifying the JSON's flat-struct assumption.
+
+## A zero-xref grep for a resource's own symbol means the community project never traced it either — pivot to loader-name-pattern search, don't give up
+
+When a mature, self-rebuilding community disassembly declares a resource
+(a `.segment`/`.export`/`.incbin` for a graphics or data blob) but a plain
+`grep -rn` for that exact symbol name across the *entire* disassembly tree
+finds nothing outside its own declaration, that's a real, informative
+negative — it means the community project's own authors never traced that
+resource's consumer/loader either, not that your grep missed something.
+Don't read this as "this format is a dead end"; it means the shortcut this
+project usually provides (an already-named loading routine to read) isn't
+available for this specific resource, and the next move is a **different**
+search: grep the game's own loader source (e.g. `field-main.asm`,
+`main.asm`) for *loader-routine name patterns* related to the resource's
+apparent role (`Tfr*Gfx`, `Load*`, `*ObjGfx`, `*SpriteGfx`) rather than the
+undeclared symbol itself — the routine that actually reads the resource is
+real and present in the source even when nothing points at the resource by
+name. Confirmed on FFV (SNES, `ceres` project): `MapSpriteGfx`/
+`VehicleGfx`/`WorldSpriteGfx` (overworld/vehicle field sprites) had zero
+xrefs anywhere in `everything8215/ff5`'s ~37K-line `field-main.asm` outside
+their own `gfx-main.asm` declarations — but grepping that same file for the
+loader-name pattern `SpriteGfx`/`ObjGfx`/`ChrGfx` immediately surfaced
+`TfrPartyGfx`, a real, previously-unlinked routine that resolves the
+player's field-sprite state through two genuine pointer tables
+(`_c01e02`, `VehicleGfxPtrs`) — real progress from a negative grep, not a
+dead end. (The tile-arrangement inside those pointed-to blocks was still
+left open that session — the lesson is about *finding the consumer code*,
+not a guarantee the whole format falls out once you do.)

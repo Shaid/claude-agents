@@ -51,3 +51,26 @@ plus a `-config` regenerate — cheap once someone realizes it's needed;
 confirmed taking a 351 KB hunk from ~1.5% to 99.47% declared-code coverage
 in one edit + regenerate, turning 93,841 lines of real instructions visible
 that were previously flattened to `DC.L` hex.
+
+## Variant: hundreds of narrow `CODE` islands, not one big undeclared span
+
+A `.cnf` doesn't have to look sparse to have this problem. Gunship 2000
+AGA's `gs.asm` (435 KB, 131-hunk MANX binary) had a `.cnf` with **~430
+separate `CODE` range declarations already** — `-preproc`'s recursive
+descent had found a huge number of individual small routines (each reached
+via its own call-site xref) but never walked the straight-line code
+*connecting* them, leaving hundreds of small DATA-classified gaps (tens to
+low-thousands of bytes each) scattered throughout the file, several of
+which held real code (`DC.L`/`DC.W` hex disguising `RTS`/`MOVEM`/`JSR`
+opcodes). One such gap (sound-effect-trigger dispatch thunks) was flagged
+and fixed by merging it into one `CODE` range; **a broader post-fix sweep
+for the same disguised-opcode signal found it recurring in several other,
+still-untouched gaps elsewhere in the same file** — fixing the one flagged
+region did not mean the `.cnf`'s fragmentation problem was solved
+elsewhere. A `.cnf` with a large *count* of `CODE` ranges is not evidence
+of good coverage by itself; sum the declared ranges' total byte length
+against the hunk size (same diagnostic as above) and/or grep the whole
+`.asm` for disguised-opcode hex (`$4E75`/`$4E56`/`$48E7`/`$4EB9`/`$4EAD`/
+`$6100`-range inside `DC.W`/`DC.L` lines) before trusting that a single
+flagged-and-fixed region means the binary's disassembly is now reliable
+end to end.

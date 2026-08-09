@@ -40,3 +40,25 @@ this record variant. Real instances have to be found via disassembly /
 pointer-chase tracing from actual code (the struct's real callers, index
 tables, etc.), the same way the *first* instance that let you infer the
 struct layout was found — not by scanning for more of the pattern.
+
+## Positive confirmation: the same principle also explains when a blind scan *does* converge
+
+Carrier Command (Amiga, `hunter` project) had an earlier session's
+whole-file scan for a per-vehicle 3D model stream, anchored only on one
+weak field (`vertex_count == 60`, i.e. the raw byte pair `00 3C`) plus a
+loose face-count/index-bounds check: 212 raw byte-pair matches, 69 passing
+the loose secondary filter, with no way to tell real hits from coincidence
+— exactly the "signature not rare enough + no real locality check" failure
+this file describes. A later session replaced that anchor with the format's
+**full recursive grammar** (a self-terminating BSP-tree walk requiring
+every branch to resolve in-bounds, every face index below the record's own
+vertex count, and zero degenerate faces) — i.e. added the missing
+self-describing-locality property this file calls out as the deciding
+factor. Same file, same general region, same underlying data: 69
+uninterpretable candidates collapsed to exactly 4, all independently
+verified real. The two cases aren't in tension — they're the same
+principle from opposite sides: a scan without a self-terminating/
+self-validating structure to check against cannot converge no matter how
+much you tighten value-range filters (the Genesis case above), but a scan
+*with* one (recursive parse success itself *is* the locality check) can
+converge sharply even starting from a weak initial byte anchor.

@@ -65,3 +65,32 @@ mislead about physical tile arrangement if its address pattern encodes a
 hardware addressing convention rather than a display-order convention —
 the render comparison is what actually adjudicates, every time, not the
 mere existence or absence of a plausible-looking reader.
+
+**Third confirmed instance, same routine, a different downstream
+question.** The same `TfrObjGfxSub` DMA-destination grouping misled a
+*second*, independent decision in a later `ceres` session: which raster
+tiles belong to which of two h-flip attribute tables (`TopSpriteHFlip`/
+`BtmSpriteHFlip`) governing mirrored left/right-facing sprite frames. A
+literal reading again grouped tiles `[0,1,4,5]` (skipping the middle
+raster row) as one flip-controlled unit and `[2,3]` as the other — the
+*exact same* wrong grouping the frame-composition case above already
+rejected. Rather than re-running a render-and-eyeball comparison (some
+candidate frames have identical top/bottom flip values, so a render
+can't distinguish the hypotheses there), this session settled it with a
+**geometric argument** instead: a real SNES 16x16 OAM sprite is always
+built from two *spatially adjacent* tile rows, and the confirmed §13.1
+raster layout places the DMA-literal grouping's two "top" rows one full
+tile-row apart on screen (y=0 and y=16, skipping y=8) — a physically
+impossible shape for one 16x16 hardware sprite. That alone rules the
+DMA-literal grouping out, independent of any render. The correct split
+(rows 0-1 = "top" 16x16 entity, row 2 = "bottom" 16x8 entity) was then
+confirmed byte-exact: applying it made a right-facing render exactly
+equal (0/1536 RGBA byte mismatches, 15/15 objects) to a naive whole-image
+mirror of the left-facing render — see
+`verification-techniques.md`'s whole-image-mirror-invariant entry.
+**Once one routine's address-level grouping is shown to encode hardware/
+VRAM addressing rather than display semantics, treat it as unreliable for
+*every* downstream question it touches, not just the one that first
+caught it** — check geometric/physical plausibility (can this literal
+grouping even correspond to real contiguous hardware sprite geometry?)
+before trusting it again for a different purpose.

@@ -51,6 +51,22 @@ values* are absolute, per-build machine addresses. It wasn't checked directly
 one disassembly. Whatever those `$64xx`-family values actually encode, they
 are portable data, not addresses that differ per link.
 
+**Closed the loop in a later session: `$64xx` is a real, fully-decoded VM
+instruction, not an address of any kind.** Tracing the interpreter's own
+fetch-decode loop directly (`_DoFrmlScript`, not a byte-oriented survey of
+disassembled bytecode content) found the whole word is `(opIndex:4 << 12) |
+operand:12` — the *nibble* `6` selects `_Anim_Ctrl`, and the "0x64xx" shape
+was always just this one opcode's low 3 hex digits varying. `_Anim_Ctrl`
+sub-dispatches on 3 more operand bits into a real call/return/goto/
+class-switch instruction set, with an explicit numeric word-index target and
+a genuine 5-deep per-object return stack — see
+`docs/vengeance/amiga/engine.md` § "Entity Animation Bytecode VM" and
+`tools/vengeance/fsme-vm.ts`. The general technique this confirms: when an
+opcode's meaning is contested, trace the interpreter's *own* dispatch loop
+(find the reader, not the format — the VM-bytecode instance of that
+principle) rather than building an opcode table by pattern-guessing from the
+bytecode's own byte shapes.
+
 **The fix: before accepting a "structurally cannot match" verdict for any
 bytecode/word-stream format, try the search again with 16-bit words
 byte-swapped** (a full per-word byte-pair swap across the whole candidate

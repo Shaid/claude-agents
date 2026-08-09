@@ -49,3 +49,30 @@ top-ranked one from a cheap coherence heuristic — and pick the sole result
 with no comb/shear artifacts. Related: `header-shape-ambiguous-pixel-encoding.md`
 covers the same "byte-count alone is not sufficient" trap for pixel
 encodings and decompressor choice; this is the tile-index-array analogue.
+
+**A second, independent case confirms the "cheap auto-score is not a
+substitute for a human look" finding above generalizes beyond tile
+adjacency.** Confirmed on Valkyrie Profile 2: Silmeria (PS2,
+`~/Development/valkyrie`): once a real raw 8-bit raster image format was
+found (character portraits, UI menu screens — see `game-re-corpora/
+valkyrie.md`), one real payload size (31 instances on the disc) rendered as
+pure noise at every width tried and needed excluding from the pipeline's
+output. Two different automated per-image quality scores were tried to
+separate "clean real render" from "noise" without a hand-maintained
+exclusion list: a row-to-row pixel continuity score (mean abs difference
+between adjacent rows) and a byte histogram (zero-byte fraction,
+most-common-byte fraction). **Both failed in the same direction as the
+tile-adjacency case**: real UI screens with sharp icon art and
+content-dependent background darkness scored *worse* (noisier) on both
+metrics than the confirmed-garbage samples — the metrics conflated "has
+high local contrast" with "is noise," and legitimate game art spans too
+wide a range on both axes for a universal threshold. With only ~5-6
+known-good vs. 1 known-bad real sample to calibrate against, a
+hand-written, commented exclusion of the one specific bad value was more
+honest and more correct than a heuristic threshold tuned against too small
+a labeled set. General takeaway: don't reach for a generic statistical
+image-quality heuristic to auto-gate a small, mixed real/noise sample set —
+either render-and-eyeball every candidate (small corpora) or accept a
+manually-curated exclusion list with its reasoning documented, rather than
+shipping an unreliable auto-filter that *looks* more scalable than a
+hardcoded list but silently drops or keeps the wrong ones.
