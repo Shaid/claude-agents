@@ -134,6 +134,23 @@ worked before/afters in `references/evidence-and-voice.md`.
 
 ---
 
+# Deployment is not your call
+
+The site is a plain static build — `npm run build` writes `dist/`, and any host
+that serves a directory serves it. The scaffold offers a GitHub Pages workflow
+because that is what the existing sites use, not because the site requires it.
+
+So: **don't assume GitHub Pages**, and don't add host-specific config unasked.
+If the repo has no `.github/workflows/deploy.yml`, that may be deliberate —
+`create-seer-app website` takes `--no-deploy-workflow`, and it never overwrites
+an existing workflow. Two things do matter wherever it is hosted, because
+getting them wrong yields a site that works while misreporting its own address:
+`site:` in `astro.config.mjs` must be the deployed URL (it feeds canonical URLs
+and the sitemap), and `base:` must be set as well when deploying to a subpath
+rather than a domain root.
+
+---
+
 # Verification — required before reporting done
 
 - `npm run build` in `www/` (this runs `scripts/build.mjs` first). It must pass.
