@@ -73,6 +73,10 @@ and roughly how much work the list represents. Then one table:
 | 1 | High | `src/content/docs/wime/index.mdx:5` | Ships the scaffold placeholder ("replace this content with a real overview") as the game's landing page | Rewrite as a splash home — model on crawl's `blackcrypt/index.mdx` |
 | 2 | Med | — | No status page for any of the 5 games; `docs/wime/TODO.md` has open items | Add `wime/status.md` — model on crawl's `blackcrypt/status.md` |
 
+Those two rows are real findings from the first audit this standard was
+written for, both since fixed — kept because they show the shape: a precise
+location, what is wrong in the reader's terms, and the exemplar to copy.
+
 Close with a short **suggested order of work** — usually: kill placeholders,
 then add the status pages, then fill coverage gaps, then tighten prose.
 

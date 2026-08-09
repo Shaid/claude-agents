@@ -168,8 +168,10 @@ when you find a page contradicting the notes, **fix the page**, never the notes.
 Delete on sight, in any site you touch:
 
 - "Welcome to the X documentation." / "replace this content with a real
-  overview of the project once you have one" (the `create-seer-website`
-  scaffold's `index.mdx` — still live in `middilgard/www/src/content/docs/wime/`).
+  overview of the project once you have one" — the scaffold's own `index.mdx`
+  placeholder. It survived in middilgard's flagship game section for months
+  before being rewritten, which is how long a placeholder can sit on a public
+  landing page unnoticed.
 - Sidebar labels that are just the capitalised filename.
 - A `<Card>` or hero action pointing at a page that doesn't exist yet.
 - Lorem-ish connective tissue: "This page describes the format." — say what the

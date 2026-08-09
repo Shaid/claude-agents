@@ -196,8 +196,9 @@ Rules specific to galleries:
 **Exemplar:** `blackcrypt/status.md`
 
 Purpose: one honest surface for open work, mirroring the repo's `TODO.md`.
-**Every game section should have one.** Its absence is the single most common
-gap on seer sites.
+**Every game section should have one.** Its absence was the single most common
+gap when this standard was written — no game on the five-game middilgard site
+had one, despite every game carrying open items in its `TODO.md`.
 
 ```
 ├─ "This page mirrors the repo's single status surface, docs/<game>/TODO.md.

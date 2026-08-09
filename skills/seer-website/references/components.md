@@ -51,7 +51,8 @@ would have invented one.
 
 ## The scaffold `SpriteGallery` contract
 
-`create-seer-website` ships a game-agnostic `SpriteGallery.astro`. Prefer it,
+`create-seer-app` ships a game-agnostic `SpriteGallery.astro` (its template
+lives in `packages/create-seer-app/templates/website/`). Prefer it,
 and push game knowledge into the calling page:
 
 ```mdx
