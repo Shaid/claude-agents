@@ -14,6 +14,8 @@
 !/agents/game-re.md
 !/agents/game-re-lessons
 !/agents/game-re-tooling
+!/agents/game-re-corpora
+!/agents/game-re-method
 # ...but not the third-party reference mirrors kept alongside the authored
 # tooling notes. fullsnes.txt (nocash's SNES specs, extracted from no$sns)
 # and genesis-reference/ (Exodus techdocs, Plutiedev/Kabuto hardware notes)

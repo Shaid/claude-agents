@@ -674,6 +674,7 @@ rely on remembering these from a prior context window.
 | `transparent-png-preview-tool-artifact.md` | A rendered atlas shows flat-colour blocks or an all-white/black wash in an inline preview |
 | `indexed-table-base-below-valid-rom-window.md` | Filtering a long-addressing-instruction census by requiring a physically-valid ROM address |
 | `published-walkthrough-numeric-oracle.md` | A stat-block field survived 2+ disassembly-only negatives and the game has a fan community |
+| `scanned-manual-paraphrase-needs-reverify-and-diff.md` | About to decode/confirm something against a paraphrase (yours or another agent's) of a scanned, text-layer-less manual, or about to report a "byte-exact" match against one without an actual programmatic diff |
 | `vm-bytecode-embeds-platform-addresses.md` | A cross-platform content search returns zero matches for VM bytecode or a scripted-behavior table |
 | `packed-exe-mimics-variable-length-records.md` | A raw-executable byte census finds a variable-length record format with unexplained residue near boundaries |
 | `bytecode-residue-recurring-groups.md` | A data-file record parser's leftover residue keeps reproducing the same short word groups verbatim at different offsets |
