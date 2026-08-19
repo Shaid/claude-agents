@@ -89,8 +89,11 @@ lookup:
 | Xbox 360 | `XEXLoaderWV` (self-decrypts retail/devkit XEX — no external step) |
 | SNES / Apple IIGS 65816 CPU | `ghidra-snes` (IIGS has the CPU module but no OMF loader — raw import loses segment headers) |
 
-For Amiga, PS3, PS Vita, PS5, Saturn, DS, N64 — see the Gaps section of
-`ghidra-loaders.md` before assuming a loader exists locally.
+Amiga has a working loader too (`ghidra-amiga`) but it's owned operationally
+by the `amiga-disasm` agent, not this one — it already carries the
+HUNK/small-data context Ghidra output needs interpreting against. For PS3,
+PS Vita, PS5, Saturn, DS, N64 — see the Gaps section of `ghidra-loaders.md`
+before assuming a loader exists locally.
 
 ## Response Format
 

@@ -1,8 +1,29 @@
 # Tooling — Amiga (68k, HUNK, ADF/HDF, amiberry)
 
 `Read` this when working on an Amiga target. Covers static disassembly (IRA),
-radare2's HUNK limitations, disk-image tools, the hardware-reference lookup,
-and amiberry's operational gotchas once access has been granted.
+radare2's HUNK limitations, Ghidra's HUNK loader, disk-image tools, the
+hardware-reference lookup, and amiberry's operational gotchas once access
+has been granted.
+
+## Ghidra
+
+A working HUNK loader **is** installed — `ghidra-amiga` (author "Bartman/Abyss",
+builds on lab313ru's `ghidra_amiga_ldr` plus WHDLoad support), at
+`~/.config/ghidra/ghidra_12.1.2_PUBLIC/Extensions/ghidra-amiga/`. (That's the
+real per-user extensions path this Ghidra build resolves to — not the legacy
+`~/.ghidra/.ghidra_12.1.2_PUBLIC/` most other Ghidra documentation assumes;
+see `game-re-tooling/ghidra-loaders.md` for why.) It ships Amiga NDK 3.9
+datatypes for accurate struct typing and its own `ghidra_scripts/`
+(`ApplyRegBase.java` for custom hardware register overlays, `CopperList.java`
+for Copper-list analysis, `ExportFunctionsHeadless.java`). Confirmed working
+via real prior sessions — a Black Crypt project exists at
+`~/Development/ghidra-projects/blackcrypt`. Reach for it over IRA/radare2
+when you specifically want a decompiler or the NDK's typed structs; IRA
+remains better for the refine-and-repeat `.cnf` workflow below, and radare2
+for quick interactive byte-pattern work. Own this tool's Amiga usage from
+the `amiga-disasm` agent, not `ghidra-disasm` — the latter doesn't carry the
+small-data/`A4`/hunk-offset context Ghidra's raw output needs interpreting
+against.
 
 ## Static disassembly
 

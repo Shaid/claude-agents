@@ -15,12 +15,15 @@ connecting to GhidraMCP, headless batch analysis, when to fall back to the
 GUI — see the `ghidra-disasm` agent; this file is the loader/platform
 reference it and `game-re` both read.
 
-All of this targets the local install at `~/ghidra_12.1.2_PUBLIC`, extensions
-in `~/.ghidra/.ghidra_12.1.2_PUBLIC/Extensions/`, user scripts in
-`~/.ghidra/.ghidra_12.1.2_PUBLIC/scripts/`. Amiga is deliberately out of scope
-here — no HUNK loader exists anywhere, and the working Amiga path is IRA +
-radare2 on a flat-mapped image (`amiga.md`); a HUNK loader stub source is
-checked out at `~/Development/ghidra_amiga_ldr` if that ever changes.
+All of this targets the local install at `~/ghidra_12.1.2_PUBLIC`. The real
+per-user extensions directory is `~/.config/ghidra/ghidra_12.1.2_PUBLIC/Extensions/`
+(this build resolves the XDG-style path, not the legacy `~/.ghidra/.ghidra_12.1.2_PUBLIC/`
+one — confirmed via its own application.log and real project history), with
+general user scripts in `~/.config/ghidra/ghidra_12.1.2_PUBLIC/ghidra_scripts/`.
+Most platform scripts below instead ship inside their own extension's bundled
+`ghidra_scripts/` folder (Ghidra auto-registers each extension's own script
+dir), which is where to look first. Amiga has a working loader too —
+`ghidra-amiga`, see the table below — it is not a gap.
 
 ## Installed extensions
 
@@ -35,6 +38,7 @@ checked out at `~/Development/ghidra_amiga_ldr` if that ever changes.
 | PSP | `ghidra-allegrex` | [kotcrab/ghidra-allegrex](https://github.com/kotcrab/ghidra-allegrex) | Allegrex CPU module (MIPS-derived, PSP-specific instructions). Pair with the NID/HW-register scripts below. `psp.md` has the `fileOffset = vaddr + 0x60` ELF convention and cross-module NID-call resolution |
 | 3DS | `ghidra-ctr-loader` | [Martmists-GH/ghidra-ctr-loader](https://github.com/Martmists-GH/ghidra-ctr-loader) | CXI (direct import), CIA (decrypted-only, first container only), CRO/CRS (multi-file linking works; `.bss`/relocations and multiple `.rodata`/`.data` sections in `static.crs` are explicitly unimplemented upstream). No decryption — pre-decrypted CXI/CIA input required |
 | Xbox 360 | `XEXLoaderWV` | [zeroKilo/XEXLoaderWV](https://github.com/zeroKilo/XEXLoaderWV) | XEX2/XEXP. Unlike PS3/PS4/3DS, this fork **does self-decrypt** retail and devkit keys — no external decryption step needed |
+| Amiga | `ghidra-amiga` | Author "Bartman/Abyss" per its own `extension.properties`; its bundled `README.md` says it builds on [lab313ru/ghidra_amiga_ldr](https://github.com/lab313ru/ghidra_amiga_ldr) and apparentlymart's `ghidra-amiga-whdload`. Installed from a pre-built `ghidra_12.0.1_PUBLIC_*_ghidra-amiga.zip` in `~/Downloads` — no local source checkout, so its own repo URL isn't confirmed; don't invent one | HUNK executable loader, bundled Amiga NDK 3.9 datatypes (`amiga_ndk39.gdt`) for accurate struct typing, WHDLoad-lineage support. Ships its own `ghidra_scripts/` (`ApplyRegBase.java`, `CopperList.java`, `ExportFunctionsHeadless.java`). Confirmed working — real project history exists (`~/Development/ghidra-projects/blackcrypt`), including successful headless exports on other platforms via the bundled script. Built for 12.0.1; runs fine under 12.1.2. Owned operationally by the `amiga-disasm` agent, not `ghidra-disasm` — see `amiga.md` |
 | MCP bridge | `GhidraMCP` | pre-built from `~/Development/ghidra-mcp` | See the `ghidra-disasm` agent for how to actually connect a session to it — it's not registered as this session's MCP server by default |
 | — | `Jython` | official optional extension zip | Enables `.py`-script execution in Ghidra's Script Manager. Required by the Atari PRG import script and by the PSP NID-resolver scripts (Python 2 syntax) below — Ghidra 12.x no longer ships Jython by default, the default scripting runtime is PyGhidra (Python 3) |
 
@@ -43,7 +47,7 @@ module Ghidra doesn't ship natively, which is also what Apple IIGS needs (see
 Gaps below). See `snes.md` for radare2's own M/X flag-width blind spot, which
 this doesn't fix — this is purely the CPU language module for Ghidra.
 
-## User scripts (not extensions — live in `scripts/`, need Jython)
+## General user scripts (not extension-bundled — live in `ghidra_scripts/`, need Jython)
 
 | Script | Platform | Purpose |
 |---|---|---|
