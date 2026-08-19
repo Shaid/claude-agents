@@ -22,3 +22,10 @@ file in the corpus (not just the one the name suggests) — a full match
 against an unexpected file is easy to find this way and easy to miss
 otherwise, and it can completely change what the smaller file's role is
 (here: a copy of a shared template block, not an index at all).
+
+The same sweep pays off from the opposite direction too — searching for every
+sibling's *prefix inside* an oversized, structureless file, rather than
+diffing a small file against large ones. See
+`oversized-file-may-be-concatenated-sibling-prefixes.md`. Treat "run a
+corpus-wide prefix byte-diff" as the reflex whenever any file's role is
+uncertain, not only when filenames suggest a pairing.

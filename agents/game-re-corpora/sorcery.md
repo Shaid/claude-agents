@@ -145,13 +145,36 @@ address bank-rollover error (file offset `>= 0x8000` isn't bank `$00`)
 was caught and fixed, inherited across 2 prior sessions — see
 `game-re-tooling/snes.md`'s new bullet on this.
 
-**Still open** (see `docs/wizardry6/TODO.md` for the up-to-date list):
-full dialogue-text byte-to-glyph encoding (the glyph bank itself is now
-confirmed, only the mapping remains), the SPC700 driver/sample blob's
-total size, the spell-animation bank's own palette and two of its opening-
-sequence siblings (a Mode 7 sequence, a scrolling panorama — both located,
-not yet extracted), full-body monster/character sprites (checked across 4
-bounded checks now, still not found, not proven absent), and the dungeon/
-maze-geometry art question itself (re-opened this session, no lead).
-See `docs/wizardry6/snes/data-structure.md` and `docs/wizardry6/TODO.md`
-for the up-to-date open-item list.
+**Major sweep session (2026-08-16, re-oracle):** 7 of the then-16 TODO
+rows closed, 8 narrowed, in one Fable session across both Amiga and SNES.
+Highlights: the SNES first-person **view walk fully traced and shipped**
+(`$80:C69F`: 26 frustum slots, visibility-propagation skip flags, art
+dispatch through `$80:DE4E`, floor/ceiling `$80:DED8` tables — verified by
+dual independent ports, Python vs. TS, word-identical over real poses),
+which **confirmed the cross-platform wall-value semantics** (0=open,
+1=open doorway, 2=solid wall, 3=closed door) both maze rows had carried as
+a shared unknown; the Amiga **deferred-draw queue decoded** (12-byte
+records, descending-depth consumer) along with `0x9b58`'s complete
+per-code dispatch and both checkerboard parities, all implemented
+(298,744-pose sweep, 0 exceptions); the flagP/flagQ per-level overlay
+dispatches decoded (fog cells, open sky, pits, alt floors); monster
+per-attack 16-byte sub-records solved field-for-field against the Zimlab
+bestiary; the full SNES 8-bit text encoding solved (ASCII + JIS X 0201
+half-width katakana + a custom hiragana page with trailing dakuten
+combining); the SPC sound system's real directory found (151-module
+far-pointer table at `$A0:8000` — the prior "driver blob at `0xF0919`"
+premise was wrong, that's the 37-song module-set table); spell-animation
+palette closed (mode-A tilemap words carry live per-cell BG sub-palette
+fields; sourced `tilemap-word-assets-carry-own-palette-field.md`);
+scenario.dbs section 5 solved (NPC name table spliced at `'^'`
+placeholders). Also sourced the 68k brief-extension-word addendum to
+`addressing-mode-operand-hides-implicit-index-offset.md` and the
+decimal-vs-hex `A4`-displacement caveat in `game-re-tooling/amiga.md`.
+
+**Still open** (see `docs/wizardry6/TODO.md` for the authoritative list):
+the 16-bit script-token → kanji-glyph mapping (four linear-layout probes
+refuted), per-region SNES art-variant/palette runtime gating, the Amiga
+deferred queue's `.PIC` cel-token draws, pcfile field spans, a handful of
+monster/maze residual bytes, and the two DOS/EGA rows.
+See `docs/wizardry6/snes/data-structure.md`,
+`docs/wizardry6/amiga/data-structure.md` and `docs/wizardry6/TODO.md`.

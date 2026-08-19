@@ -812,10 +812,12 @@ letting a blind byte-pattern search for the literal destination-address
 sequence (`0x0200,0x2c00,0x4800,0x1b00,0x1a80,0x1a00`) locate the whole
 table before any disassembly — likely shared driver-family convention, not
 FF6-specific; (2) a corpus-wide census of every real `PROGCHANGE` event
-across all 72 songs (4,384 events) revealed a two-bank instrument-numbering
+across all 72 songs revealed a two-bank instrument-numbering
 split (`srcn` 0-7 = boot-resident SFX table, `srcn` 32-65 = a separate
 34-entry music-instrument table via `srcn-32`) that no source or doc
-stated — the real usage data was the only oracle for this indexing
+stated (the split conclusion survived a later header-model correction —
+see below — though the census count itself shrank from 4,384 to 1,438
+real events once track pointers resolved to the right data) — the real usage data was the only oracle for this indexing
 convention, found only by walking the whole corpus rather than trusting the
 scanner's own "srcn 0-63 direct" description literally. Also: `vgmtrans`'s
 source has real, per-driver-version behavioral differences beyond the
@@ -839,8 +841,10 @@ Worth noting for a future pass: V1's boot-upload table reads via two
 *separate* byte arrays (`LDA table_lo,X` / `LDA table_hi,X`, a
 structure-of-arrays split) rather than V3/V4's single interleaved 2-byte-LE
 array — the shared boot-table *shape* finding above does not extend
-backward to V1 unchanged. See `docs/ffiv/snes/data-structure.md` §13 and
-`docs/ffiv/TODO.md` (`ffiv-music-sound`).
+backward to V1 unchanged. **A later session took this all the way to a
+working real-hardware renderer** — see the "FFIV gets its own real SPC700
+boot harness" entry near the end of this file. See
+`docs/ffiv/snes/data-structure.md` §13 and `docs/ffiv/TODO.md`.
 
 A later FFVI-only session (`docs/ffvi/snes/data-structure.md` §18.16) did a
 systematic audit of the whole renderer against `vgmtrans/vgmtrans`'s
@@ -863,3 +867,202 @@ cents/dB math throughout, not a hardware model, despite living in the same
 parsing — see `reader-side-may-still-be-export-target-math.md`. Likely
 worth the same style of audit for FFV's/FFIV's own AKAOSNES ports before
 assuming their earlier, shallower VGMTrans cross-checks caught everything.
+
+**§18.16's "pure MIDI/SF2-export noise" verdict above was itself corrected
+in a following session** (`docs/ffvi/snes/data-structure.md` §18.19) — it
+had only read 2 of the `AkaoSnes/` reader directory's files and missed a
+third, `AkaoSnesTrackLfo.cpp`, which (read this session alongside the other
+two) contains real, version-aware (`AKAOSNES_V1`-`V4`) driver-parameter
+decoding the export math sits downstream of. This session read the whole
+`AkaoSnes/` directory, then — rather than trusting VGMTrans alone —
+cross-checked every claim against `everything8215/ff6`'s own
+`src/sound/ff6-spc.asm`, a hand-labeled full SPC700 driver reconstruction
+shipped by the same "rebuilds the ROM byte-for-byte" oracle project already
+used elsewhere in this corpus, spot-verified byte-exact against this
+project's own `SPCCode` disassembly before being trusted. Result: vibrato/
+tremolo (a real triangle-wave LFO, `CalcVibratoRate`/`UpdateVibratoTremolo`,
+with a genuine confirmed hardware quirk — tremolo's consumer silently drops
+negative LFO swings instead of subtracting, so "negative"-direction
+tremolo is near-inaudible while the identical direction mode on vibrato is
+fully audible), pan-LFO ("pansweep," a simpler real bipolar triangle with
+no smoothing layer), and `PITCH_SLIDE` (a real one-shot linear pitch ramp,
+armed by the VCMD and consumed at the next NOTE/TIE dispatch) are all now
+implemented in `akao-render.ts`, verified via 10 new hand-derived unit
+tests (`akao-render-lfo.test.ts`) plus the existing 85-song corpus smoke
+test — 155/155 project tests, `tsc`, and lint all clean.
+`PITCHMOD_ON`/`OFF` turned out to be a *different* mechanism entirely — the
+real S-DSP `PMON` hardware register (cross-voice frequency modulation from
+the immediately-preceding voice's own output), identified by elimination
+against two already-confirmed sibling registers (`ECHO_ON`→`EON`,
+`NOISE_ON`→`NON`) cached in the same cold-boot init block in register-map
+order — confirmed but left an explicitly documented no-op (real usage
+28/85 songs vs. vibrato's 369/85; implementing it well would need
+reordering the render loop's per-voice mixing to strict ascending order).
+Sourced two new pitfalls: `adjacent-cache-slot-elimination-identifies-register.md`
+(the register-by-elimination technique) and
+`parallel-lfo-vcmds-may-clamp-asymmetrically.md` (the tremolo asymmetry).
+
+**FFV gets its own real SPC700 boot harness** (`tools/ffv/akao-spc-render.ts`,
+mirroring FFVI's §19 architecture but for AKAOSNES V3). Real progress beyond
+§12's earlier boot-table-only identification: `everything8215/ff5` turned out
+to ship a **full labelled SPC700 disassembly** (`src/sound/ff5-spc.asm`) and
+65816-side driver source (`sound-main.asm`/`song-data.asm`) the earlier FFV
+session hadn't consulted — every address/mechanism in the new renderer was
+read from that source then independently re-verified against this project's
+own ROM bytes. Found and fixed a real, previously-undocumented off-by-one in
+the existing `akao-samples.ts` (`MUSIC_ADSR_ADDR` was 1 byte late,
+`MUSIC_COUNT` was 34 instead of the real 35) via a 5-hop, zero-slack
+arithmetic-closure chain from the already-confirmed `SongScriptPtrs` through
+five further tables ending at FFV's own real `SongSamples` (the exact
+structural analogue of FFVI's own `SongSamples` mechanism, §19.10) — also
+newly wired in for correct per-song instrument resolution, and two
+newly-found real tables (`MUSIC_LOOP_START_ADDR`/`MUSIC_FREQ_MULT_ADDR`) that
+resolve the earlier session's "no confirmed tuning table" open item.
+
+Two genuinely new boot-harness gotchas this game's driver surfaced (neither
+present in FFVI's own equivalent, sourced as their own pitfall files —
+`boot-injection-entry-still-calls-bypassed-blocking-transfer.md` and
+`session-persistent-channel-state-has-no-cold-boot-default.md`): (1) FFV's
+real "load song" entry point (`PlaySong`, ARAM `$0DA8`) is NOT directly
+force-callable the way FFVI's `$0A92` is — its own first third calls the same
+generic port-protocol transfer routine (`TfrData`) the bypassed main-CPU
+handshake uses, which hangs forever without a real main CPU; the harness
+instead force-calls `$0DD4`, the instruction right after that call would have
+returned. (2) Per-channel volume/pan (`wChVol`/`wChPan`) are session-persistent
+state FFV's driver never resets across a song load by design (real hardware
+inherits it from whatever played before) — confirmed via live DSP
+register-write tracing (`KON`/`PITCH`/`SRCN` all correctly populated,
+`VOL(L)/VOL(R)` permanently `0x00`) after `InitCh`'s own full body was traced
+and found to never touch either register (unlike the sibling `PlaySfx` path,
+which sets an explicit `0x60` SFX default — confirming the asymmetry is real,
+not an oversight). Seeding both to a defensible default (full volume, center
+pan) — an honest, flagged approximation, not a traced value — took several
+songs from flat silence to real audio (peak 0 → 0.4-0.8). That session also
+flagged an apparent "slow-tempo bootstrap" mystery (`PlaySong` resets tempo
+to ~1 BPM and many songs' first `TEMPO` VCMD seemed unreachably deep) —
+**resolved by a later re-oracle session as a misdiagnosis**, see the next
+paragraph. Verified end-to-end at the time: 72/72 songs construct with zero
+exceptions, live Playwright browser check against the actual viewer (song
+16, peak 0.441, zero console errors, real `blob:` URL on the `<audio>`
+element), full existing FFV/FFVI/shared test suite green (284 tests).
+
+**FFV renderer fully working after a re-oracle escalation** (closed
+`ffv-spc-slow-tempo-bootstrap`): the real root cause of 46/72 songs
+rendering silent was the **song-header model reading every field 2 bytes
+early** — it had been transcribed from VGMTrans's `parseHeader()`, which
+parses *SPC rips* (post-upload ARAM images); the ROM blob prepends a
+2-byte transfer byte count that the 65816 upload loop (`sound-main.asm`
+`@0242`-`@0271`) consumes and never uploads. Real at-rest blob header: 22
+bytes, `[transferLen][scriptBase][8 track ptrs][endAddr]`, data at +22;
+resolution is mod-65536 (song 4's pointer space genuinely wraps through
+`$FFFF`). Structural closure invariant, 72/72 exact: `(endAddr - base)
+mod 2^16 == transferLen - 20`. Every song's whole upload fits ARAM
+verbatim (corpus max `0x14AC` bytes, window `$1C00`-`$4800`), so the
+harness's `walkSongData` packer + romBase-neutralization trick was
+deleted outright in favour of a verbatim copy relocated by the driver's
+own `PlaySong`/`UncondJump` `addw` arithmetic. The old model had passed a
+397k-event corpus walk with zero errors (AKAO's grammar has no invalid
+byte sequences — walk cleanliness is a near-zero-power oracle there), and
+the emulated driver had faithfully executed the misplaced bytes,
+"corroborating" the wrong tempo theory with consistent timing. After the
+fix: **71/72 songs render real audio within 1.5s** (the exception, song
+17, is the literal "Silence" placeholder — 7/8 null tracks, empty
+`SongSamples`); 71/72 songs have a `TEMPO` VCMD at zero elapsed ticks
+(`PlaySong`'s `zTempo=1` + `zSongTickCounter=#$FF` reset is a deliberate
+*fast* bootstrap — the first tick fires ~4.5ms after load and executes
+every track's leading VCMD run including its `TEMPO`); the earlier
+`wChVol`/`wChPan` seeding is now defense-in-depth (every real track opens
+with its own `VOLUME`/`PAN` VCMDs). Sourced
+`reference-tool-parses-runtime-image-not-rom-blob.md` and the
+corpus-scale addendum to `rle-decode-succeeds-on-garbage.md`. Docs:
+`docs/ffv/snes/data-structure.md` §12.2-12.4 + §13.6-13.9 correction
+blocks; 348 tests green across all three games after the fix.
+
+**FFIV gets its own real SPC700 boot harness** (`tools/ffiv/akao-spc-render.ts`,
+the last of the three games to get one — completing the trilogy's music
+pipeline). Real progress beyond the earlier driver-identification-only pass
+(above): a fresh clone of `github.com/everything8215/ff4` turned out to ship
+the same kind of asset FFV's own session found in `ff5` — a **full labelled
+65816 + SPC700 disassembly** (`sound/sound.asm`, `notes/ff4-spc.asm`,
+`notes/ff4-spc-ram-map.txt`), not just the self-describing JSON data-rip
+this project's other FFIV modules had already been using from that same
+repo. **Worth checking for on any "everything8215"-shaped disassembly repo
+before assuming only the JSON rip exists**: grep the tree for a `sound/`
+directory or `notes/*-spc.asm` file — the JSON rip and the disassembly are
+two independent assets the same repo can carry, and earlier sessions
+touching only the JSON side (FFIV's own text/graphics work in this same
+corpus, e.g.) don't rule out the fuller disassembly also being there.
+
+Two genuinely new findings, both source-verified against real ROM bytes,
+not carried over from V3/V4:
+
+1. **FFIV's boot upload is the plain, documented SNES/SPC700 IPL protocol
+   directly** (`[count:u16][dest:u16][payload]*` blocks, terminated by
+   `count=0` + entry address) — not FFV/FFVI's shared, driver-family
+   `InitTfrSrcTbl`/`InitTfrDestTbl` 6-block convention. Found by a byte-exact
+   search for the real ARAM `$0800` code's own leading bytes (from the
+   disassembly), which hit exactly once in the whole ROM; walking the block
+   sequence from there gave 8 blocks, every one landing byte-exact, zero
+   slack, on a ram-map-documented region. **A shared engine/driver family
+   does not guarantee a shared boot-upload convention** — verify each
+   game's own `InitSound` routine rather than assuming the sibling games'
+   already-confirmed table shape carries over (the existing FFIV entry
+   above already flagged the "structure-of-arrays" difference as a hint of
+   this; this session found the full mechanism).
+2. **FFIV's song/sample tables use ca65 `.faraddr (label - base)` signed
+   relative offsets, not literal far pointers** — resolved at runtime by a
+   65816 routine (`AddPtrOffset`) with real piecewise bank-selection
+   arithmetic. That routine did NOT need porting: LoROM banks only use their
+   upper `$8000`-`$FFFF` half for ROM data, and consecutive banks' upper
+   halves map to *exactly* contiguous file offsets, so a link-time
+   `label - base` byte distance is numerically identical to a **file-offset
+   delta** — confirmed byte-exact, zero slack, five ways at once (the base
+   table's own header predicts five sibling tables' real file offsets, each
+   independently cross-checked against that table's own source-cited CPU
+   address). Worth remembering for any other `ca65`/LoROM-linked driver
+   using this exact macro pattern (`make_ptr_tbl_far`-style relative-offset
+   tables): the runtime relocation routine is a red herring for a static
+   decoder, not a thing that needs reimplementing.
+
+A genuinely tricky boot-harness bug, root-caused only by single-step
+tracing (sourced as `idle-loop-frequency-detection-can-select-a-subroutine-
+interior.md`): FFV/FFVI's established "most-visited PC over a long sampling
+window" technique for finding a safe SPC700 idle-loop re-entry point
+**silently picked an unsafe address** for FFIV's driver. FFIV's `Main` loop
+nests a busy-wait that calls a subroutine (`CheckInt`) every single spin
+iteration; that subroutine's own interior PCs (reached via a real `CALL`,
+with a return address already on the stack) rack up *more* hits than
+`Main`'s own top-level loop head and dominated the histogram. Force-calling
+a new target from inside `CheckInt` corrupts the stack once its own natural
+`RET` eventually fires — every song rendered exactly **zero** audio (not
+quiet, `peak=0` across the whole 70-song corpus), with no exception and no
+obvious symptom pointing at the cause; a naive listener would plausibly
+blame the volume/pan cold-boot gap (§ below) instead. A single-step
+`pc`/`sp` trace (print every instruction) immediately showed the real
+desync. Fixed by targeting `Main`'s own real, source-confirmed loop head
+directly (a known-good address from the disassembly) instead of detecting
+one heuristically — verified by re-tracing: the injected call now reaches
+its own natural return at the exact same step count every time, with `sp`
+constant throughout. **This heuristic is only safe for a flat, 2-3
+instruction idle loop** (FFV/FFVI's own shape); any driver whose idle loop
+nests a subroutine call inside a busy-wait needs a source-confirmed target
+address instead, not the frequency histogram.
+
+Also hit FFV's own `wChVol`/`wChPan` gap again — independently
+re-confirmed by direct trace, not assumed by analogy (per-channel
+volume/pan has no cold-boot default; §
+`session-persistent-channel-state-has-no-cold-boot-default.md` generalizes
+across all three games' drivers now). Verified end-to-end: 70/70 songs
+construct with zero exceptions, 11/11 spot-checked songs produce real
+non-silent audio (peak 0.12-0.85) with 7 fully-silent and 1 near-silent song
+independently confirmed as genuine "no music"/tie-only content (not a
+renderer gap, via a corpus-wide null-track scan), live Playwright browser
+check against the actual viewer (song 1, peak 0.496, zero console errors,
+real waveform + playable `<audio>` element), full FFV/FFVI/FFIV/shared test
+suite green (345 tests) after the change. No VCMD-level renderer was built
+for FFIV at all — a deliberate scope call, not a gap: with the opcode table
+already confirmed and the disassembly oracle available from the start
+(unlike FFV/FFVI, whose VCMD renderers predate their own `everything8215`
+disassembly discoveries), going straight to the real-hardware harness
+avoided re-deriving pitch/envelope semantics by hand for a driver version
+this project had no prior renderer for.

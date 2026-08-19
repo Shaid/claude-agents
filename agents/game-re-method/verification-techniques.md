@@ -600,3 +600,219 @@ IDOM-bone-palette skinning where ~38% of per-vertex bone addresses didn't
 resolve against any `IDOM` chunk carried by their own mesh record — the
 proof meant the unresolved fraction did not need to block shipping a real,
 visually-verified static-pose skinned export.
+
+## A header's own count/table-start/table-end fields cross-checked arithmetically — before any semantic decode
+
+When an unfamiliar container/bundle header has a plausible `count` field and
+a plausible table-start-offset field, and a third field looks like it might
+be a redundant "table end" or "next section" offset, check whether
+`tableEnd == tableStart + count * assumedEntryWidth` holds *exactly* across
+several real samples with different `count` values before trusting that
+you've identified the right fields at the right widths/roles at all. This is
+much cheaper than decoding what the table's entries actually point to, and
+it's a strong disambiguator: a wrong entry width, a wrong table-start field,
+or a miscounted header size almost never produces a coincidental exact match
+across multiple different `count` values, so a clean pass across a handful
+of samples is real confirmation, not just plausibility. Confirmed on NieR:
+Automata (PC)'s in-house `DAT\0` resource-bundle container (`flower`
+project): a 32-byte header (`magic`, `count` u32 LE, `headerSize` u32 LE,
+`tableEnd` u32 LE, three more unidentified u32 fields) followed by a
+`count`-entry table of `u32 LE` absolute offsets. `tableEnd == headerSize +
+count*4` held with zero deviation across 12 real decoded samples spanning
+`count = 1` to `count = 512` — strong enough evidence to treat the header
+shape as confirmed and move straight to walking the offset table for real
+sub-resource magics, without first tracing any loader code (none was
+available for this title in this pass).
+
+**The same invariant chains across more than one trailing header field.** A
+follow-up pass on the same `DAT\0` container found its two remaining
+unidentified header fields (`0x14`/`0x18`) were each *further*
+`count`-length `u32[]` tables immediately following the ones already
+confirmed — `nextFieldEnd == prevFieldEnd + count*4` held again, twice
+more, with the same zero-deviation strength across a wider sweep (60
+samples, `count` 1-666). Once one `tableEnd == tableStart + count*width`
+invariant is confirmed, check whether the header's *next* unidentified
+field is simply the end of another same-width parallel table before
+assuming it's structurally different — repeating an already-confirmed
+field-width guess against the next offset is nearly free to test and, when
+it holds, decodes an entire additional table for the cost of one
+arithmetic check. (One of the two candidate fields here turned out instead
+to be the end of a variable-length name-string region — the invariant
+correctly *failed* to hold there at the assumed fixed width, which was
+itself the signal that field was a different kind of region, not a
+counter-example to the technique.) A cheap secondary confirmation once a
+table's role is still just a structural guess: if a nearby region turns
+out to hold literal ASCII content, cross-check it against known strings
+from other evidence — here, real per-entry resource *names* recovered from
+that name-string region included `"dummy.wmb"`, matching a literal
+fallback-mesh string already found in the executable by an unrelated
+method (a strings scan) — an independent semantic confirmation stacked on
+top of the arithmetic one.
+
+## Two structurally-unrelated counts of the same population, derived by different methods, agreeing exactly
+
+When a corpus has both (a) a low-level container-framing structure that can
+be walked from raw bytes with **zero** knowledge of the higher-level
+format (an outer compression codec's frame boundaries, a fixed-record
+directory, a chunk-tag scan) and (b) a separately-decoded master index/
+table-of-contents that *also* independently declares how many sub-units
+belong to each group, comparing the two per-group tallies is an
+unusually strong, free verification oracle — the two counts have no
+shared derivation to produce a coincidental match, so exact agreement
+across every group is close to byte-exact-strength confirmation of both
+sides at once, without needing an emulator or a second reference
+implementation. Confirmed on NieR Replicant ver.1.22474487139 (PC,
+`flower` project): each `.arc` file's outer Zstandard-frame count (walked
+from raw bytes via the public zstd frame-header spec, computed before any
+knowledge of the in-house `tpArchiveFileParam` master index's contents)
+exactly matched that same archive's `arc_index`-grouped file count from
+the independently-decoded master index (`info.arc`) — `lang1.arc` 3 = 3,
+`lang2.arc` 4 = 4, `param.arc` 250 = 250, `init.arc` 3,533 = 3,533,
+`stream.arc` 3,593 = 3,593, and the sum (19,162) matched the index's own
+declared total `file_count` field too. The one archive that *didn't*
+match 1:1 (`common.arc`: 1 outer frame containing 11,779 index-declared
+files) wasn't a failure — it was itself informative, since the index's
+own `is_streamed=0` flag on that archive predicted exactly this shape
+(whole-archive-decompressed-up-front, individual assets as flat
+uncompressed slices within the one frame) before that flag's semantics
+had been otherwise tested.
+
+## A cross-region bijection: a predicate over region A selecting exactly the cells region B's record table addresses
+
+When a file has both (a) a bulk array whose values you can classify with a
+predicate derived from *code* (or from a value-decomposition rule), and (b) a
+separate, smaller record table elsewhere in the same file whose records carry
+coordinates into that array, the two can verify each other with no external
+oracle at all. Select the cells the predicate marks special; collect the cells
+the records point at; compare **as sets of coordinates**, not as counts.
+
+An exact cell-for-cell match is unusually strong because a single test
+confirms several independent unknowns simultaneously — the array's row stride,
+its row order, the record's field order (which byte is column, which is row),
+and the correctness of the predicate itself. Any one of those being wrong
+scrambles the coordinates and destroys the match; there is no way to get a
+perfect bijection out of a wrong layout.
+
+Confirmed on Phantasie I (Amiga, `nicodemus` project): the predicate "the
+engine's three dispatch paths that consult the point-of-interest table" (a
+ones-digit test plus two whole-value compares, all read off the disassembly)
+selects **99 cells** across 18 shipped 20×26 terrain grids, and the 18 record
+tables hold **99 records landing on one** — matching at identical
+`(column, row)`, with **zero** marked cells lacking a record and **zero**
+records for a marked cell that isn't there. The two records that fell outside
+the rule were traceable to stale slots. Note the negative half carries as much
+weight as the positive: the engine's *other* events (a whole-value compare, a
+class dispatch) are parameterless, and correctly have no records at all —
+a predicate that over-selected would have shown up immediately as unmatched
+cells.
+
+## Settling an orientation/field-order ambiguity by rare-value enrichment, not by eye
+
+When several readings of a coordinate pair (`(x,y)` vs `(y,x)`, row-major vs
+column-major, width W vs width H) all produce in-range indices, "which render
+looks right" is subjective and a wrong reading can look plausible. There is a
+cheap objective discriminator whenever the coordinates are expected to point
+at *special* cells: for each candidate reading, look up the value landed on
+and score it by that value's **frequency in the corpus as a whole**. The
+correct reading concentrates on rare values; wrong readings land on bulk
+content at chance frequency.
+
+Confirmed on the same corpus: reading a record's first two bytes as
+`(col, row)` into a width-20 row-major grid landed on values with a mean
+corpus frequency of **0.0023**, while `(row, col)` row-major, column-major and
+row-major width-26 all scored **0.072** — i.e. exactly the background rate.
+A **31× enrichment toward rare values** settled grid width, orientation and
+record field order in one measurement, before any code had been disassembled.
+This generalises to any "pointer into a bulk array" question — item drops into
+a loot table, trigger cells into a map, entity ids into a name table — and it
+is worth running *before* reaching for an emulator, since it costs one pass
+over data already in hand.
+
+## Corpus-wide content hashing discriminates "this instance's own resource" from "a shared/generic one"
+
+When a container embeds several same-typed sub-resources (textures, sound
+banks, palettes) per instance and it's unclear which slot is semantically
+"this specific instance's own" versus a common/default one reused across
+many unrelated instances, decode and content-hash that slot across the
+*whole* corpus rather than guessing from slot position or size alone. A
+slot whose decoded content is unique per instance is instance-owned; a slot
+whose decoded content recurs byte-identical across many otherwise-unrelated
+instances is a shared/generic resource, not that instance's own — no
+disassembly of the loading code needed to make this call.
+
+Confirmed on Chaos Legion (PS2, `flower` project): each of 40 decoded 3D
+model packages embeds exactly 2 `TIM2` textures. MD5-hashing every
+package's decoded RGBA content showed slot 0 (the first embedded texture)
+is unique on every package sampled, while slot 1 recurs byte-identical
+across many unrelated packages (e.g. one exact hash shared by 5 different
+models with visibly different mesh shapes) — real, corpus-wide evidence
+that slot 0 is the model's own per-part diffuse atlas (later bound as
+`baseColorTexture`) and slot 1 is a shared secondary map, without needing
+to trace the game's own material-binding code at all. This generalizes to
+any "which of these N embedded resources is mine" question: dimension or
+byte-size alone (see `recurring-exact-size-may-be-encoder-output-not-
+shared-content.md`) is too weak a signal since same-size instances can be
+completely unrelated content, but full-corpus *content* hashing turns
+"shared vs. unique" into a cheap, decisive, code-free measurement.
+
+## Reapply an already-validated technique to the new population before inventing a new statistic
+
+When a format has an unresolved field (a flag bit, a sub-mode byte) *within
+a format whose own spec already contains a decisive verification technique
+for a structurally analogous question*, try that same technique against the
+new field's two populations (flagged vs. unflagged, mode A vs. mode B)
+before reaching for a new statistical test. Correlation-style approaches
+(tag distribution, position-in-list, size distribution) tend to produce
+real but merely suggestive signal — enough to write up a plausible
+hypothesis, not enough to close it — because they measure *association*,
+not the mechanism itself.
+
+Confirmed on Drakengard 2's `CSFg` mesh format (`flower` project): a strip
+header's bit 15 was known to require masking for correct parsing but its
+meaning was unresolved after a full session of tag-correlation, list-
+position, and vertex-set-overlap analysis (real signal, not decisive). The
+same format's own spec already had a *decisive* winding-verification
+technique from solving ordinary triangle-strip winding earlier (checking
+face orientation against each triangle's own vertex normals, confirmed
+100.00% agreement on thousands of real faces). Re-running that identical
+face-vs-normal check, split by the flag bit instead of by nothing, was
+immediately decisive: 14,362/14,368 flagged strips wound backwards, 0
+forward — bit 15 is a reversed-winding flag, gated by a separate sub-block
+`flags` bit that a prior pass had also left as "role unresolved" without
+connecting the two fields at all. The fix cost one re-run of an existing
+function against a new split, not a new investigation.
+
+**A companion lesson on testing a "duplicate/two-sided geometry" hypothesis
+specifically**: vertex-*index*-set overlap between two candidate
+populations is a weak test — real, topologically distinct surfaces
+routinely share a meaningful fraction of vertex indices at seams/borders,
+so partial overlap is compatible with both "these are the same surface
+duplicated" and "these are two different surfaces that happen to meet."
+The decisive version operates one level up, on **triangles**, not vertices:
+exact triangle duplication (same 3 indices, or same 3 resolved positions)
+and shared-edge-topology counting (how many of population A's edges are
+also population B's edges) between the two populations. Zero triangle
+duplication and edges shared at roughly the rate you'd expect from one
+continuous surface (not ~100%, which would mean two full copies) cleanly
+refutes a duplicate-pass hypothesis in a way vertex-index overlap alone
+cannot — confirmed in the same Drakengard 2 investigation above, where
+0/104,348 flagged triangles duplicated an unflagged one and 31.8% of
+flagged edges were shared unflagged-triangle edges (one continuous
+membrane, not two stacked layers).
+
+**Dual independent ports of a traced algorithm, diffed on intermediate
+structured output — not just final renders.** When a disassembly trace of a
+non-trivial algorithm (a view-walk, a dispatch cascade, a layout engine) is
+being promoted into pipeline code, implement it twice from the trace
+independently (e.g. a throwaway Python oracle and the committed TypeScript
+port) and require **exact identity of the intermediate output list** (the
+ordered resolved words/records/draw-calls, not the composed image) across
+a spread of real inputs. This is stronger than Method §6's pixel-exact
+final-render regression alone: renders tolerate classes of bugs that
+structured-output identity does not. Confirmed on Wizardry 6 SNES's
+dungeon-view walk — requiring word-identical output across 7 real poses
+caught two bugs whose renders still looked plausible: a global-vs-grid-
+local coordinate-space mix-up, and a parity term computed from local
+instead of absolute map coordinates (wrong on levels whose grid origin is
+odd). Any disagreement pinpoints the first diverging element, which names
+the faulty stage directly.

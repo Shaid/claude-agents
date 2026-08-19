@@ -301,3 +301,316 @@ draw-routine trace didn't complete). The manual's HP/MP-by-class-and-level
 charts and body-location damage system (6 locations ×
 Okay/Injured/Broken/Gone) were both tested directly against candidate P1
 fields and refuted — see `scripting-engine.md` §7.5.2.
+
+**Phantasie II's `.PIC` full-screen picture format is now solved** — six
+files (`COVER1.PIC`, `COVER2.PIC`, `PELNOR.PIC`, `DECOR.PIC`, `FINAL2.PIC`,
+`CROWD.PIC`) that had sat extracted-but-undecoded since the extraction
+pass above. No reference-tool source exists for this format at all
+(unique among every format in this project). Layout: the same ST
+word-Interleaved-by-2 convention already confirmed for `.PAT` (not P1's
+Planar layout, despite two files sharing P1's exact 32,000-byte size).
+Palette: **three separate sources across two different executables**,
+each found via disassembly, not analogy — `START.PRG` (a small
+2,567-byte title-sequence bootstrap distinct from the main game engine,
+governs `COVER1.PIC`/`COVER2.PIC`), and two distinct tables inside
+`PHANT.PRG` itself (a town palette for `PELNOR.PIC`, and the
+already-confirmed monster/race palette reused for the
+`DECOR.PIC`/`FINAL2.PIC`/`CROWD.PIC` ending sequence — mirroring how P1's
+own `decor.pic`/`final.pic` also reuse *their* monster/race palette, a
+real cross-game authoring convention, not coincidence). One file
+(`CROWD.PIC`, the only 3-bitplane file among six 4bpp ones) loads to a
+runtime BSS buffer rather than the screen directly, with a file-exact
+(not generic) read length — both signals it's composited differently
+from the other five, though the exact compositing step wasn't traced.
+Full evidence: `docs/phantasie/graphics-formats.md` §10. This pass also
+established, for the first time in this project, **GEMDOS/TOS `.PRG`
+disassembly via Capstone** as a working technique distinct from the
+existing Amiga HUNK tooling — see `game-re-tooling/atari-st.md`'s new
+section, plus two new general lessons:
+`buffer-offset-arithmetic-confirms-partial-image-placement.md` (a
+blit-target buffer-offset computation is a free, code-derived dimension
+oracle for an ambiguous raw-picture byte count) and a sharpened
+`tile-grid-dimension-needs-render-not-just-bytecount.md` (a wrong *width*
+on a flat raw picture — not just a tile grid — can render as recognisable
+content repeating in bands, a third failure mode beyond clean-render vs.
+noise; a byte-level row-repeat check distinguishes it from genuinely
+tiled source art).
+
+**Phantasie I's town/world-map layer is now solved and code-confirmed** —
+previously the project's largest open format question and (per its own
+`implementation-plan.md`) a prerequisite for a playable slice, since the
+real game flow is character creation → town → world map → dungeon, not
+dungeon-first. `dungeon-format.md` §8.2/§8.3 now carries the full spec;
+decoder + 14 real-byte tests at `src/assets/formats/outdoor.ts`.
+
+- **`maps.int` (9,360 B)** is not a grid at all: **18 × 520-byte section
+  grids**, block `k` byte-identical to the leading 520 bytes of the `k`-th
+  `out*.dat`. A prior pass had it filed as "no clean square-grid
+  factorization, open/unresolved" — see
+  `oversized-file-may-be-concatenated-sibling-prefixes.md`. Block order is
+  by *ordinal over files that exist*, so blocks 16/17 are sections **18/19**
+  (there is no `out17.dat`).
+- **`out*.dat` (2,500 B fixed record, read in one `Read()`)**: 20×26 terrain
+  grid at 0 (`byteOffset = (25 - engineRow) * 20 + col`, stored bottom-up),
+  15 × 5-byte POI records at 520, 10 × 40-byte text lines at 595, and a
+  **map display list at 1000** (`u16 bg`, then `0xFFFF`-terminated
+  `{count, iconIndex, count × {u16 x,y}}` groups) plotting 128-byte icons
+  from a bank at `game+0x196BC`. The engine **saves these files back on
+  every section exit** — they are live save state, and `maps.int` is the
+  pristine master a separate `backup` utility restores.
+- **Sections tile 4-wide with a one-cell overlap** (`newSection = section −
+  4·dRow − dCol`; arrival coords 0/19/25), giving a 77 × 126 world;
+  sections above 16 are walled off with a "THE RIVER STYX" refusal.
+- **Tile byte = `class*10 + variant` consumed entirely by branch chains, no
+  lookup table anywhere**, and `+120` is a fog-of-war flag written back by
+  the reveal routine — *not* a graphics bank. Notably this diverges from
+  P3's `.set`, where the same-shaped map byte **is** a rendering index; see
+  `decomposable-data-byte-may-have-no-lookup-table.md`.
+- **`twns.int`'s map-coordinate question is closed**: town position lives in
+  the `out*.dat` POI record, not in `twns.int` (whose first 32 bytes are
+  byte-identical across all 11 populated records — a shared shop/price
+  template). Still open: the rest of that record, the outdoor icon bank,
+  terrain-class English names, and the POI record's `+3` byte. See
+  `docs/phantasie/TODO.md`.
+
+Verification worth reusing: a 99/99 cell-for-cell bijection between
+code-derived "event" tiles and the POI records, and a 31× rare-value
+enrichment test that settled grid width/orientation/field order before any
+disassembly — both written up in `game-re-method/verification-techniques.md`.
+
+**Phantasie II's world-map layer is now solved too — and it is Phantasie I's
+format with exactly two constants changed** (`dungeon-format.md` §8.6;
+decoder `PHANTASIE2_OUTDOOR` in `src/assets/formats/outdoor.ts`, which now
+carries both games behind one `OutdoorLayout` record, 17 new real-byte
+tests). `MAPS.INT` = 17 × 520-byte grids, byte-identical to all 17
+`OUT*.DAT` prefixes (17/17); `OUT*.DAT` is a fixed 3,000-byte record whose
+first 995 bytes are byte-for-byte P1's layout. The only differences in the
+entire format are the record size (3000 vs 2500) and the display-list offset
+(1500 vs 1000) — everything else, traced by disassembling `PHANT.PRG` with
+Capstone, is *instruction-for-instruction* identical to the Amiga `game`
+binary: `GetTile`'s grid math, the 5-byte POI scan (including the same latent
+over-read past the 15-record table), the 3-arm message-length encoding, the
+`+120` fog flag, and `ChangeSection`'s `newSection = section − 4·dRow − dCol`
+mosaic arithmetic. P2's 17 sections sit sparsely on a 4 × 8 mosaic (77 × 201
+world); every edge facing one of the 15 absent slots is impassable ocean
+(29/30 edges 100%), which is the mechanism that makes them unreachable. P2's
+POI data also gives *cleaner* confirmations than P1's own for two shared
+hypotheses: ten town cells with ten consecutive ids 1-10, and class-5
+dungeon-entrance ids taking exactly 8 distinct values against exactly 8
+shipped `DNG*` files.
+
+This pass also **corrected a prior session's verdict on `OUT*.DAT`**, which
+had been closed as "confirmed save-mutated, not pristine content — there is
+no known pristine P2 counterpart". The residue evidence was real but all of
+it sits in the 995-1500 gap the engine never reads back, and `MAPS.INT` is
+the pristine master. See the sharpened `save-file-not-asset.md`.
+
+**Phantasie III has no `out*.dat`/`maps.int` equivalent at all** — confirmed,
+not merely unfound (`dungeon-format.md` §9.0). Its overworld is the single
+global 50 × 75 `Graphics/phantasy.set` map array already documented in
+`graphics-formats.md` §5; there is no per-section container, no mosaic, and
+no section-transition arithmetic anywhere in `PhantasieIII`. An exhaustive
+scan of the binary's `D/`- and `Graphics/`-prefixed strings yields the
+complete resource-name list, and it contains no `OUT`, `MAPS` or `TWNS`.
+**P3's overworld location metadata is now solved, and the "it's in the map
+values" hypothesis is refuted in its mechanistic form** (`dungeon-format.md`
+§9.0.5). P3 identifies every named town/dungeon/inn by a chain of ~34
+**hardcoded `(x,y)` comparisons** at hunk-0 `0x9C6A` (`LocateSpecial()`),
+which never reads the map array at all. The map byte reaches only two
+consumers in the entire 137 KB CODE hunk — the 9×9 viewport blitter at
+`0x9B82`, which pushes it **verbatim** to the tile blitter (this is the
+first code-level confirmation of `graphics-formats.md` §5.3's
+column-index reading, previously structural-only), and a terrain-class
+range chain at `0xA4A6` whose 19 named classes (`Meadows`, `Forest`,
+`Hills`, `Mountains`, `Desert`, `Pathway`, `Water`, `Ocean`, `A bridge`,
+`Dense Fog`, `Bright mist`, `The River Styx`, `Lava`, `Black path`,
+`Mist`, `Steam`, …) come from a pointer table at hunk-1 `0x1750`. The
+distinctive cells *are* the 30 named locations one-for-one (values `25`-`52`
+and `54`, bijection-verified against occurrence counts, one value shared by
+two inns) — but as marker **artwork**, not as a lookup key; see the new
+case (c) in `decomposable-data-byte-may-have-no-lookup-table.md`. All 30 are
+now bound to concrete names, and the `a`-`k` dungeon-file letter mapping
+(long recorded as "ordering assumed, not confirmed") is resolved from a word
+table at hunk-1 `0x22AC`: indices 1-11 → `J H E D A C B K I F G`.
+
+Four P3 `D/` file families were resolved or corrected on the way, all
+code-traced in `PhantasieIII` (hunk-0 addresses; file offset = address +
+`0x28`): `D/M0`/`M1` are **three-track music** (`0xFF` track separators,
+830/659-byte declared reads, byte-exact — previously mis-filed as "a
+border/divider graphic asset", see the new
+`padded-file-tail-describes-padding-not-content.md`); `D/W0`-`W4.cmp` are
+ordinary `.cmp` scene backdrops (two god-on-throne scenes, a town street,
+shop doorways — rendered, and `w3`/`w4` share `phantasy.set`'s exact
+palette); the `D/S1`-`S20` scroll loader reads 1,050 bytes with message ids
+121-140 → 1-20 and **special-cases `S6`**, resolving that file's
+long-standing outlier-size question; and `PLN3` is a two-byte flag file the
+engine reads and writes.
+
+> **Correction:** that pass also recorded `PLN1`-`PLN4` as "not terrain
+> grids — refuted", on the strength of their byte values being disjoint from
+> `phantasy.set`'s 196-value map space. **They are map arrays**, in exactly
+> that format — see below. `value-space-disjoint-refutes-same-kind-table.md`
+> has been rewritten around this failure: disjointness refutes "the same
+> table", never "the same format", because a partitioned value space makes
+> two instances covering different regions *expected* to be disjoint.
+
+**`D/M0`/`M1` and `D/PLN1`/`PLN2`/`PLN4` are both now fully solved**
+(`dungeon-format.md` §9.0.2-§9.0.2.6 and §9.0.3.4):
+
+- **Music.** The driver is a genuine AmigaOS vertical-blank interrupt
+  server, self-named `"VertB-Timer"` (`AddIntServer(INTB_VERTB=5, …)`,
+  installer at hunk-0 `0x0D4A`, `is_Code` = `0x0DF8`, tick at `0x2192`), so
+  one tick is one video frame. 24-command byte grammar with two nesting
+  levels of loop; note events are `(note, duration)` where bit 7 of the
+  duration byte is a **tie** flag and `frames = ((dur & 0x7F) + 1) ×
+  multiplier`. The period table at hunk-1 `0x0640` is **ProTracker's,
+  byte-identical**; waveforms are 8-sample cycles repeated 8×, which puts
+  note 57 at A4 = 440.4 Hz under the NTSC clock. Four-phase ADSR, rate
+  tables indexed by a master-volume row. Instrument 3 is 4,000 bytes of
+  noise **generated at boot by the game's own already-documented LCG**
+  (`seed*25173+13849 mod 65536`, hunk-0 `0x1C24`) — two subsystems traced
+  from opposite ends of the binary landing on the same seed word is a free
+  cross-check on both. Verification: all six tracks parse byte-exactly with
+  0 unknown commands across 1,489 bytes, and all 705 notes' durations
+  satisfy `dur+1 ∈ {1,2,4,6,8,10,12,16}` (powers of two plus dotted values)
+  — a property only true under the correct reading.
+- **`PLN*`.** `D/PLNn` is the map array for engine map id `n`: `PLN1` =
+  Castle of Light and `PLN2` = Castle of Dark (9×9, 81-byte read), `PLN4` =
+  the Netherworld (31×16, 496-byte read), loaded by the map-switch routine
+  at hunk-0 `0x1EB1E`. Map id 3 is unused, which is why `PLN3` alone is a
+  stray 2-byte flag. 100% of cell values fall in the terrain classifier's
+  own bands, and 6/6 unclassified marker cells sit on `LocateSpecial()`'s
+  hardcoded coordinates for that map.
+
+Two general findings from that pass, both now folded into lesson files.
+**The 128-byte padding filler is not arbitrary — `fillerByte ==
+contentLength mod 128`, 58/58 files, zero deviations** (see
+`padded-file-tail-describes-padding-not-content.md`), which reproduces every
+code-traced read length in the game and handed over the two unknown ones.
+And the `PLN*` item was cracked not by its `re-codebreaker` escalation but
+by a *sibling* subagent's unrelated overworld trace mentioning the
+map-switch routine's 9×8 and 31×15 grid geometries — 81 and 496 cells,
+matching the two padding-derived content lengths exactly (see the new
+`new-size-constant-is-a-cross-item-join-key.md`). The escalation was stood
+down; the multi-session "these files are inert" negative failed because a
+**second, live `D/PLNX` template string** existed at hunk-0 `0x6B4E`
+alongside the dead utility's copy at `0x7253` (see the new
+`filename-template-string-may-have-a-second-live-copy.md`).
+
+**P3's `.cmp` palette semantics are now fully code-traced, and the previous
+"embedded palette, decoded correctly" verdict was wrong for 6 of 13 files**
+(`graphics-formats.md` §2 correction + §4.5, both dated 2026-08-11).
+`loadCmp()` (file `0x1264`) reads *every* `.cmp` header palette into one
+shared global scratch (`DATA+0x2AEE`); the caller decides its fate.
+`loadBanks()` (`0x7F64`) copies that scratch to a per-bank slot for banks
+0/1/2 only, and **only slot 0 (`heros.cmp`, `DATA+0x2BCE`) is ever
+installed** — slots 1/2 have exactly one reference each in the binary
+(their own store) and banks 3-6 aren't copied out at all. So all seven
+monster/party sprite banks render under `heros.cmp`'s palette:
+`giant1.cmp` is a grey-blue dragon and a green giant, not the purple/blue
+pair previously documented. The full per-screen map (5 live slots, 2 dead)
+came from counting callers of the palette primitive — `LoadRGB4` has
+**exactly one** caller in the 175 KB executable, with no `SetRGB4` and no
+`$DFF180` write anywhere, so `setPalette()`'s 13 call sites are the
+complete answer to "what colours are on screen when". Verified pixel-exact
+against Kroah's sprite-viewer PNGs: **0 mismatches / 384,000 pixels** for
+the six banks, versus 36,487 under their own palettes, with four scene
+`.cmp` files as a discriminating control group (0 under their *own*
+palettes; 55,591 wrong under the substituted one). Two new/sharpened
+lessons: `embedded-palette-not-the-installed-palette.md`, and a mixed-
+addressing-root case added to `negative-from-addressing-root-not-shapes.md`
+(this binary uses A4-relative *and* reloc-patched absolute addressing in
+the same functions, so the dead-slot negative needed both censuses).
+
+Same pass corrected P3's **channel ramp**: `setPalette()` (`0x11D6`) does
+`(word & 0x0777) << 1` before `LoadRGB4`, so each 3-bit ST nibble `n`
+displays as `2n/15` = 8-bit `34n`, **not** the Atari ST's own `n*36.43`
+(brightest is `0xEE`, not `0xFF`). P3 is an Amiga port of ST data, so the
+"ST-sourced containers keep the ST lookup" rule holds for P2 (a real Atari
+ST binary) and fails for P3. The mask is lossless on shipped data —
+288/288 palette words across 18 embedded P3 palettes have a zero high
+nibble and all channel nibbles in 0-7 — which is itself a free structural
+confirmation of the palette field layout. Carried open: `Anatomy2.csh` and
+`Scroll.csh` are code-confirmed *never* to have their own palettes
+installed, but their host screen wasn't traced (`docs/phantasie/TODO.md`,
+`gfx-p3-csh-host-palette`).
+
+Tooling note: `game-re-tooling/atari-st.md`'s Capstone `.PRG` disassembly
+technique — established on a prior pass for the `.PIC` graphics subsystem —
+transferred to an entirely unrelated subsystem (world-map loading, file I/O,
+movement dispatch) with zero friction. The `file_offset = 28 + address`
+identity and the shared-trap-trampoline caveat both held.
+
+**P3's three non-overworld "plane" maps (`D/PLN1` Castle of Light, `D/PLN2`
+Castle of Dark, `D/PLN4` Netherworld) are now wired into the asset pipeline
+and viewer, not just decoded as grids.** Two things a prior pass had left
+genuinely open are now settled:
+
+- **Same 250-tile bank as the overworld — confirmed, not a separate art
+  asset.** The prior doc's "their tile bytes index a different buffer
+  (`$295C`), so whether they share `phantasy.set`'s bank is untested" had
+  conflated two unrelated globals: `$295C`/`$2964` hold the raw map-**cell**
+  bytes (genuinely different per map) while the tile-**art** bank pointer
+  (`$290C`) is a separate global written exactly **once** in the whole
+  137,352-byte CODE hunk — a one-time boot allocation, always filled from
+  `Graphics/phantasy.set` — with its only two consumers (`LoadTile` at
+  `0x3834` and a masked-overlay sibling at `0x378A`) each having exactly one
+  caller, both inside the single shared 9×9 viewport blitter (`0x9B82`).
+  See the new `doc-blocker-cites-wrong-buffer.md` lesson.
+- **No fourth non-overworld map exists — confirmed by exhaustive write
+  census, settling a domain expert's "there might be a fourth, it's been a
+  while."** The active-map-id global (`$28C2`) is written by exactly seven
+  call sites across the whole binary, and every one writes only `{0, 1, 2,
+  4}` — `3` never appears, so `D/PLN3`'s stray 2-byte-flag-file status
+  (§9.0.3) is provably not an accident of missing content. New worked
+  example in `negative-from-addressing-root-not-shapes.md`.
+- Two previously-unresolved computed `LocateSpecial()` name-index arms
+  (flagged "not disentangled" — `dungeon-format.md` §9.0.5.5) are now both
+  solved: the shared castle-arrival arm computes `14 + $28C2` → town index
+  15/16 ("Light"/"Dark"), and a second, previously unnoted arm computes
+  `9 + $28C2` → dungeon index 10/11 ("The Castle of Light"/"The Castle of
+  Dark"), both confirmed byte-exact against the executable's own name
+  tables.
+
+New format modules `src/assets/formats/pln.ts` (grid decoder) and
+`src/assets/formats/p3-planes.ts` (Netherworld terrain re-banding
+classifier + plane-gated location table), a new pipeline step
+`tools/phantasieiii/build-castle-maps.ts`, and 31 new real-byte tests.
+`tools/viewer/map-viewer.ts` needed **zero** logic changes — its earlier
+generalization for the overworld (mosaic fields optional, terrain-art
+strip optional) already covered a 9×9/31×16 single-grid map with no
+mosaic. Full evidence: `dungeon-format.md` §9.0.3.6.
+
+**All three games' data tables (monsters, races, items, spells, skills) are
+now published end-to-end, not just decoded.** Previously the decoded JSON
+was stuck in Stage 1 (`data/extracted/`, gitignored, internal-only). This
+pass: (1) added the two missing P1/P2 item-name decoders
+(`readP1ItemNames`/`readP2ItemNames`, reusing the existing
+`readSequentialCStrings` helper — zero new RE, the offsets were already
+confirmed in `data-tables.md` §1.5/§2.6); (2) added a `readP3Items()` merge
+helper that combines three separately-indexed P3 tables (name 0-180, stats
+0-100, price 0-180) into one record set, correctly emitting `null` — not a
+fabricated `0` — for the id range the stats table doesn't cover; (3) added
+a new Stage 2 build step per game (`tools/<game>/build-data-tables.ts`,
+following the existing `build-dungeons.ts` module pattern — independently
+re-derives from raw game files rather than reading Stage 1's JSON, keeping
+the two stages decoupled) that republishes every table into
+`public/assets/<game>/<platform>/` with `type: 'data-table'` manifest
+entries; (4) built a new generic `DataTable.astro` component for the `www/`
+Starlight site (build-time `readFileSync` of a JSON manifest + a
+`define:vars` search-filter script, modeled directly on the existing
+`SpriteGallery.astro` pattern) and wired it into new/updated
+`data-tables.mdx` pages for all three games. This `DataTable.astro`
+shape (auto camelCase→Title-Case column labels, array-valued cells
+rendered comma-joined, `null` rendered as an em dash rather than blank)
+is reusable prior art for any other seer project's www site that wants a
+generic browsable-table component — see `www/src/components/DataTable.astro`.
+
+While wiring this, found and fixed real staleness in `www/`: five site
+pages (data-tables, sprites, graphics, status, index for phantasieiii, plus
+`docs/phantasie/implementation-plan.md`) still described the P3
+race-sprite-cell table and `inititem.dat`'s field semantics as
+open/unresolved, when the raw `docs/phantasie/data-tables.md` had already
+resolved both in a prior session (§4.2, §6.4) — the public site simply
+hadn't been updated to match. See the new
+`curated-site-page-drifts-from-corrected-raw-docs.md` lesson.

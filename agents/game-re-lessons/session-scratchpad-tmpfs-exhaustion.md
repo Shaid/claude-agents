@@ -29,6 +29,21 @@ that one is an inotify *watch-count* limit tripped by a project's own
 raw tmpfs *disk space* exhaustion in a directory outside the project
 entirely, and it breaks the Bash tool itself, not any one dev process.
 
+**A single large operation can trigger this just as fast as accumulated
+leftovers.** Confirmed on Fire Emblem: Three Houses (`chimera` project): a
+one-shot `hactool --romfsdir=<scratchpad path>` re-extraction of a ~7GB
+Switch RomFS, run to recover files missing from an already-extracted dump,
+filled the shared 16GB tmpfs to exactly 0MB free by itself within about a
+minute — no prior-pass leftovers involved. The general rule this extends
+to: **never target the session scratchpad as the output directory for any
+extraction, decompression, or build step whose output could plausibly run
+into the hundreds of MB to GB range.** Target real project disk (e.g. this
+project's own `data/extracted/`, which is gitignored and exists for
+exactly this) instead, and use the scratchpad only for genuinely temporary
+probe scripts and small intermediate files. If real disk is also tight,
+check `df -h` on the *target* filesystem before launching, not just after
+a failure.
+
 **Recovery, and the judgment call it requires**: `df -h /tmp` confirms the
 symptom (near-100% used, near-0 available) once at least one Bash call
 succeeds again (a `dangerouslyDisableSandbox: true` call may get through

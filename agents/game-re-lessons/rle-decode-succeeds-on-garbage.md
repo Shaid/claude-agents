@@ -40,3 +40,24 @@ output found no recognisable code or data structure. When a decompressor is
 embedded in the game's own executable (as opposed to a well-known standard
 codec), disassemble it and confirm the algorithm family *before* trusting
 any decoded output as a search target, even one with a plausible size.
+
+**Corpus-scale variant — a whole-corpus stream walk with zero decode
+errors is a near-zero-power oracle when the grammar has no invalid byte
+sequences.** FFV (SNES, AKAOSNES V3, `ceres`): a 397,703-event walk of
+all 72 songs' track streams reported zero out-of-range notes and zero
+unrecognized opcodes — and every single track pointer was resolved ~57KB
+into the wrong data (see
+`reference-tool-parses-runtime-image-not-rom-blob.md`). The walk could
+not fail: every byte < `$D2` is a valid note and every opcode `$D2`-`$FF`
+has a defined argument length, so *any* byte stream walks cleanly; and
+all in-stream jump targets stayed "in bounds" because a constant
+resolution shift cancels inside pointer arithmetic
+(`self-consistent-chain-wrong-unit.md`'s shape). Before counting a
+walk-cleanliness census as evidence, ask what byte sequence would have
+*failed* it — if the answer is "almost none," replace it with (a) an
+independent anchor tied to the loader or container (here: `(endAddr -
+base) mod 2^16 == transferLen - 20`, exact across all 72 songs), and
+(b) *semantic* coherence of stream openings — real music tracks open
+with setup VCMDs (TEMPO/VOLUME/PAN/program select) before notes; the
+wrong model's "track starts" were dangling loop-ends and ties, which are
+syntactically valid but musically impossible.

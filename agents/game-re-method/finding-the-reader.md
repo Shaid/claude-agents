@@ -55,6 +55,21 @@ backwards** (`-31992` had been guessed as "a static single-image object" and
 `-32004` as "a multi-frame animated object"; they are `_OpenFrml` and
 `_OpenImag` respectively).
 
+Two practice upgrades from a five-run campaign (Spirit/Vengeance combat +
+exploration, 2026-08) where this technique was decisive every single time:
+
+- **Script it at session start, don't resolve by hand.** A ~30-line scratch
+  resolver (parse `HUNK_SYMBOL`, walk the stub table, map every
+  `displacement → symbol`) settles *all* anonymous A4 calls in one pass —
+  one run resolved ~40 call targets before starting its trace, and every
+  subsequent claim inherited ground-truth naming for free. When the
+  committed `.asm` lacks file-offset comments, `amitools`'
+  `binfmt.hunk.HunkReader` reads the DATA-hunk bytes directly.
+- **Never assume a displacement transfers between binaries of the same
+  engine family.** Spirit's `Excal` and Vengeance's `ExcalII` share symbol
+  names but not stub-table layouts; every displacement must be re-resolved
+  per binary (same lesson class as `decoder-address-reuse-across-rom-release.md`).
+
 Then **confirm from the call, and use the symbol only to find it.** Each of
 those two functions carried its own FourCC literal in its body
 (`PEA $46524d4c` = `'FRML'`, `PEA $494d4147` = `'IMAG'`) feeding a

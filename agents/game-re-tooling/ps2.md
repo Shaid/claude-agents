@@ -31,10 +31,19 @@ general diagnostic and `game-re-corpora/valkyrie.md` for a fully-solved
 worked example (tri-Ace's XOR-scrambled TOC, decoded in
 `~/Development/valkyrie/tools/valkyrieprofile2/ps2-toc.ts`).
 
+## Node `readFileSync` caps at 2 GiB — use positional reads on retail ISOs
+
+Retail PS2 single-layer DVDs are ~4.4 GB images; `fs.readFileSync(iso)` in
+a Node/tsx pipeline throws `RangeError: File size (N) is greater than 2
+GiB`. Decode multi-GB images with `openSync` + positional `readSync(fd,
+buf, 0, n, offset)` (or `fs.promises.FileHandle#read`) — this bites on
+*any* platform whose disc images exceed 2 GiB (PS2 dual-layer, GameCube/
+Wii, PS3/PS4 PKG), not just PS2. Confirmed on Odin Sphere's 3.4 GB ISO
+(CRI CVM decode, `vanille`).
+
 ## Main executable format
 
-The main boot ELF is a standard 32-bit LSB ELF (`EI_CLASS=1`,
-`EI_DATA=1`), `e_machine=8` (`EM_MIPS`) — the PS2 Emotion Engine's R5900
+The main boot ELF is a standard 32-bit LSB ELF (`EI_CLASS=1`,`EI_DATA=1`), `e_machine=8` (`EM_MIPS`) — the PS2 Emotion Engine's R5900
 core is a MIPS III-derived custom ISA, so generic MIPS ELF parsing gets you
 the header/entry-point/section-table shape for free; a normal load base is
 around `0x100000` (confirmed `e_entry=0x100008` on one title).
@@ -45,11 +54,48 @@ key-derivation microprogram, and its FIS texture-chunk consumer). **The
 search range" against a real EE ELF, reproducibly, regardless of the
 `bits` parameter on `open_file`/reopen (tried both the auto-detected
 default and an explicit `32` override) — confirmed on Valkyrie Profile 2's
-`SLES_546.44`. Don't waste time retrying `search`/`list_strings` variations
-on a PS2 EE target; go straight to a manual byte scan of the extracted ELF
-(plain Python/Node `bytes.find`) to locate a magic/string, then hand the
-resulting address to `disassemble`/`xrefs_to` for the actual tracing —
-those still work normally once you have a starting address.
+`SLES_546.44`, and independently reproduced on Drakengard's `SLUS_207.32`
+(this is an environment/MCP-server-level restriction on the `search`
+command family, not a one-title fluke — running `analyze` at any depth
+first does not lift it, and it blocks all three of `search`'s hex/value/
+string modes, not just one). `list_all_strings` (the whole-binary `izz`-
+style scan) is a **different** underlying command and is NOT affected —
+it still works and is the fastest way to confirm a literal string exists
+and read short surrounding context, even though (unlike `list_strings`) it
+doesn't surface an address you can feed to `xrefs_to` directly. Don't
+waste time retrying `search`/`list_strings` variations on a PS2 EE target;
+go straight to a manual byte scan of the extracted ELF (plain Python/Node
+`bytes.find`, or construct the exact MIPS `lui`/`ori` instruction-word
+bytes if hunting a magic-check code site built from split immediates
+rather than a literal string) to locate a magic/string/instruction
+pattern, then hand the resulting address to `disassemble`/`xrefs_to` for
+the actual tracing — those still work normally once you have a starting
+address.
+
+## R5900 3-operand `MULT`/`MADD` decode as "invalid" in capstone/radare2
+
+The Emotion Engine extends MIPS with 3-operand forms that generic MIPS
+disassemblers (capstone, radare2) report as `invalid` or misdecode with
+wrong register names:
+
+- `MULT rd, rs, rt` — opcode `0x00` (special), funct `0x18`, with the `rd`
+  field nonzero: **rd = LO32(rs × rt)** (and HI:LO updated). The standard
+  2-op `mult` has bits 15-0 zero; a nonzero `rd` there is the 3-op form.
+  Confirmed load-bearing in the ZOE2 STAGE cipher
+  (`mult $t0, $v1, $a2` at 0x100fe8 — the doc-level key advance
+  `keyX' = LO32(keyX*0x02E90EDD)+keyY` only works if you know rd gets the
+  product low; see `docs/zoe2anubis/ps2/data-structure.md` §2.4) and in
+  `DG_MODEL::Init`'s node walk (0x131710: `madd t7, zero, a3` = rd ← LO,
+  then accumulate).
+- `MADD rd, rs, rt` — special2 (opcode `0x1C`), funct `0x00`, nonzero `rd`:
+  rd ← LO; LO:HI ← LO:HI + rs×rt.
+
+When a traced EE function shows `invalid` instructions or a `mult` with an
+impossible operand (e.g. `mult t0, zero, s4`), hand-decode the word —
+don't skip the instruction or trust radare2's register guesses. The
+`mtlo`/`mflo` around these forms is often the accumulator plumbing, and a
+"product of zero" reading usually means the disassembler picked the wrong
+register field.
 
 ## IOP modules
 
@@ -128,3 +174,48 @@ decode failure. Before concluding a render-state/material field is
 PS2 GS-flavoured command stream, try state carry-forward across the
 stream's own draw order first — it is usually the actual answer, not a
 fallback heuristic.
+
+## PCSX2 savestates are a complete static VU1-tracing oracle — no live emulator needed
+
+When a PS2 format's field semantics resist EE-side/statistical analysis,
+the VU1 microprogram that consumes the data is the authoritative reader,
+and a single PCSX2 savestate contains everything needed to trace it
+offline (proven on ZOE2's `.mdz` vertex record, where one static VU1 pass
+overturned two full EE-side statistical escalation passes — see
+`game-re-lessons/model-silhouette-render-confirmed-by-placement-layer.md`):
+
+1. **Extraction:** a savestate is a zip whose entries use compress-type 93
+   (Zstandard) — Python ≥3.14 `zipfile` reads them natively, no manual
+   zstd step. Relevant members: `eeMemory.bin` (32 MB EE RAM),
+   `vu1MicroMem.bin` (16 KB microcode), `vu1Memory.bin` (16 KB VU data),
+   `Scratchpad.bin`, `eeHwRegs.bin`.
+2. **Find the built packets, not the file templates.** Engines commonly
+   build per-resource VIF1 DMA chains at load time (the ELF holds only
+   patch templates); the resource's runtime-pointer fields (zeros in the
+   file) hold the packet addresses in EE RAM. Decode DMA source-chain tags
+   (16 bytes: `u64 {qwc | id<<28 | addr<<32}` + 2 VIF-code words,
+   ids cnt/next/ref/refs/call/ret/end) plus VIF codes
+   (STCYCL/UNPACK/MSCAL/MSCNT/DIRECT). A `ref` tag pointing at the raw
+   file records with an `UNPACK Vn-format NUM addr` declares the exact
+   per-record VU-memory layout (e.g. `V3-16 NUM=3N` = three qwords per
+   18-byte vertex).
+3. **Find the per-frame display list** by searching EE RAM for a word
+   containing a known packet address — it is typically double-buffered
+   (two copies ~0x100000 apart) and carries per-node constant uploads
+   (matrix/light rows to fixed VU addresses) plus the `MSCAL` entries.
+4. **Read the kernel.** A ~200-line hand-rolled VU disassembler suffices
+   (upper/lower 32-bit instruction pairs; reusable worked example:
+   `~/Development/flower/tools/zoe2anubis/vudis.py`). Enumerate kernel
+   entries by grepping for `XTOP`; note that dispatch is often `JR` on a
+   per-node control word uploaded in the display list, and `MSCNT` batch
+   kernels self-sustain by ending `[E] NOP | B <own entry>`. Field
+   semantics then read off directly:
+   - the **ITOF variant** applied to each input qword declares its
+     fixed-point scale: ITOF0 = integer, ITOF4 = /16, ITOF12 = /4096,
+     ITOF15 = /32768 — an ITOF12'd field is a ±1.0 quantity (normal/UV),
+     an ITOF4/ITOF0'd one is a coordinate;
+   - `MULAx/MADDAy/MADDAz/MADDw` chains against constant registers =
+     matrix × position; a 3-term dot + `MAX` vs 0 feeding a `MADD` into a
+     colour = lighting normal; `ADD` to a global + `MINIi 255` = prelit
+     vertex colour; a per-vertex bit ORed into the output XYZ2 qword's
+     bit15 = the GS ADC strip-restart flag.

@@ -41,3 +41,17 @@ specifically *because* the bytes already have a working classification
 (a magic tag, a bucket name, an indirect-evidence-based guess) that
 doesn't visibly scream "nobody has tried rendering me yet." A named bucket
 with a plausible story is not the same as a verified one.
+
+**Corollary — check for already-rendered output before re-decoding.** If a
+prior session already extracted and colour-confirmed the corpus (a
+`build/cache/.../*.png` tree from an earlier pipeline run), the cheapest
+version of "just render it" is to `Read` those existing PNGs directly
+rather than write a new decode probe. Confirmed on Wings (Amiga, `hunter`
+project): a follow-up session tasked with identifying several
+still-unexplained DDD.BOLT frames (a "tunnel/hangar" image, pilot
+head-turn portraits, a crosshair sprite) settled every one of them by
+opening the already-rendered, already-real-palette sprite PNGs a prior
+session's asset build had left in `build/cache/`, rather than re-deriving
+content type from raw bytes — a few minutes of visual inspection closed
+questions that would otherwise have needed fresh rendering work on top of
+already-done rendering work.

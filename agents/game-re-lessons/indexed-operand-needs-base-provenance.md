@@ -61,3 +61,22 @@ because you searched the wrong byte) and
 because you searched the wrong opcode form). Raw-opcode censuses fail in both
 directions, and neither direction is safe without provenance:
 `negative-from-addressing-root-not-shapes.md` is the general fix.
+
+**Doing this exhaustively over a whole census — not just spot-checking a
+few hits — turns a doc's "N candidate writers, none traced" hedge into a
+genuine, citable closure.** Confirmed on Black Crypt (Amiga, `crawl`):
+an open item read "11 candidate `byte +0x07` writers exist... none was
+traced to the object array." A full census of *every* byte-writing
+instruction touching that field offset across the whole 166 KB code+data
+image (not just `MOVE.B` — every form that can address an odd offset:
+`ADDI.B`/`CLR.B` too) found 19 write sites; resolving every single one's
+base-register provenance back to a confirmed type-filter constant (a
+`MOVEQ #type,D3` argument to an already-verified type-filtered lookup
+helper) or a type-specific field pattern showed all 19 belonged to *other*
+record kinds, none to the one the open item asked about. Because the
+provenance-resolution was applied to literally every hit rather than a
+sample, the result upgrades from "still not found" to "confirmed absent" —
+a real, positive finding (the feature is provably dead/unreachable code),
+not just an unresolved residue. The technique doesn't change; what changes
+is treating "resolve provenance for every hit" as a closure method in its
+own right when the candidate count is small enough to be exhaustive.

@@ -25,6 +25,121 @@ plan: 1B/1C/1D (gfxNumber resolver, Wine viability, art scoping) and
 Phases 3-4 (resource injection, code patch) — see
 `docs/blackcrypt/TODO.md`.
 
+## Might & Magic I (DOS/EGA, `data/mm1/dosega/`, GOG)
+
+**MM1 maze geometry is SOLVED** (2026-08-13 pass): `MAZEDATA.DTA` = 55 ×
+512-byte screens, **byte-identical layout to MM2 `map.dat`** (two 256-byte
+pages: page 0 four 2-bit N/E/S/W wall codes `0` open/`1` wall/`2` torch/`3`
+door, page 1 `(dark<<1)|wall` per direction + `0x80` event flag) — the MM1
+codec (`tools/mm1/map.ts`) literally shares `decodeMapCell` with the MM2 one.
+Screen names from MM.EXE's null-terminated slug table at **file offset
+`0x10C07`** (55 slugs); each slug names a companion `*.OVR` map-script
+overlay (55 files in the GOG dir — set-equality is the independent
+cross-check). Verified three ways: TS round-trip byte-exact vs disk, TS
+decode byte-exact vs Vairn/MM2's independent Python decoder (`mm1_maps.py`,
+byte-identical page output), and slug table byte-exact vs MM.EXE. Ground
+truth: **Vairn/MM2's dedicated MM1 section** (docs 50-52/22-24 +
+`tools/mm1_*.py` + an interactive 3D maze walker) and ScummVM
+`engines/mm/mm1`. Caveat: overland sectors (14-33) still use MapWalls
+page-0 encoding; code `3` there means border/edge, not door. See
+`docs/mm1/dosega/data-structure.md`.
+
+**MM1 graphics are SOLVED** (2026-08-14 pass): `WALLPIX.DTA` (17 wall sets ×
+12 frustum slices — 4 left + 4 right + 4 front, fixed sizes 16-176 px wide)
+and `MONPIX.DTA` (75 monster portraits, 104×96) share one container + codec:
+`.DTA` = `u16LE` index size + `u32LE` offset table (+sentinel) + payloads,
+each entry prefixed by its own `u16LE` size word; the image format is an RLE
+stream (`0x7B` run marker) filling a `w/4 × h` grid of 2bpp cells
+**column-major** (`col + row*stride`, NOT a cycling `idx += stride` — porting
+it the naive way consumes the stream exactly with 0 remainder yet renders
+single-colour garbage), expanded MSB-first through a per-entry 4-index remap
+(WALLPIX `TILE_COLORS[entry]` nibbles; MONPIX `PALETTE[imgNum]` u16 nibbles)
+into the standard 16-colour EGA palette. Ported from ScummVM
+`engines/mm/mm1` (`gfx/dta.cpp` + `screen_decoder.cpp` + `maps/maps.cpp`
+`loadTile` + `data/monsters.cpp` `getMonsterImage`); monster names from
+ScummVM's static `monsters.txt` (195 monsters, last field = `_imgNum`; ~69
+distinct images shared; all aquatic monsters use imgNum 75 which has NO
+MONPIX entry — they get no portrait). Verified: 92/92 entries 0-remainder
+decode, size words 92/92, symmetric-vs-horizon L/R patterns, biome-coherent
+colours. `scripts/mm1lib/` + `scripts/extract_mm1_gfx.py`. Still open:
+`ROSTER.DTA`/`GACARD.DTA`/`SCREEN0-9`/`MM.RSM`, items/monsters/spells
+tables, `*.OVR` event bytecode (ScummVM `maps/map00-55.cpp` are its
+hand-translated scripts).
+
+**MM1 misc data is SOLVED/documented** (2026-08-14 pass): `ROSTER.DTA` =
+18 × 127-byte character records + 18 town bytes (2304 B exact; layout from
+ScummVM `data/roster.cpp` + `character.cpp`; decoded record 0 = "CRAG THE
+HACK", the canonical starter party — roster file doubles as a verification
+oracle: names/classes/HP/gold match the known MM1 party). `SCREEN0-9` = 10
+title screens (u16LE size word + the same 2bpp RLE ScreenDecoder at 320×200,
+_indexes (0,2,4,15), screen 2 uses (0,3,5,15)). `MM.RSM` = the game's
+**overlay-loader symbol table** — 22 named internal routines (`readmaze_`,
+`readrost_`, `readwall_`, `readmon_`, `readscr_`, `ovloader_`, `Bpcomand`…)
+each followed by a 4-byte address field (seg-byte, 0x28, u16LE offset);
+address encoding open. `GACARD.DTA` = 1 byte copy-protection card state.
+`scripts/extract_mm1_misc.py`. Still open: items/monsters/spells tables,
+`*.OVR` event bytecode (ScummVM `maps/map00-55.cpp` are its hand-translated
+scripts; MM.RSM is the head start), live-capture oracle.
+
+**MM1 data tables are SOLVED** (2026-08-14 pass): items and monsters are
+embedded in **MM.EXE**, not .dat files. ITEMS at file offset `0x19B2A`, 255
+× 24-byte records (14-char name + disablements, constBonus id/value,
+tempBonus id/value-or-spellId, maxCharges, cost `u16` **big-endian** —
+the one BE field in an otherwise-LE table, reads as ×256 under LE —
+damage, AC_Dmg; categories 1-60 weapon/61-85 missile/86-120 two-handed/
+121-155 armor/156-170 shield/171-255 special). MONSTERS at `0x1B312`, 195 ×
+32-byte records with a **15-byte** name field (15th byte = last letter for
+15-char names, else pad — a 14-byte assumption shifts every stat) + count,
+fleeThreshold, HP, AC, damage, attacks, speed, experience `u16LE`, loot,
+resistUndead, resistances, bonusOnTouch, specialAbility, specialThreshold,
+counterFlags, imgNum (→ MONPIX portrait). Both verified **byte-exact
+255/255 and 195/195** against ScummVM's static transcriptions
+(`devtools/create_mm/files/mm1/items.txt`/`monsters.txt`). SPELLS have **no
+binary table** — spells are code + combat-effect strings in the exe string
+pool (~0x12580-0x12780); SP cost = spell level (formula); the canonical 47
+cleric + 47 wizard + 32 monster spell lists are transcribed from ScummVM
+(`scripts/mm1lib/mm1_spells.json`). `scripts/extract_mm1_tables.py`. See
+docs/mm1/dosega/data-structure.md § Items/Monsters/Spells.
+
+**`.OVR` overlays are SOLVED at the container level** (2026-08-14 pass):
+the 55 per-screen "map scripts" are **compiled 8086 code + a data segment**,
+not a bytecode. Container verified 55/55 (`14 + code_sz + data_sz == file
+size`): 14-byte header (constant entry offset 242, far-data constants
+0xF48F/0xC940, code_sz, data_sz, per-file load-segment candidate); code
+bound to the game's fixed memory map (MOV AX,0xC940 at entry; references
+0xC973/0x3C3A...). Data segment: map id/code byte, WALLPIX area table byte,
+3×u16 wall/lane ids (towns→entries 0-2, caves→3-5, overland→6-13; AREAA1 =
+6/13/12 = wall07/wall14/wall13, byte-for-byte Vairn doc 24), 4×3-byte event
+triples (open), then **387 map text strings** (the real game dialogues).
+`scripts/mm1lib/ovr.py` + `scripts/extract_mm1_ovr.py`. Open: code-segment
+script semantics (memory-map-bound disassembly; MM.RSM is the loader
+oracle) — see `script-files-may-be-native-code-bound-to-fixed-memory-map.md`.
+
+**MM1+MM2 walkers are integrated into the shared Dungeon Walker** (2026-08-14,
+`tools/walker/index.html` game dropdown — alongside Black Crypt + Wizardry
+6; the old `tools/walker-mm/` page redirects there): `GameView` gained
+optional `renderCanvas`/`renderMinimap` hooks (full-colour frustum
+renderers bypass the DrawItem composite path), `tools/walker/games-mm.ts`
+holds `MM1View`/`MM2View`, and the harness gained per-game asset platforms
++ partial URL params. MM1 renders the **real WALLPIX slices** (per-screen
+set from the decoded .OVR selection fields; overland uses its biome art;
+**no torch overlay** — the game renders code-3 faces as plain walls, the
+reference implementation has no torch art). MM2 renders the authentic
+`.32` sheets indoors (town/cave/castle + floor + sky + 3-phase torch
+flicker, roof-bit sky switch, cross-screen stepping via attrib
+neighbours) and the **outdoor scene on overland** (`tools/walker-mm/
+outdoor3d.ts` port: outdoor1-3 horizon lanes + desert/ocean/swamp/tundra
+biome decor from terrain ids, `outb.32` terrain minimap, surface byte
+0xCC/0x99/0xBB from attrib). Also fixed: the MM renderers now clear the
+whole 320x200 harness canvas (stale previous-game pixels below the
+208x120 viewport looked like "Black Crypt's floor"), and the page-0
+wall-code semantics were corrected to **2=door, 3=torch** (ASM traces +
+collision-page statistics; earlier prose had them swapped). See
+`docs/walker-mm.md`.
+
+Might & Magic II (Amiga+DOS) and MM3 (Amiga+DOS) integrations also live in
+this repo (`docs/mm2/`, `docs/mm3/`) — not yet summarized here.
+
 ## eotb3 (Eye of the Beholder III, DOS/Windows, `data/eotb3/dosvga/`)
 
 **Different engine from EOB1/EOB2 — not Kyra, no ScummVM support.** EOB3

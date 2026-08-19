@@ -48,3 +48,26 @@ treated with the same skepticism as literal exporter code — a useful
 structural/behavioral hint (which VCMD exists, roughly what it does
 semantically) but not a source to port formulas from without an independent
 ROM-byte trace.
+
+> **Correction (a later session on the same project):** the verdict above —
+> "vibrato/tremolo/pan-LFO/pitch-slide are pure MIDI/SF2-export math, no
+> hardware model" — was itself overstated. That pass read only
+> `AkaoSnesModulation.cpp`/`AkaoSnesTrackPitch.cpp`; it never opened
+> `AkaoSnesTrackLfo.cpp`, a **third sibling file in the same reader
+> directory**, which turned out to contain real, version-aware
+> (`AKAOSNES_V1`-`V4`) decoding of the driver's actual internal LFO rate/
+> depth/frame-timing parameters — genuine hardware modeling that the
+> export-math files' final cents/dB conversion step sits *downstream* of.
+> **The fix above (check what a function computes, not which file/class it's
+> in) is still correct and was reapplied successfully** once the missing
+> file was read — but it wasn't applied broadly enough: two files out of a
+> reader directory's several is not "the whole reader," and a "pure export
+> noise, no hardware model anywhere in here" verdict needs the *entire*
+> reader directory audited, not just the files a first pass happened to open
+> (e.g. because they were the ones an earlier, narrower pass already cited).
+> Before writing off a whole VCMD family as unimplementable from a reader
+> source, list every file in that reader's own directory and confirm each
+> was actually opened — a sibling file you didn't read can hold the real
+> model. See `adjacent-cache-slot-elimination-identifies-register.md` and
+> `parallel-lfo-vcmds-may-clamp-asymmetrically.md` for two further techniques
+> that came out of the corrected pass.

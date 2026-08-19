@@ -81,3 +81,67 @@ for the directory matches the actual extracted-file byte total exactly. If
 any known executable is present, its header magic (GEMDOS/TOS `.PRG`:
 `0x60 0x1A`) is a strong, free, format-specific oracle — check it before
 trusting anything else.
+
+## Disassembling GEMDOS/TOS `.PRG` executables (Capstone, not IRA/HUNK tooling)
+
+A `.PRG` is **not** an Amiga HUNK executable — none of this project family's
+HUNK-specific tooling (`amiga.md`, `HUNK_RELOC32` operand resolution, IRA)
+applies. Structure: 28-byte header (`>HIIIIIIH`: magic `0x601A`, `text_len`,
+`data_len`, `bss_len`, `symtab_len`, `reserved`, `prgflags`, `absflag`),
+then `text_len` bytes of code, then `data_len` bytes of initialized data —
+**contiguous in one flat, zero-based address space**: address `0` is the
+first text byte, and data starts at address `text_len` (not a separate
+segment with its own base). `file_offset = 28 + address` holds uniformly
+across text *and* data — confirmed by finding literal immediate operands
+(e.g. `move.l #$19f,d0`) that resolve to file offsets matching independently
+grepped string locations exactly, on both Phantasie II's `START.PRG` (2,567
+bytes, disassembles whole in one pass) and `PHANT.PRG` (155,785 bytes).
+`bss_len` follows immediately after data in address space
+(`[text_len+data_len, text_len+data_len+bss_len)`) but has **no file
+bytes at all** — a `Setpalette`/similar call whose operand resolves into
+this range is loading a *runtime-constructed* value, not something
+readable statically from the file (confirmed: Phantasie II's `CROWD.PIC`
+load target address fell in BSS, correctly flagging it as staged into a
+working buffer rather than blitted straight from disk to screen).
+
+Disassemble with Capstone from Python (no local m68k-aware disassembler
+was needed): `capstone.Cs(capstone.CS_ARCH_M68K, capstone.CS_MODE_BIG_ENDIAN
+| capstone.CS_MODE_M68K_000)`, fed the raw text-segment bytes starting at
+address 0.
+
+Two practical notes from re-using this on a second, unrelated subsystem of
+the same `PHANT.PRG` (world-map loading, file I/O and movement dispatch, a
+pass after the `.PIC` graphics work above): the `file_offset = 28 + address`
+identity and the trampoline caveat below both held with zero friction, so
+treat this technique as proven for general code tracing, not just for
+locating graphics calls. But **Capstone silently emits nothing for a range
+that starts mid-instruction** — `md.disasm()` returns an empty iterator
+rather than an error, which reads exactly like "this range is data." Wrap it
+in a loop that, on an empty result, prints the two bytes as `DC.W` and
+advances by 2; that recovers sync automatically and makes real inline data
+(jump tables, embedded filename strings between functions) visible instead
+of invisible. Do not name your disassembly helper script `dis.py` — Python's
+stdlib `dis` is imported by `inspect`, which Capstone imports, and the name
+collision produces a confusing partially-initialized-module traceback.
+
+**Finding OS/hardware calls (XBIOS `trap #$e`, GEMDOS `trap #$1`) needs a
+two-hop search, not a single opcode scan, once the binary is large enough
+to route calls through a shared wrapper.** A small loader may call a trap
+directly inline (`move.w #$6,-(a7); trap #$e` — Setpalette, function 6;
+byte-searchable as the literal 6-byte pattern `3F 3C 00 06 4E 4E`). A
+larger executable instead routes *every* GEMDOS/XBIOS call through one
+generic trampoline per trap vector (pops the pushed function number and
+re-issues the trap at runtime) — so a direct `trap #$e` pattern search
+finds only the trampolines themselves (as few as a literal handful across
+a 150 KB binary: 8 on `PHANT.PRG`), not the real call sites. The fix:
+(1) find the trampoline by locating the trap opcode itself and identifying
+which one re-dispatches based on a stack argument rather than an inline
+immediate; (2) find every caller of that trampoline via a raw `jsr
+$target.l` byte-pattern search (`4E B9` + 4-byte big-endian target
+address) over the whole text segment; (3) for each caller, disassemble a
+short window immediately before it and check the preceding `move.w
+#imm,-(a7)` for the pushed function number. Confirmed on `PHANT.PRG`: a
+direct trap-opcode search found only 8 hits total (mostly unrelated
+`Supexec` calls), while step (2) against the identified XBIOS trampoline
+found 41 real call sites, 8 of them `Setpalette` (function 6) — invisible
+to the single-pass search entirely.

@@ -1,9 +1,27 @@
-# A TODO.md/plan.md status claim survives unverified across session boundaries unless you chase its evidence pointer
+# A TODO.md/plan.md status claim — or a confident corpus-count number in the spec doc itself — survives unverified across session boundaries unless you re-derive it
 
 **When it bites:** starting work on a TODO.md row (or a plan.md session-log
 entry) whose description already reads as settled/confirmed, and you're
 about to build the next step on top of it without opening the
-`data-structure.md` section its Evidence column points to.
+`data-structure.md` section its Evidence column points to. **Also** bites
+when `data-structure.md` itself states a specific whole-corpus count
+("N instances counted recursively via a depth-4 walk") as if it were a
+settled fact, and the probe script that produced it either wasn't
+committed or no longer exists to audit — a session's plan built entirely
+around explaining a "gap" against that number (why coverage is only 12 of
+297, say) can spend a full pass rationalizing a number that was simply
+wrong from the start, with no bug anywhere in the current code to find.
+Confirmed on Drakengard (PS2, `flower` project): a prior session's
+`docs/drakengard-cavia-archive-format.md` stated "297 instances [of
+`mmodel.bin`] counted recursively" with no surviving probe script; a fresh
+walker deliberately built to mirror the production `walkCaviaContainer`
+exactly (container-name histogram, not a leaf-only scan) found the true
+figure was **12** — self-consistent with every other already-shipped
+count (LOD/animation container totals all divided evenly by 12, not 297).
+The "297" wasn't a bug to explain, it was never correct. Fix for this
+variant: before treating an unaudited whole-corpus count as a planning
+premise, re-derive it with a walker that matches the real production code
+path, not the prose.
 
 Wizardry 6 Amiga's `docs/wizardry6/TODO.md` carried this row forward across
 a full session boundary: *"Section 6 is now confirmed (400×32B monster

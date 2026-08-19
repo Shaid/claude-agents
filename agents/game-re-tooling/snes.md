@@ -136,6 +136,28 @@ it could already be a file offset.**
   this is strictly reliable and was already the working method for
   everything else in that project.
 
+## Finding OAM/sprite DMA by target register, not by resource shape
+
+For confirming whether a ROM uses real SNES OAM/OBJ hardware sprites at
+all (as opposed to faked-with-BG-tiles sprites, common in vehicle/action
+games that lean on rotation/scaling tricks), don't start from a resource-
+shape census — start from **which DMA channel's B-bus target register is
+set to `$2104`/OAMDATA**: byte-scan for `LDX #$04; STX $43N1` (or the
+equivalent `LDA`/word forms) for each channel `N` 0-7, i.e. "set channel
+N's `BBADN` to the OAMDATA port." Once found, the transfer's *size*
+register (`DASNL/H`, `$43N5`) is a strong, free cross-check against the
+SNES's fixed, well-known OAM table size: `0x220` = 544 bytes exactly
+(128 sprites x 4 bytes low table + 32-byte high table) confirms a genuine
+whole-OAM-table DMA flush (the standard "build a shadow copy in WRAM,
+flush the whole table via DMA every frame" idiom), not a coincidental
+`$2104` reference. Confirmed on Urban Strike (SNES): 3 candidate bank-`$A8`
+entry points an earlier `re-codebreaker` escalation had flagged as
+"sprite leads" turned out, on tracing, to be more tilemap/palette
+infrastructure — the real sprite-hardware-usage confirmation came from
+this DMA-target-register angle instead, not from following the
+escalation's own pointers (a reminder those aren't guaranteed correct
+either — see `verify-escalation-artifacts-not-just-claims.md`).
+
 ## Finding a graphics loader without a DMA register census
 
 The DMA-register byte-pattern census (`STA $420B`/`$4342`/`$4345` etc. —

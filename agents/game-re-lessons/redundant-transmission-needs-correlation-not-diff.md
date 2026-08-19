@@ -38,3 +38,32 @@ in case of any offset) — never conclude "distinct" or "redundant" from a
 raw byte-diff percentage alone. A byte-diff answers "are the underlying
 bits identical," not "is this the same signal" — those are different
 questions once any encoding, dithering, or bit-level variation is in play.
+
+> **Correction (2026-08-10, same game, later pass):** the 0.99995 figure
+> above turned out to have been measured on a decode with an independent,
+> undiscovered byte-order bug (see `audio-byte-order-measurable.md`'s
+> Chaos Legion addendum) — the "decode both to their native sample/value
+> domain first" step matters more than this file originally emphasized,
+> because a wrong decode can still produce a deceptively clean-looking
+> correlation number. Re-measured correctly-decoded, and across more than
+> the original single clip/single aggregate figure (per this project's own
+> "check every clip, not just one" convention): whole-clip zero-lag
+> correlation ranged **0.37-0.96** across 4 clips (not a uniform ~1.0), and
+> a per-window breakdown of one clip (12 one-second windows across its
+> length) ranged **0.20-1.0000** — some windows genuinely bit-exact
+> duplicates, others showing real, non-trivial amplitude divergence on both
+> sides (not silence-dominated noise). A wide lag search (±1 second) found
+> no better alignment, ruling out a simple fixed time offset as the
+> explanation. **Two generalizable additions**: (1) always re-verify a
+> correlation-based "redundant duplicate" conclusion *after* fixing any
+> decode bug discovered later in the same investigation — a stale figure
+> computed pre-fix can silently outlive the bug that produced it; (2) a
+> single aggregate correlation number over a whole long stream can hide
+> real per-window variance — break the stream into several windows spread
+> across its duration (not just the start) before trusting one number as
+> "confirmed duplicate," the same way a whole-corpus average can hide a
+> per-file exception (see the sibling file's per-file byte-order point).
+> The practical dedup decision (keep one copy, drop the other) can still be
+> the right pragmatic choice even without a clean uniform correlation —
+> just document it as "best available, not proven bit-exact everywhere"
+> rather than closing the question.

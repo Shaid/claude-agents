@@ -1,12 +1,28 @@
-# A familiar extension is not proof the file follows that format's real spec
+# A familiar extension is not proof the file follows that format — or category — its name implies
 
 **When it bites:** a file's extension matches a well-known interchange
-format (`.LBM`→IFF ILBM, `.PCX`, `.BMP`, `.WAV`, `.MID`...) and a doc or
-prior pass already labels it that way, but you haven't actually checked the
-first bytes against that format's real magic/chunk structure — especially
+format (`.LBM`→IFF ILBM, `.PCX`, `.BMP`, `.WAV`, `.MID`...) — or just
+strongly suggests a content *category* via project-internal or genre
+convention (e.g. `.TIM` "smells like" a texture because a sibling `TIM2`
+format exists elsewhere in the same corpus) — and a doc or prior pass
+already labels it that way, but you haven't actually checked the first
+bytes against that format's real magic/chunk structure. Especially risky
 when you're about to write a standard-format parser (an IFF `FORM`/chunk
-walker, a RIFF reader) against it, or cite the standard format's own field
-layout in a spec doc without having found a single matching magic byte.
+walker, a RIFF reader) against it, reach for an existing sibling decoder as
+a "probably the same, different magic" candidate, or cite the assumed
+format/category in a spec doc without having found a single matching magic
+byte.
+
+Confirmed on NieR (2010, PS3, `flower` project): a `.TIM` extension
+strongly suggested a texture (this project's own `.TIM`/`TIM2` prior art
+elsewhere made that a reasonable first guess, and even prompted checking
+the project's existing TIM2 decoder as a candidate reference), but the real
+decompressed bytes carried an unrelated magic (`MTMI`) and structure
+entirely — a flat, fixed-stride table of attack/motion animation-clip
+names, verified byte-exact via `recordCount * strideBytes + headerBytes ==
+fileSize` holding on 6/6 real samples, zero pixel/palette data anywhere in
+it. The check that caught it was the same one-line discipline as the
+standard-format case below: read real bytes before trusting the name.
 
 Confirmed on Epic (Ocean, Amiga, 1992): every `.LBM` file's decompressed
 content had been carried in the project's docs as "IFF ILBM" purely on the

@@ -69,8 +69,25 @@ technique instead; each is a short script.
   generates parsers in many languages. Worth it when a format is confirmed and
   several tools need to read it; overkill mid-investigation.
 - **[vgmstream](https://github.com/vgmstream/vgmstream)** — 1,000+ game audio
-  formats. Already in the main tooling map; repeated here because "try
-  vgmstream first" applies to *any* unidentified audio blob.
+  formats. "Try vgmstream first" applies to *any* unidentified audio blob —
+  but it's worth more than identification. Its `src/meta/*.c` source is
+  routinely a **stronger, more complete reference than a community 010
+  Editor/binary-template** for a format's field layout, especially for
+  codec-ID or version-dependent branches a template's author never
+  exercised (a template scoped to "the common case" has no reason to
+  document branches it never saw; vgmstream's source, maintained across a
+  huge real-world corpus, usually does — see
+  `format-field-width-unexercised-by-first-corpus.md`'s 4th instance,
+  where vgmstream's `ktss.c` even names the exact game in a comment for
+  the codec branch a template missed). And once a from-scratch decoder is
+  built from that source, `vgmstream-cli`'s own decoded WAV output is a
+  strong ground-truth oracle: diff your decode against its output
+  sample-by-sample (not just "plays and sounds right") for the strongest
+  verification bar short of the game's own executable. Official pre-built
+  CLI releases are a single self-contained binary in a `.zip` — no build,
+  no install, no root needed; check `~/.cache/yay/vgmstream-cli-bin/` (or
+  equivalent AUR-cache path) for one before downloading a fresh copy, it's
+  sometimes already sitting there from a prior session's package research.
 
 ## Negative result — what this class of resource does not cover
 

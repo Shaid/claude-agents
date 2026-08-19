@@ -126,7 +126,12 @@ only character sprites stay 2D. Found via a GTE/COP2 opcode census across
 all extracted code overlays (ranked candidates by real 3D work in one pass —
 `LWC2 VXY0,(rN)` is literally the vertex fetch), then backward tracing
 `LWC2` base registers: **world-map terrain** (§9.6.1, tri-Ace's own format,
-not TMD — packed 6-byte vertex pool, 20-byte LOD records, vertex indices
+not TMD — packed 6-byte vertex pool, four 20-byte draw-batch records per
+chunk (spatially disjoint, jigsaw into the full cell; originally misread
+as a "LOD table" and rendered one-at-a-time, dropping ~68% of the map —
+see §9.6.1 Correction and `game-re-lessons/record-array-alternatives-vs-
+parts-footprint-test.md`; vertical axis stored down-positive, §9.6.1a),
+vertex indices
 smuggled into an unused byte of packed GTE colour words; 68 chunks/disc) and
 a small **object-model primitive-list format** (§9.6.2, TMD-shaped but not
 TMD; five GPU primitive modes including three found only after a follow-up
@@ -183,17 +188,48 @@ field-overlay half of this story (a genuine MIPS instruction misclassified
 as inline string data because its raw bytes happened to be printable
 ASCII).
 
+**Terrain/object-model geometry is now really textured, and the town/
+dungeon room compositor exports real parallax and content animation too
+(2026-08-17).** The world-map terrain (100% of primitives, 21,238/21,238)
+and the 24 field-area environment cubes resolve their decoded texture-page/
+CLUT references against a corpus of on-disc TIMs (page-containment +
+CLUT-row-range match — the same shape already solved for the 2D tile-
+sprite compositor, §12.6 below, just applied to 3D geometry this time) and
+export as real glTF with a baked atlas, replacing the earlier flat-fill/
+placeholder-grey polygon-JSON render for those specific populations (the
+30 untextured effect-object models stay polygon-JSON, unaffected).
+Separately, the room compositor (`composeRoom`) gained an optional
+main-camera parameter feeding its already-confirmed parallax formula, plus
+a content-animation frame patcher for the section-5 torch/urn-flicker
+table — whose per-frame "self-relative" offset field had a genuine,
+undisassembled ambiguity resolved by a corpus-wide parse-success vote
+(1,850/1,850 vs. 702/1,850 between the two candidate bases — see
+`game-re-lessons/self-relative-offset-ambiguity-resolved-by-corpus-vote.md`).
+901/1,118 rooms now export extra parallax/animation frames. A real design
+mistake surfaced and was fixed mid-pass: panning the export camera by the
+game's own full real camera range emptied the composited frame, because
+the compositor's canvas is the room's own full extent, not a 320x224
+viewport crop (see `game-re-lessons/offline-compositor-full-canvas-not-
+viewport-crop.md`) — a quarter-screen pan fixed it.
+
 Full writeup: `docs/valkyrieprofile/psx/data-structure.md` (§8 the
 directory, §8.6/§8.7 the classifier, §9.3 the `raw-other` nested-sub-index
-header format, §9.4 the STR video format, §9.6/§9.6.1-9.6.8 the 3D
-geometry formats, the Purify Weird Soul billboard renderer, and the still-
-open named-spell-effect question, §10 the text format, §11 the audio/BGM
-formats, §13.7 playable-character battle-sprite identity/roster mapping),
-`docs/valkyrieprofile/TODO.md`. Shared decoders:
+header format, §9.4 the STR video format, §9.6/§9.6.1-9.6.16 the 3D
+geometry formats (including the texture-atlas export) plus the room
+background/placement/parallax/compositor formats, the Purify Weird Soul
+billboard renderer, and the still-open named-spell-effect question, §10
+the text format, §11 the audio/BGM formats, §13.7 playable-character
+battle-sprite identity/roster mapping), `docs/valkyrieprofile/TODO.md`.
+Shared decoders:
 `tools/shared/psx-cd.ts`
 (raw CD-XA MODE2/2352 + ISO9660 reader — this project's first PSX target,
 no prior `game-re-tooling/psx.md` existed), `tools/shared/psx-slz.ts`,
-`tools/shared/psx-tim.ts`, `tools/shared/psx-vp-toc.ts` (the directory
+`tools/shared/psx-tim.ts` (also the shared texture-page/CLUT resolution
+helpers `resolveTexPageRef`/`texRefSourcePixel`/`renderTimRow`),
+`tools/shared/psx-vp-textured-gltf.ts` (small from-scratch glTF 2.0
+exporter for atlas-mapped unindexed triangle geometry — no skin, one
+shared texture per document, much simpler than a skinned-mesh exporter
+would need to be), `tools/shared/psx-vp-toc.ts` (the directory
 decoder — VP1-specific encryption, not a generic PSX pattern),
 `tools/shared/psx-vp-text.ts` (the text/font decoder), `tools/shared/
 psx-str.ts` (the STR video header parser + CD-XA rewrapper),
@@ -201,9 +237,21 @@ psx-str.ts` (the STR video header parser + CD-XA rewrapper),
 `tools/shared/psx-vp-bgm.ts` (BGM sequence + variable-length instrument
 bank + PCM renderer), `tools/shared/psx-vp-terrain.ts` (world-map terrain
 chunk format), `tools/shared/psx-vp-model.ts` (the object-model primitive-
-list format, 5 GPU primitive modes), `tools/shared/psx-vp-battle-bundle.ts`
+list format, 5 GPU primitive modes), `tools/shared/psx-vp-room.ts` (town/
+dungeon room background/placement/parallax compositor, `composeRoom`),
+`tools/shared/psx-vp-battle-bundle.ts`
 /`psx-vp-battle-anim.ts` (playable-character battle-sprite bundle +
-animation-directory format).
+animation-directory format — **including the 2026-08-16 bit-13 patch-page
+solve**: parts with flags bit 13 sample per-rect packed patch rasters from
+the bundle's `other` block, page-selected by flags bits 8-10, with `(u,v)`
+a VRAM-upload key rather than a TIM coordinate; this dissolved the old
+"u+w>256 overflow" open item and closed the `other`-block format,
+1,295/1,311 record-page groups byte-exact, `buildPatchSet`'s beam-search
+order recovery + opacity-mask scoring — see `game-re-lessons/
+source-rect-may-be-upload-key-into-packed-sibling-blob.md` for the
+general pattern; per-frame durations are also exported now and the viewer
+plays them at real decoded timing, closing the live
+battle-anim-viewer-rendering user report).
 
 ## VP2 (PS2, EU SLES-54644) — TOC + "SL" container, FIS textures, TAC streamed audio, terrain heightmaps, and character mesh geometry (PS2 VIF1 display packets) all solved; `supported: true`
 
@@ -468,3 +516,141 @@ whichever runtime code actually binds a `MINA` clip to a specific mesh's
 `IDOM` palette, not a further structural/offset guess). Full writeup:
 `docs/valkyrieprofile2/ps2/data-structure.md` § 3.12.22,
 `docs/valkyrieprofile/psx/data-structure.md` § 9.6.2a.
+
+## VP1 (PSP, `ULUS10107`, TOSE's "Valkyrie Profile: Lenneth" remaster) —
+container cracked, first-reconnaissance pass (2026-08-18)
+
+A **portable remaster by a different studio (TOSE)**, not a ground-up
+rewrite — real, extensive format reuse with the PSX original confirmed at
+multiple levels. Disc is a plain standard 2048-byte-sector ISO9660 UMD
+image (no CD-XA raw-sector layer, unlike VP1/VP2's PSX/PS2 raw dumps —
+new minimal reader `tools/shared/psp-iso9660.ts`). Almost the whole game
+lives in one file, `PSP_GAME/USRDIR/PSPVAL1.PFS` (515 MB), produced by
+Sony's own PSP SDK "MakePfs" tool (no public docs/tooling found for this
+specific format — blind-RE'd, same as everything else in this project).
+`PSP_GAME/SYSDIR/BOOT.BIN` is a **plain unencrypted PSP ELF** (Allegrex/
+MIPS R3000, `Type: 0xffa0`) — unlike the retail `EBOOT.BIN` (`~PSP`-tagged,
+encrypted) — radare2 auto-detects it with zero loader work, and it alone
+was enough to crack the container (the `*_master.prx` per-mode overlay
+modules, direct analogues of VP1/PSX's field/battle/world-map code
+overlays, weren't even needed this pass).
+
+**`PSPVAL1.PFS`'s directory is a trailer, not a header** — a 44-byte
+header (`entryCount`, `dataSectorCount`, one always-zero reserved field)
+is followed by real payload data immediately, and the actual directory (a
+flat array of `entryCount` little-endian u32 **start sectors**,
+monotonically non-decreasing, entry `i`'s length = `(start[i+1] -
+start[i]) * 2048`) lives at the very *end* of the file
+(`dataSectorCount * 2048`), sector-padded with the fill byte `0x98` —
+found only by disassembling the header-consumer function in `BOOT.BIN`,
+which computes the trailer's exact byte size from the header fields (see
+the MIPS branch-delay-slot pitfall this produced,
+`game-re-lessons/mips-delay-slot-instruction-always-executes.md`). Entry
+index 0 is always a reserved/zero-length slot (see `game-re-lessons/
+reserved-slot-zero-shifts-extractor-index.md`). Verified byte-exact: the
+trailer-size formula matches the real 515,420,160-byte file with 0
+deviation, and all 5,058 real entries decode to a monotonic
+non-decreasing sequence, 0 deviations. New shared module:
+`tools/shared/psp-vp-pfs.ts`.
+
+**VP1 (PSX)'s `"SLZ"` codec is reused byte-for-byte, zero code changes
+needed** — all 327 real `"SLZ"`-tagged `PSPVAL1.PFS` entries on the disc
+decode successfully with the **unmodified** `tools/shared/psx-slz.ts`
+decoder (0 failures). A third confirmed platform for this exact
+tri-Ace-originated codec, after PSX and PS2 (see the VP2 section above) —
+reinforces the general "check a sibling game/platform in the same project
+before treating a container as unsolved" pattern
+(`game-re-lessons/cross-platform-decode-oracles.md`).
+
+**Two raw (uncompressed) `PSPVAL1.PFS` entries are genuine, byte-
+compatible standard PSX MDEC "STR" video, reused verbatim** (same `60 01
+01 80` magic, same header field shapes — `chunksInFrame`, `frameNumber`
+sequencing, `320×240` — as VP1/PSX's own STR videos), confirmed by a real
+decode through the *existing* PSX pipeline (`wrapSectorsAsCdxa` + ffmpeg
+`-f psxstr`, zero new code): 204 real, coherent frames (a castle/tower
+exterior scene). The PSP hardware has no MDEC decoder IP block, so this
+is either a software MDEC decoder somewhere in the PSP code or an inert
+repackaging leftover — undetermined this pass, a good example of
+"structurally confirmed, consumer still unknown" being an honest stopping
+point rather than a forced guess.
+
+**A second movie file, `moviepac.dat` (157 MB), wraps standard Sony PSMF
+containers — zero custom video codec work needed.** Its own directory is
+simpler than `PSPVAL1.PFS`'s (a 16-byte **header**, not a trailer, holding
+`count` **absolute**, sector-aligned byte offsets directly — confirmed
+`headerSize + count*4` exactly equals the first offset). Each of the 74
+real movies begins with the literal ASCII tag `PSMF0014`; `ffprobe`/
+`ffmpeg` read the raw bytes directly with **zero flags** (auto-detected
+via the generic `mpeg` demuxer) and produce a real decoded frame (a CGI
+cutscene, hands bathed in blue magical light) — per this project's
+established "delegate to a trusted decoder for a standard, non-game-
+specific codec" convention. Audio-stream detection is a known open gap
+(`ffprobe` reports 0 audio streams — the `game-re-lessons/generic-
+demuxer-misses-custom-pes-audio.md` false-negative pattern).
+
+**26 raw entries are literal standard PNG files** (480×272, the PSP's
+native resolution) — no decode work at all, just a byte copy trimmed to
+the real `IEND` end (PFS entries are sector-padded past their real
+length). Visually verified: real "now loading"-style game artwork.
+
+**A carried-over PSX-era developer debug string is a concrete clue about
+the archive's internal ordering.** Two small raw entries near the very
+start of the directory hold plaintext Shift-JIS text reading (translated)
+"Valkyrie Profile / This is Disc 1" and "... Disc 2" — the same *kind* of
+disc-check string this project's VP1 (PSX) doc already confirms exists on
+the original two-disc masters, evidently kept verbatim by TOSE's
+disc-unification tooling when repacking both PSX discs into one PSP
+archive. A good general reminder that a remaster's own packaging debris
+can hand you real structural facts about its container "for free."
+
+First-reconnaissance pass only (matches this project's own established
+"container cracked + a handful of asset types + one visual" bar for a
+first pass, not full parity with the PSX side): the ~4,551 other raw
+entries and the 326 untraced SLZ payloads are still open. Full writeup:
+`docs/valkyrieprofile/psp/data-structure.md`,
+`docs/valkyrieprofile/TODO.md` (`vp1psp-*` rows). New shared modules:
+`tools/shared/psp-vp-pfs.ts`, `tools/shared/psp-iso9660.ts`.
+
+**Second pass (2026-08-18): the `*_master.prx` per-mode module resource-
+access mechanism is solved — direct literal PFS index, no id-translation
+table.** All eight modules (`Battle_master.prx`, `Field_master.prx`,
+`Camp_master.prx`, `GodCamp_master.prx`, `MiniMap_master.prx`,
+`Staff_master.prx`, `Title_master.prx`, `WldMap_master.prx`, the PSP
+equivalents of VP1/PSX's per-mode code overlays) were extracted and
+disassembled for the first time. None reopen `PSPVAL1.PFS` themselves
+(confirmed dead libc `open()` import in `Field_master.prx`, zero real
+callers by both xref analysis and an exhaustive `jal 0x0` byte scan) —
+instead, all eight import a shared `vpLibrary` API (109 functions)
+exported by `BOOT.BIN` alongside a much larger 1,971-function
+`libraryXP` (parsed directly from each PRX's raw `.lib.ent`/`.lib.stub`
+ELF sections — 16/20-byte fixed records, NID arrays matched to stub jump
+slots by `(addr - firstStubAddr) / 8`; new Python tool,
+`parse_prx_exports.py`, not yet a shared TS module). Four `vpLibrary`
+NIDs resolve (through tail-call trampolines) to real `BOOT.BIN` bodies
+forming a complete `GetEntrySize`/`OpenEntry`/`ReadEntry`/`malloc` API.
+**`GetEntrySize`'s disassembled body computes an entry's byte length with
+the exact same formula already implemented independently in
+`tools/shared/psp-vp-pfs.ts`'s `listPfsEntries()`** — decisive,
+byte-for-byte algorithmic confirmation, not just plausible resemblance —
+and the `index` argument it takes is a raw, 0-based `PSPVAL1.PFS`
+directory index with **no separate resource-id translation layer at
+all**: two real literal call-site indices (2175, 2182) found in
+`Field_master.prx` were independently verified against the real disc
+(non-degenerate, structured, embedded `SLZ` content) via the existing PFS
+reader. This is the direct PSP-side analogue of VP1 (PSX)'s own confirmed
+"TOC slot loaded by literal constant" convention (PSX doc §9.5) — same
+studio-level design pattern surviving a full platform port. 204 total
+`GetEntrySize` call sites were found across the 8 modules; only 1 had a
+statically-resolvable bare-literal argument (the rest pass a
+register/table-computed index, same "some literal, some dynamic" mix PSX
+already showed) — a real, well-scoped stopping point (mechanism proven,
+full per-call-site census left as future work), not a stall. A secondary
+finding located `moviepac.dat`'s missing audio (open item since the first
+pass): a manual PES start-code census found 313 `0xBD` (`private_stream_1`)
+packets per movie sample with a consistent sub-header shape — the same
+"audio hides behind a nonstandard PES stream id" pattern this project's
+VP2 (PS2) FMV audio already hit (§2.10.2 above), confirming the technique
+transfers across platforms within this project; the codec inside the
+payload (plausibly ATRAC3+) is still unidentified. Full writeup:
+`docs/valkyrieprofile/psp/data-structure.md` §7 (new), §5.2 (audio
+update), `docs/valkyrieprofile/TODO.md`.

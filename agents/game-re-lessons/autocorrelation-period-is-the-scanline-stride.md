@@ -39,6 +39,30 @@ narrow tile-sheet widths (16px, 32px) are an easy blind spot precisely
 because "an 8-16px-wide image" doesn't intuitively read as a plausible
 sprite/screen width the way 96-384px does.
 
+**Addendum — the same measurement, run on a real screenshot instead of
+the extracted asset, is a strong independent oracle for a decode you
+already believe you've solved.** Once a tile/icon's pixel dimensions are
+already derived from disassembly or structural evidence, autocorrelating
+a clean patch of an *actual game screenshot's* rendered output (not the
+extracted file) at the location where that tile should repeat is a cheap
+confirming — or falsifying — cross-check, and can also discriminate
+between two competing draw-mechanism hypotheses when more than one is
+consistent with the disassembly. Confirmed on Phantasie III (Amiga,
+`nicodemus` project): disassembly had found two plausible per-cell draw
+loops writing to overlapping screen regions for the dungeon view — one
+stepping 5px per column against an 8px-wide icon (genuine overlap), one
+stepping a clean 8px/5px per cell (no overlap) — and it wasn't obvious
+from the code alone which one dominates the visible frame. Autocorrelating
+a real emulator screenshot's background-texture patch found a sharp peak
+at exactly 8px horizontally and 5px vertically, both with no evidence of
+the other loop's fractional 5px-into-8px overlap — confirming the
+non-overlapping loop is what's actually on screen (the overlapping loop
+only paints a thin strip the other loop fully repaints over), while also
+independently reproducing the icon's already-known 8×5 dimensions to the
+pixel. Same technique as the base lesson, different purpose: there, the
+period *finds* an unknown width; here, it *arbitrates* between finished
+hypotheses using ground truth neither hypothesis was built from.
+
 **Addendum — comb-striping that persists across every width tried,
 including the period-derived one, can mean the data isn't pixel data at
 all.** Confirmed on Wizardry 6 (SNES): a region flagged by a byte-density

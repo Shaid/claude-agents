@@ -65,14 +65,69 @@ decoded and verified:
    than either of the two techniques above and sometimes conclusive by
    itself.
 
+**A third resolution for the same empty-filename-search symptom: the file is
+a pristine *master copy* the engine never opens, because its sibling files
+carry the live state and are written back in place.** Before concluding
+"nothing reads this," check whether a *set* of related files is both loaded
+and **saved** by the engine, and whether the silent file is a concatenation
+or duplicate of their content (`oversized-file-may-be-concatenated-sibling-prefixes.md`
+is the cheap test). Confirmed on Phantasie I (Amiga, `nicodemus` project):
+`maps.int` appears nowhere in the 193 KB `game` executable's strings, which
+initially read as "possibly not used by the shipped game at all." The engine
+in fact builds `"OUT%-d.DAT"` with `sprintf` and calls a shared
+open/read-**or-write**/close helper — the world map's fog-of-war flag is
+written straight back into the per-section `out*.dat` files on every section
+exit. `maps.int` is byte-identical to those files' concatenated grids
+because it is the pristine master; the only executable naming it is a
+separate `backup` disk utility that restores it. The diagnostic that
+distinguishes this from the file-requester case: the missing filename's
+content is *derivable from* other shipped files, and those siblings appear
+in a save/write path, not only a load path. Note the knock-on for asset
+extraction — files an engine saves in place are live save state, so a dump
+taken from a played disk may not be canonical (this is the same hazard the
+timestamp-clustering section above covers, reached from the opposite end).
+
 Not every timestamp-outlier file resolves this cleanly: `TWNS.DAT`
 (1995, 3,504 B) turned out to be a **structurally distinct, smaller**
 save-state summary of the same town-name list held by the pristine
 `TWNS.INT` (1986, 13,900 B) — not an overwritten copy of it, so the
 pristine template file remained safely usable even though a same-content-
-family save file existed alongside it. And some outlier files (P2's
-`OUT*.DAT`) resisted both techniques above (no sibling pristine format to
-diff against, no player-specific strings found) and stayed genuinely
-inconclusive on content alone — timestamp remained the only evidence for
-those. Don't assume every file in a timestamp cluster resolves the same
-way; check each one.
+family save file existed alongside it. Don't assume every file in a
+timestamp cluster resolves the same way; check each one.
+
+**"Written by the game" is not "content is playthrough-specific" — residue
+in a region the reader never touches classifies nothing.** A file the engine
+demonstrably saves in place can still hold a completely pristine payload,
+because save-write residue collects in whatever part of a fixed-size record
+the format doesn't use. Confirmed on the same Phantasie II disk, correcting
+an earlier verdict of this project's own: `OUT*.DAT` was closed as
+"**confirmed save-mutated, not pristine content** — there is no known
+pristine P2 counterpart", on three individually sound lines of evidence
+(sparse gapped file numbering; ten files sharing a byte-identical block of
+*unrelated* boilerplate text; `OUT1.DAT` embedding readable GEMDOS directory
+entries for `DNG4`-`DNG8`, unmistakably a serialized open-file table). Every
+one of those observations was real — and every one of them sits in the
+995-1500 byte gap between the text block and the display list, which the
+disassembled engine never reads back. Once the format was decoded, the
+regions the engine *does* read proved untouched, and the pristine master
+(`MAPS.INT`, 17 × 520-byte terrain grids, byte-identical to all 17
+`OUT*.DAT` prefixes) had been sitting on the other floppy the whole time —
+missed because it was filed as a `TWNS.INT`-adjacent disk-1 file rather than
+as `OUT*.DAT`'s sibling. The same pass had also inferred a *content* claim
+from the numbering gaps ("only outposts a specific playthrough visited get
+written"); the pristine master contains exactly the same seventeen sections,
+so the gaps are unreachable map, not unvisited locations.
+
+Two rules fall out, both cheap:
+
+- **Scope residue to the region it's in.** Before letting stale bytes
+  classify a whole file, find out which byte ranges the reader actually
+  consumes. Residue outside them says the file gets *written*, nothing more.
+  (`proven-residue-does-not-bound-region-start.md` is the within-region twin:
+  residue doesn't bound where the dead part *begins*, either.)
+- **"No pristine counterpart exists" needs a search, not an absence you
+  happened to notice.** Check every disk/archive in the release, not just the
+  one the file lives on, and check by *content* (does any other shipped file
+  contain this one's bytes as a substring?) rather than by filename or folder
+  adjacency — `oversized-file-may-be-concatenated-sibling-prefixes.md` is the
+  one-line test, and it works in this direction too.

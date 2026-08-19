@@ -49,6 +49,30 @@ top-ranked one from a cheap coherence heuristic — and pick the sole result
 with no comb/shear artifacts. Related: `header-shape-ambiguous-pixel-encoding.md`
 covers the same "byte-count alone is not sufficient" trap for pixel
 encodings and decompressor choice; this is the tile-index-array analogue.
+`buffer-offset-arithmetic-confirms-partial-image-placement.md` covers a
+cheaper code-level shortcut when the loader computes a blit-target offset
+before the read — check for that before rendering every candidate by hand.
+
+**A third failure mode beyond "clean render" vs. "pure noise": a wrong
+*width* on a flat raw picture (not a tile grid) renders as the same
+content visibly repeated in near-identical bands** — recognisable, not
+noise, but wrong. Confirmed on Phantasie II's `CROWD.PIC` (11,160 bytes,
+several candidate `(width,height,bitplanes)` factorizations, no header
+field): decoding at a plausible-looking but wrong width (240 instead of
+the correct 320) produced clearly recognisable "crowd of people" content
+repeated in 4 near-duplicate horizontal bands — an unrelated width (e.g.
+144, 160) instead produces the expected structureless noise. The
+repeated-bands look tempts a "the source art really does tile" reading;
+don't take that at face value — byte-diff the raw file at the wrong
+candidate's row stride (e.g. compare `file[r*stride:(r+1)*stride]` against
+`file[(r+n)*stride:(r+n+1)*stride]` for the apparent repeat period `n`)
+before concluding the repetition is real content. Zero exact byte matches
+across every row pair at that stride means the "bands" are a rendering
+artifact of decoding at the wrong stride, not duplicated data — the
+correct width (found here by re-deriving from the file's own bitplane
+count via `size / bitplaneCount / (width/8)`, testing every integer
+`bitplaneCount` divisor rather than assuming it matches sibling files)
+produces one clean, non-repeating image instead.
 
 **A second, independent case confirms the "cheap auto-score is not a
 substitute for a human look" finding above generalizes beyond tile

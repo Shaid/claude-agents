@@ -1,9 +1,15 @@
-# radare2's SNES/65816 disassembler doesn't track M/X flag width
+# radare2's SNES/65816 disassembler doesn't track M/X flag width — and even your own flag-aware disassembler needs the *right* entry state, not a project-wide default
 
 **When it bites:** About to trust a raw radare2 linear disassembly of a
 65816/SNES binary — especially right after a `RESET` handler or any other
 code that starts in 8-bit emulation-mode width, before the first
-`REP`/`SEP`.
+`REP`/`SEP`. **Also** bites when calling your *own* hand-rolled flag-aware
+disassembler (the fix below) on a function you're jumping straight to,
+rather than one you've traced there linearly from a known-good start —
+seeding it with a "usual" M/X default instead of the state a real,
+upstream instruction sequence actually leaves the CPU in reproduces the
+exact same silent failure mode this file describes for r2, just caused by
+your own wrong assumption instead of a tool limitation.
 
 radare2 6.1.9 ships a native `snes` bin+asm plugin (`format=sfc,
 arch=snes`) that correctly parses the LoROM/HiROM header and sets up
@@ -57,3 +63,27 @@ committed linear r2/rasm2 dump of SNES code as a *starting point*, not as
 ground truth, the same way IRA's `-preproc` output needs checking on Amiga
 (see `game-re-tooling/amiga.md`) — this is the 65816 equivalent of that
 trap, but caused by flag-tracking rather than code/data classification.
+
+**The entry-state trap, once you have your own flag-aware disassembler.**
+M/X width is not a single project-wide constant — different call contexts
+genuinely run with different flags at entry, because nothing forces every
+function in a ROM to be reached with the same M/X the boot sequence
+happens to use. Confirmed on Urban Strike SNES: an entire bank (`$A8`,
+containing the game's actual tile/graphics upload code) was disassembled
+with `X=1` (8-bit index, a reasonable-looking default carried over from
+elsewhere) when the real calling context leaves `X=0` (16-bit index) at
+entry — one instruction (`A0 00 00 B7`) decodes as `LDY #$00 / BRK #$B7`
+at `X=1` but as `LDY #$0000 / LDA [$20],Y` at `X=0`, and every instruction
+after it in that bank was consequently garbage. This produced a fully
+plausible, internally-consistent-looking disassembly that supported a
+wrong conclusion ("no resource dispatch exists") for an entire session,
+because nothing about the mis-decoded output looked broken — same
+signature as the r2 case above, just self-inflicted. **Fix:** never seed a
+flag-aware disassembler's M/X state from a "usual" default when jumping
+directly to a function — trace linearly from the actual call site (or the
+nearest upstream `REP`/`SEP` you've confirmed executes on the path that
+reaches this code) and carry the resulting state forward. If you can't
+trace back to a confirmed entry state, treat the disassembly as
+provisional and look for an independent sanity check (a structural
+invariant, a known-good instruction shape) before trusting it for more
+than a few instructions.

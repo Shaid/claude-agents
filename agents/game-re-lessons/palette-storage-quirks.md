@@ -26,6 +26,18 @@
   has already come up empty. Cross-check candidates: other files sharing
   the same container/header shape as the asset you're decoding, not just
   files that "look graphical."
+- **On attribute-RAM hardware (C64 multicolor/hires bitmaps, ZX Spectrum,
+  MSX2) the "palette" may be per-cell attribute blocks inside the same
+  payload — not a register set, and not a separate file.** Two WIME C64
+  sessions (`middilgard`) hunted a portrait palette as unknown
+  `$D021`/`$D022`/`$D023` register values; the colours were in the file the
+  whole time — the 5,000-byte payload was 4,000 bitmap + 500 screen-RAM +
+  500 colour-RAM, each picture carrying its own colours. The byte ratio is
+  the tell (8:1:1 = 8 bitmap bytes vs 1+1 attribute bytes per cell):
+  `payload_size − bitmap_size` dividing cleanly by the cell count is the
+  same invariant trick as the PAL_HDR case below. On such hardware only
+  `$D02x`-class registers (background/border) are set by code; everything
+  else is data.
 - May start at an unexpected offset — Dune's palette starts at byte 2, since
   the "header" bytes are actually the first palette command.
 - Sprites may carry a `pixelBase` offset into a shared palette region.

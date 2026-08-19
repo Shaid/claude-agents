@@ -302,6 +302,23 @@ disassembly isn't available) to learn which instances use which variant —
 don't assume the declarative rip is a complete spec just because it's
 usually sufficient for plain offset/stride/pointer-table questions.
 
+**A second caveat, confirmed on the same reference project in a much later
+session:** the self-describing JSON rip and a fuller *disassembly* are two
+independent assets a rebuild-from-source repo can carry side by side —
+earlier sessions using only the JSON side don't mean the repo lacks the
+other. `everything8215/ff4`'s JSON rip covers static data tables (names,
+dialogue, stat records) but has no representation for driver/*behaviour*
+work at all — a sound driver's boot sequence, ARAM addressing, and
+interrupt dispatch simply aren't expressible as a "table location + record
+layout" declaration. A later session on the exact same repo, needing to
+build a real SPC700 boot-injection harness, found it *also* ships a full
+labelled 65816 + SPC700 disassembly (`sound/*.asm`, `notes/*-spc.asm`) that
+three earlier sessions touching only the JSON side had never looked for.
+**Before starting driver/code-behavior work on any repo already used as a
+JSON-rip oracle, grep its tree for a `sound/`/`notes/`/similarly-named
+directory of hand-labelled `.asm` files** — don't assume "we've already
+used this repo, so we've already seen everything useful it has."
+
 ## A community script's fixed byte offsets can be correct even when its full per-entry walk logic diverges — check whether it assumes different upstream preprocessing
 
 A community reference script that reads a format's header via fixed
@@ -523,6 +540,52 @@ disassembly: sorting the resolved record-start offsets from the table's own
 pointer/index array and diffing consecutive values — a genuinely
 fixed-stride table produces one constant gap; this one produced gaps
 ranging 10-19, immediately falsifying the JSON's flat-struct assumption.
+
+## When an oracle tool's CLI hardcodes a different input variant than yours, patch it rather than giving up — and read unlicensed source as a spec, not code to vendor
+
+A working community reimplementation/decompiler can be a perfect oracle for
+your exact file even when its **shipped CLI** doesn't support your file's
+specific variant — check whether the variant-specific offsets/logic already
+exist somewhere in its source (a struct, an enum branch, a data table) before
+concluding the tool "doesn't apply." Confirmed on Frontier: Elite II (Amiga,
+`hunter` project): `watsonmw/fe2-intro` ships a from-scratch decompiler for
+the game's 3D model bytecode, but its `main()` hardcodes loading the newer
+"EliteClub2" CD32/shareware executable's table offsets — this project's
+target file is the original ".1960" release, a different variant. Its own
+`assets.c` already declared the original variant's offsets in an
+`AssetsRead_Amiga_Orig` enum branch, just never wired to a CLI flag; a
+12-line patch (one new `-orig` flag selecting that already-present branch)
+was all it took to turn the tool into a working oracle for the actual target
+file, run headless (`SDL_VIDEODRIVER=dummy ./tool -orig -dump-game-models
+<exe>`) with zero parse errors across the whole corpus. Before writing off a
+community tool as "wrong version/platform/format variant for my file," grep
+its source for an enum, a version-detection table, or a per-variant branch
+that already names your variant — a mismatched default CLI flag is a much
+cheaper problem than "the tool doesn't cover this," and the fix is usually a
+handful of lines.
+
+**Read genuinely unlicensed reference source as a specification, not as code
+to vendor.** Some of the best community RE projects (a solo maintainer's
+GitHub repo, no `LICENSE` file, no license statement anywhere in the README
+or source headers) leave real legal ambiguity about redistributing their
+code verbatim into your own committed tree — treat this the same way you'd
+treat a copyrighted fan disassembly or a scanned manual: absorb the byte-
+level facts (struct layouts, opcode encodings, table offsets) by reading the
+source, then write your own clean-room reimplementation in your project's
+own style, crediting the source project in a doc comment. This sidesteps the
+licensing question entirely (byte layouts and opcode semantics are facts
+about the target file format, not the reference project's expression of
+them) while still getting the full benefit of the reference project's prior
+work. Confirmed on the same Frontier session: `fe2-intro`'s ~4,700-line
+`modelcode.c` (no stated license) was read in full to extract the exact
+32-opcode ISA (per-opcode word counts, branch/skip-length formulas, two
+self-describing/self-terminating variable-length forms), then reimplemented
+from scratch in Python (`tools/frontier/frontier_models.py`) with zero code
+copied — and the two independent implementations were then cross-diffed
+against each other's *output* (not source) as the verification step, which
+is strictly stronger evidence than either alone (see the "actually run it"
+oracle pattern earlier in this file) and has no vendoring/licensing exposure
+at all.
 
 ## A zero-xref grep for a resource's own symbol means the community project never traced it either — pivot to loader-name-pattern search, don't give up
 

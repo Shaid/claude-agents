@@ -39,4 +39,8 @@ validation work for no benefit. This is a different concern from
 `shared-tool-session-clobbered-by-fork.md` (which warns against trusting a
 *stateful* tool's live state after a fork) — static artifacts (scripts,
 extracted blobs, dumped tables) left in the shared scratchpad carry no such
-race risk and are safe, useful reuse.
+race risk and are safe, useful reuse. If the sibling agent is instead
+actively writing to a shared *repo* file (not scratch) at the same time —
+e.g. both sessions independently landing on the same canonical decoder
+path for a shared format — that's a live race with a different fix; see
+`concurrent-sibling-agent-edits-shared-repo-decoder-live.md`.

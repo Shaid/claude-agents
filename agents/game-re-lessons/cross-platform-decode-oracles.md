@@ -159,3 +159,20 @@ underlying catalog before any pixel-level decoding — confirmed for WIME's
 DOS EGA release (3 files) vs DOS VGA (7 files): 110/110 `GAMI` IDs and 19/19
 `LMRF` IDs matched exactly, settling the container-mapping question in one
 script run instead of guessing from file sizes/counts.
+
+**A sibling game's finished RE *repo* is a byte-exact oracle — run its
+tooling directly against your files.** A "same format as sibling game X"
+claim is often checkable without re-deriving anything: clone X's RE project
+(a fan decomp, a disassembly repo, a source-port) and run its own decoder
+on your bytes, then diff against your decode. Confirmed for Might & Magic I
+(DOS): Vairn/MM2's repo contains a dedicated MM1 section
+(`tools/mm1_maps.py`, docs 22-24/50-52) because MM1 shares the same overland
+grid and near-identical maze geometry with MM2 — the TS port's output was
+byte-exact against the repo's independent Python decoder on all 55 screens,
+and MM.EXE's embedded slug table (file `0x10C07`) matched the documented
+table exactly. Two caveats worth carrying over from the VP1/VP2 addendum:
+the sibling repo's coverage may be *partial* (Vairn decodes MM1 mazes and
+overland fully but explicitly marks items/monsters/spells/OVR scripts
+undecoded), and its "docs can be wrong — the ASM is the source of truth"
+caveat applies to whatever you trust from it. Check the sibling repo for a
+section on the *other* game before assuming you must RE it from scratch.

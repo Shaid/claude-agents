@@ -40,3 +40,20 @@ a bug and rewriting the palette-merge/donor logic. A real screenshot of the
 actual platform in question is a stronger oracle than a sibling port's
 render for questions of platform-specific artistic choice — the sibling
 port is ground truth for *structure*, not necessarily for *colour*.
+
+**The converse case — the reference is right and you are wrong — still
+needs a control group before you believe it.** When a third-party render
+disagrees with your decode and you find a rule that makes them agree, that
+rule is equally consistent with "the reference tool just does one blunt
+thing to everything," i.e. you'd be copying its bug. Discriminate with a
+same-format subset the reference gets right under the *old* rule, and
+confirm your new rule leaves that subset alone. Phantasie III (Amiga,
+`nicodemus`): six sprite banks matched a reference sprite viewer at 0
+mismatches out of 384,000 pixels once rendered under a *different file's*
+palette — but the deciding evidence was four scene files from the same site
+still matching at 0 under their **own** palettes, and breaking badly
+(55,591 mismatches) under the substituted one. A blanket "always use that
+palette" rule would have been wrong; the narrow rule the disassembly
+predicted is what the reference actually obeys. A positive plus a
+same-format negative control is what separates a discovered rule from a
+copied mistake — see `embedded-palette-not-the-installed-palette.md`.

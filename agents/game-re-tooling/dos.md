@@ -211,3 +211,26 @@ failure messages ("Unable to load MAZEDATA", "Unable to open SCENARIO.DBS",
 ...) is a direct enumeration of the load order, in order, with zero
 disassembly needed. Check for this before tracing a startup routine by
 hand.
+
+## The game may ship its own symbol table as a data file
+
+Before deep-disassembling a DOS game's overlay loader (`.OVR`-system games),
+`strings` every non-obvious file in the install — the overlay system's
+symbol/relocation table is sometimes shipped as plain data, naming the
+game's internal routines for free. Confirmed on Might and Magic I (DOS):
+`MM.RSM` (6.6 KB) holds 22 null-terminated symbol names — `$ovbgn`,
+`main_`, `ovloader_`, `Bpcomand`, `Zsetspell`, `readmaze_`, `readrost_`,
+`writrost_`, `readwall_`, `readmon_`, `readpix_`, `readscr_`, `chkopen_`,
+`scrnset_`, `setequip_`, `getseg_`, `mach_set_`, `egaxref`, `cga_movsw`,
+`ega_movsw`, `grmovax`, `grmovsw` — each followed by a 4-byte address
+field (`seg-byte, 0x28, u16LE offset`; exact encoding unconfirmed). That
+is the game's own I/O + video routine inventory, which names what the
+`.OVR` overlay loader binds and is a ready-made head start for decoding
+the per-map overlay scripts. The `$`-prefixed symbol (`$ovbgn` = overlay
+begin?) and the overlay-loader/machine-setup names (`ovloader_`,
+`mach_set_`, `adapter`, `adapter6`, `hertable`) are the tell — a mixed
+code + video routine table is a loader symbol map, not game data. (Amiga
+analog: check for a `HUNK_SYMBOL` block before counting bytes through a
+disassembly — see amiga.md; on DOS, the shipped symbol table is a plain
+data file, found by `strings`, not by parsing the executable format.)
+

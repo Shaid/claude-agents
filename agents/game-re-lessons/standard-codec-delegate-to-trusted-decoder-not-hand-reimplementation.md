@@ -55,3 +55,23 @@ form of Method §5's "when hand-reimplementation fails, emulate" — but
 applies specifically to *standard* formats, where the answer is "use an
 existing independent implementation of the standard," not "run the game's
 own code."
+
+**The boundary — not every standard codec needs this.** The signal above
+is complexity/error-surface (Huffman/VLC tables, adaptive bitstreams,
+anything with dozens of magic constants transcribed from prose), not
+"standard format" by itself. A small, fully public, deterministic
+fixed-function block codec is fine to hand-roll directly rather than
+shelling out to a trusted tool — confirmed on NieR:Automata (PC)'s texture
+pipeline (`flower` project): Microsoft's DDS container + BC1/BC3 (S3TC/
+DXT1/DXT5) 4x4-block decompression (`tools/shared/dds.ts`) is a ~30-line,
+fully spec-fixed algorithm with no adaptive tables and no ambiguity, and
+was hand-rolled directly from the public spec rather than reached for a
+third-party npm decoder — verified correct via byte-exact mip-chain/
+cubemap-face-layout size invariants against real files (not just "looks
+right"), the same verification-bar discipline this lesson's PSX MDEC case
+used, just without needing the delegation step. The distinguishing
+question before choosing either path: does getting this decode right
+require faithfully transcribing a large, error-prone table or an adaptive
+bitstream state machine (delegate), or is it a small fixed-size lookup/
+interpolation with no hidden state (hand-roll is fine, and keeps the
+project dependency-free)?

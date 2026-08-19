@@ -5,7 +5,11 @@ original game/corpus, zero errors) against a sibling game on the same engine,
 platform-wide format, or container format, especially when the sibling's
 files/resources run noticeably larger than anything the original corpus
 contained, **or** ships a header/version field whose one observed value
-in the first corpus was silently treated as the only possible value.
+in the first corpus was silently treated as the only possible value. Also
+bites when a **vendored third-party reference tool** (not your own code)
+outright refuses to open a structurally valid file from a game/title
+outside the small corpus its own authors tested against — its format-
+recognition gate can be just as overfit as a hand-written decoder's.
 
 A numeric field's width (u16 vs u32, i8 vs i16, ...) can pass every
 available check on the game it was derived from — a full corpus scan with
@@ -62,6 +66,60 @@ source rather than the single value the first game's corpus happened to
 exercise; Drakengard 3's own byte-exact behavior was unaffected (regression-
 tested) since it only ever hits the `version === 4` branch.
 
+**A third instance, and a variant worth calling out explicitly: the
+"decoder" doesn't have to be your own code — a vendored, trusted
+third-party reference tool's own format-recognition *gate* can be just as
+overfit.** Confirmed on NieR (2010, Xbox 360) in `~/Development/flower`
+(`docs/nier/x360/data-structure.md` §3.4). vgmstream's real, working CRI
+AIX parser (`meta/aix.c`, already vendored in this project for a sibling
+game) hard-rejects a structurally valid AIX file with
+`if (read_u32be(0x0c,sf) != 0x00000800) goto fail;` — a field the source
+code itself only guesses is "header size?" (comment includes the question
+mark). Every AIX sample the vgmstream authors tested against (SoulCalibur
+IV, Dragon Ball Z: Burst Limit, per the source's own citation comment)
+apparently produced exactly `0x800` there, so the hardcoded equality check
+"passed every available check" the same way a narrow field width does —
+except here the corpus that never falsified it wasn't the RE session's
+own, it was upstream's. NieR's own AIX files carry a *different, real*
+value at that offset that varies per file (not evidence of a bad
+extraction — the segment/layer table immediately following it parses to
+byte-exact-correct sample counts/rates/durations regardless), so vgmstream
+refuses to open the file at all (`failed opening ...`) rather than
+producing garbage — a *louder* failure than the silent-garbage cases
+above, but the same root cause: a value/constant that happened to be
+constant across the *tool's own* narrow validation corpus, encoded as if
+it were universal. Confirmed real by patching just that one 4-byte field
+to vgmstream's expected constant in a scratch copy (no other bytes
+touched) and getting a clean, correct 6-channel/48kHz PCM decode out the
+other side — proof the rest of the container's real structure was already
+correctly understood, only the gate was wrong.
+
+**A fourth instance: a community binary template scoped to "the common case"
+by its own header comment, with no validation gate at all — so an untested
+codec branch doesn't error, it silently decodes to internally-inconsistent
+garbage.** Confirmed on Fire Emblem Warriors (2017, Switch, `chimera`
+project, `docs/fe-warriors.md` "Audio"). The public `three-houses-research-
+team` `KTSS.bt` 010 Editor template (already trusted as the reference for
+this same project's Three Houses/Three Hopes audio, both `codecID=9`)
+states its own purpose as "Parsing KTSS (music and voices) **OPUS** files"
+and declares one fixed field layout with no `codecID`-dependent branching
+— unlike instance 3's vendored tool, it has no gate to refuse anything.
+Applying that fixed layout to FE Warriors' `codecID=2` streams (a corpus-
+wide census found *every* KTSS block in the game uses `codecID=2`, zero
+exceptions) "parsed" with no error — no bounds check tripped, no magic
+mismatch — yet was provably nonsense: the `audioOffset` field read back
+byte-identical to the already-parsed `sampleCount` field, and
+`packetCount=1` for a track with 3.5 million samples/channel. Consulting
+`vgmstream`'s independent implementation (`src/meta/ktss.c`) showed
+`codecID=2` is GameCube/Wii DSP-ADPCM with a completely different,
+version-dependent layout past byte 0x20 (its source comment even names
+this exact game: `/* DSP ADPCM - Hyrule Warriors, Fire Emblem Warriors */`)
+— the template was never wrong about `codecID=9`, it simply never claimed
+to cover anything else. **The tell wasn't a crash — it was a duplicate/
+self-referential value only visible by cross-checking two already-parsed
+fields against each other**, not any single field looking implausible
+alone.
+
 The general move: when a "confirmed" decoder from one game is about to be
 reused unmodified against a same-engine or same-platform-format sibling,
 treat any field whose narrow-width reading happens to coincide with a
@@ -78,3 +136,24 @@ the first row) and `record-stride-guess-vs-recount-fields.md` (a stride
 guessed rather than recounted) — same root cause (a range-limited first
 corpus can't distinguish "correct" from "coincidentally correct so far"),
 different concrete failure shape.
+
+**When you *do* find the sibling's changed constant, prove the old one fails
+across 100% of the new corpus — don't stop at "the new one works."** A layout
+constant that genuinely moved between ports is easy to confirm sloppily: the
+new value parses cleanly, you write it down, done. But "the new value works"
+is also true of a value that merely works *better*, and it leaves open whether
+you found the real constant or a lucky one. Running both is one extra loop and
+turns a plausible fix into a two-sided result. Confirmed on Phantasie I
+(Amiga) vs. Phantasie II (Atari ST) in the `nicodemus` project: the two ports
+share this world-map format's reader code *instruction for instruction* —
+identical grid math, identical 5-byte POI record stride (including the same
+latent over-read past the table's declared end), identical 3-arm
+message-length encoding, identical fog-of-war flag, identical section-mosaic
+arithmetic — and yet the per-section icon display list sits at offset 1000 in
+one and 1500 in the other, inside a record that grew 2500 → 3000 bytes.
+Parsing the P2 corpus at 1500 succeeded **17/17**; parsing the same files at
+P1's 1000 failed **17/17**. The clean split across the whole corpus in both
+directions is what makes it a fact rather than a working value — and note the
+broader warning it carries: "same engine, same code, byte-identical readers"
+does not imply "same layout constants", so a shared-engine finding licenses
+reusing the *structure*, never the *offsets*, without re-deriving them.

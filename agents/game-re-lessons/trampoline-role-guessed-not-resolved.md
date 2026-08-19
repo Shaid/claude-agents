@@ -38,6 +38,27 @@ before trusting or building on the claim — this is cheap (one arithmetic
 formula plus a short disassembly read) relative to the cost of an entire
 session's tracing built on a wrong premise.
 
+**Not Amiga-specific — the same trap fires for a plain `jal`/`bl`/`call`
+on any platform when a doc names a specific call as "the mechanism to
+trace" on the strength of the call *site's* location alone, without
+having read the callee's body.** Confirmed on Valkyrie Profile (PSX,
+MIPS): a project doc recorded "recovering overlay X's runtime load base
+via the installer's `jal 0x8001fd80`" as the concrete next step for a
+stalled item. Disassembling `0x8001fd80`'s target showed it was a generic
+wait/poll primitive (loops calling one helper until it returns nonzero,
+polling a callback pointer along the way) — called all over the same
+binary with unrelated arguments (a raw byte-size value in this instance),
+with no connection to overlay loading at all. The real relocation
+mechanism was a *different*, later call site in the same function, whose
+target's body contained a literal hardcoded `jal <fixed base address>` —
+recognizable specifically by reading what the callee *does with its
+arguments and where it ultimately transfers control*, not by the call
+site's position in the doc's narrative. A fast discriminator once you
+have two candidate calls: does the callee's return value get used by the
+caller (real logic) or discarded (generic side-effect/wait utility), and
+is the callee's own body's control-transfer target a literal fixed
+address (loader-shaped) or itself another indirection (utility-shaped)?
+
 **A second, narrower shape of the same trap: two *already fully known*
 targets can be visually indistinguishable at a single call site.** This
 isn't about an unresolved trampoline at all — both candidate functions

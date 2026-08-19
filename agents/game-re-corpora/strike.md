@@ -153,8 +153,93 @@ absolute hardware-register addressing as a second example of the same "one
 addressing-mode census misses real hits" trap — the CGRAM/palette DMA
 setup used direct-page `$21`/`$22` while the VRAM tile DMA setup a few
 functions earlier used absolute `$2116`/`$4342`, so a census restricted to
-one form found only half the loader). See
-`docs/urbanstrike/snes/data-structure.md` and `docs/urbanstrike/TODO.md`
-for open items (general resource table not found — only 2 resources
-decoded from one literal call site; tilemap/level format; SPC700 driver
-itself untraced).
+one form found only half the loader).
+
+**A `re-codebreaker` escalation then found the game's *actual* main
+graphics system**, after a prior pass's "no resource table" conclusion
+turned out to be caused by disassembling bank `$A8` with the wrong entry
+index-width flag (see `flag-aware-disasm-entry-state-not-global.md`). The
+splash-screen tag-byte codec above is used *only* by the splash screen — a
+resource-ID dispatch does exist, just scoped per-subsystem rather than one
+global catalog: a 24-bit far pointer held in DP `$20`/`$22`, resolved
+through a self-referential "handle" convention (a named pointer's target
+holds a pointer to itself+4; the real object starts there), indexed by
+per-subsystem 4-byte-entry arrays (`resourceId*4` → far pointer). Real
+tile/graphics resources use a **second, independent** LZSS compressor
+(`$9F:EBD4`, classic Okumura-style, 2048-byte ring, distinct from the
+splash codec) and store pixels as **chunky (linear-nibble) 4bpp**, not
+SNES-planar — the game's own upload routine (`$80:835D`) converts to
+planar at DMA time, so applying the standard planar decode directly to ROM
+bytes produces a coherent-*looking* but wrong render (a strong instance of
+`header-shape-ambiguous-pixel-encoding.md`; the discriminator was the
+15-16% out-of-palette pixel rate the wrong decode leaves behind, 0.0 for
+the right one). A tilemap descriptor + 2 payload codecs (raw, word-level
+RLE) sit on top. Fully verified byte-exact (67/67 LZSS tilesets, 98/98
+tilemap headers, 97/98 tileset links resolving) and shipped: 67 tilesets
+(12,564 tiles) + 97 composed screens, `tools/urbanstrike/snes-gfx.ts` /
+`snes-tilemap.ts` / `snes-lzss.ts`. Render oracle: a wood-panelled pool
+room with a legibly-lettered "EDGE COLA" vending machine, a flight helmet,
+an aerial city view. See `docs/urbanstrike/snes/data-structure.md`. Open:
+sprite/OBJ graphics, scrolling level/mission-map data, text, and tilemap
+encoding type `0x1E` (an indirection, target not chased) — `docs/urbanstrike/TODO.md`.
+
+**The Mega Drive overlay-tile bank's "30 runtime-composed tileset slots"
+mystery (§7.6 of `docs/strike-megadrive-tilemap.md`) also cracked further**
+this session: the mechanism repointing `$FF4690` per scene is a flat `u32`
+far-pointer table (Urban Strike file `0x0499E2`) indexed by a live
+level/scene-id RAM variable (`$FF13E4`) — `lsl.w #2,d0; move.l
+(a0,d0.w),$FF4690`. Each level's array mixes the already-known Strike-LZSS
+(`cmd=6`, one shared/common slot reused by every level) with a **new,
+previously-unidentified fourth Genesis codec** (`cmd=18`, "a fourth codec,
+nested nibble-keyed jump table" per the doc's own long-standing TODO) that
+covers most level-specific slots. Cracked by hand-decoding a linear-
+disassembler-defeating `JMP d16(PC,Dn.W)`-into-a-branch-array construct
+directly from a hexdump (see `game-re-tooling/genesis.md`) — the codec
+itself is not an LZ/back-reference scheme at all: 8 persistent 32-bit
+registers, refreshed one Genesis tile (32 bytes) at a time via 2-bit
+per-half nibble-encoded refresh modes {unchanged / upper16 fresh / lower16
+fresh / full32 fresh}, verified 129/129 byte-exact against real ROM
+resource-descriptor size fields, now `tools/shared/strike-tile-delta.ts`.
+**Record-to-level association and VRAM base-tile order then both solved
+in one pass**, `tools/shared/megadrive-level-tileset.ts`: grouping the
+overlay bank's 322 records by `tilesetSlot` (29 distinct nonzero values)
+and checking, per group, which candidate level's composed-array slot
+makes the *union* of every tile index the whole group references land as
+exactly `[0, tileCount)` — a perfect `(maxUsed+1)/tileCount == 1.00`
+fit — hits 1.00 for a unique level in **29/29** groups, assuming
+cumulative sequential VRAM-tile allocation (slot N's base = sum of tile
+counts of slots 0..N-1). Grouping many small fragments by a shared key and
+checking the *union's* fit is far more discriminating than checking any
+one fragment alone (single-record fits were ambiguous, multiple candidate
+levels passed; the 29-record group fits were unambiguous). Only the real
+CRAM palette for `cmd=18` resources remains open (escalated to
+`re-codebreaker` after 3 distinct failed approaches — a borrowed static
+palette, the descriptor's own field which mirrors its payload pointer for
+this whole resource family, and a sibling per-level object-handle chain
+that resolved through the project's own confirmed tilemap reader to a
+*legible text render* that turned out to be colouring the tilemap
+header's own struct bytes as fake CRAM data — see
+`legible-text-render-weak-palette-oracle.md`) — `docs/strike-megadrive-
+tilemap.md` §7.9, `docs/urbanstrike/TODO.md`.
+
+**Urban Strike SNES gained two more confirmed findings** this session,
+both self-driven (not escalated), applying the entry-state lesson above:
+a plain, uncompressed, null-terminated ASCII text table (883 real
+UI/mission/menu/character-bio strings, found by tracing the confirmed
+`$20`/`$22` far-pointer convention to a text consumer then scanning for
+printable-ASCII runs filtered by "contains a space, OR >=2 lowercase
+letters, OR is an all-caps label >=4 chars" — zero manual tuning needed
+beyond that one rule, `tools/urbanstrike/snes-text.ts`), and confirmation
+that real SNES OAM/OBJ hardware sprites are used (found via a DMA-
+channel-*target-register* census — `LDX #$04; STX $43N1`, i.e. "which
+channel points at `$2104`/OAMDATA" — rather than by resource shape; the
+544-byte transfer size matches the SNES's fixed, well-known OAM table
+size exactly, 128 sprites x 4 bytes + 32-byte high table, a strong
+hardware-constant cross-check for confirming a DMA transfer's *purpose*
+once its target register is known). The 3 bank-`$A8` entry points an
+earlier escalation had flagged as "sprite leads" turned out to be *more*
+tilemap/palette infrastructure, not sprite-specific code — a reminder that
+an escalation's own "still open, try these leads" pointers aren't
+guaranteed correct and need re-verifying, same spirit as
+`verify-escalation-artifacts-not-just-claims.md`. Sprite tile-graphics
+data and the shadow-OAM populate logic remain open.

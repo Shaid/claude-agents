@@ -146,6 +146,15 @@ and amiberry's operational gotchas once access has been granted.
   confirmed once per binary via a `HUNK_ABSRELOC32` entry whose
   pre-relocation stored value is exactly `0x7FFE`) and read the flat
   `-binary` disassembly's real addresses directly (`-label=1`).
+- **Normalize decimal vs. hex `A4` displacements before concluding "new
+  global".** IRA emits A4-relative displacements in **decimal**
+  (`-18340(A4)`), while project docs and probe scripts routinely cite the
+  same global in hex (`-0x47A4(a4)`). The two spellings never grep-match
+  each other, so a global that a prior session fully identified can look
+  brand-new (a Wizardry 6 session re-derived `-18340(A4)`'s role from
+  scratch — it was the already-documented `-0x47A4` current-level global).
+  Before investigating any `-N(A4)` reference, convert it to hex and grep
+  the docs/scripts for both forms.
 
 ## Parsing HUNK yourself
 
@@ -351,6 +360,24 @@ game was missing on an earlier pass.
 See the "Recompilation landscape" table in `game-re.md` — `docs/amiga-recomp.md`
 in `seer` is the platform's entry there.
 
+## Hand-written 68k opcode byte-pattern censuses — verify the encoding first
+
+A raw byte-pattern scan across a CODE hunk (no disassembler in the loop) is
+a recurring, cheap technique for exhaustive write/read censuses of one
+specific global (see `negative-from-addressing-root-not-shapes.md`'s
+"does a hidden Nth case exist" worked example) — but a hand-recalled opcode
+word is easy to get wrong in a way that produces a silent **false
+negative** (zero hits, mistaken for "this instruction form doesn't occur")
+rather than a crash. Confirmed wrong once: `clr.w $XXXX.l` (absolute-long
+addressing) hand-recalled as `0x42B9` is **wrong** — the real encoding,
+checked against actual PhantasieIII binary bytes, is `0x4279` (clr, size
+bits for word, mode 111/register 001 = absolute long). Before trusting a
+zero-hit result from a hand-written census, verify the opcode word against
+one real, already-disassembled instance of that exact instruction+addressing-
+mode combination in the target binary (or an authoritative 68k opcode
+table) rather than recalling it from memory — the mistake is invisible
+until a positive-control hit you expected to find doesn't show up.
+
 ## amiberry — operational detail (permission gate is in `game-re.md`)
 
 Once granted, still keep
@@ -366,3 +393,44 @@ Once granted, still keep
   via a prebuilt frontend HDF instead; and the IPC socket can silently
   attach to another concurrent amiberry session on the host — check
   `check_process_alive`'s PID after every launch.
+
+## Offline `.uss` savestate analysis (no running emulator needed)
+
+When a user supplies pre-made UAE-family (WinUAE/FS-UAE/Amiberry) `.uss`
+savestates instead of granting live amiberry access, `@seer-project/amiga`'s
+`uss.ts` (`loadSavestate`/`scanChunks`/`findChunk`/`inflateChunk`) parses the
+chunk stream without launching anything — see its module docstring for the
+format. Two things worth knowing beyond that doc:
+
+- **Recovering a Zorro III fast-RAM chunk's real base address**: don't
+  assume a conventional default. The savestate's `EXPB` (autoconfig board)
+  chunks are `ConfigDev`-shaped — locate the board's ASCII name string
+  (e.g. `"Z3Fast"`) inside the chunk payload and read the base/size
+  longwords immediately preceding/following it; the size should match the
+  chunk's own inflated length exactly, which is a free cross-check that
+  you found the right board entry. Chip RAM (`CRAM`) is simpler — its base
+  is always `$000000`, and its inflated length tells you the configured
+  chip RAM size directly.
+- **Recovering a hunk's live runtime load address from a savestate**: take
+  a 32-64-byte window from a few different offsets across the executable's
+  own raw hunk-payload bytes (avoiding windows that straddle a
+  `HUNK_RELOC32`-patched longword, which will differ between file and
+  memory) and search for it inside the inflated `CRAM`/`ZRAM` buffers — a
+  match's buffer offset (plus the region's base address) is the hunk's
+  runtime base. Confirmed cheap and decisive across 3 separate savestates
+  from the same session (Wings) with 0 deviation outside relocation slots.
+- **The `"CPU "` chunk (note the trailing space in the 4-byte tag — see
+  `uss-chunk-name-trailing-space.md`) is not a simple flat 68k register
+  struct on at least some Amiberry builds/CPU models.** One observed
+  instance was 22,764 bytes — the region past a small header looked, under
+  a cross-savestate diff, like a cycle-exact CPU core's internal
+  prefetch/bus-cycle trace buffer (raw opcode-shaped bytes interleaved with
+  addresses in a region unrelated to any loaded code hunk), not registers.
+  A resync-by-plausibility scan (every word-aligned `u32` tested against
+  known hunk address ranges) and a full-memory pointer census for a
+  stack-like cluster of return addresses both came back empty for a live
+  PC. No authoritative field layout was recovered this way — treat "read
+  the live PC out of a `.uss` file's `CPU ` chunk" as an open problem, not
+  a working technique, until a future session cracks the real layout
+  (candidate approach: find and read actual WinUAE/Amiberry C++ savestate
+  source rather than resync-by-plausibility alone).

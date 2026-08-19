@@ -67,18 +67,36 @@ real PS2 GS privileged-register write packets (`BITBLTBUF`/`TRXPOS`/
 pattern rather than a fixed offset; see
 `game-re-lessons/ps2-inhouse-texture-embeds-gs-register-packets.md` for the
 general technique. Pixel data is linear/unswizzled; the 256-entry CLUT
-needs the standard PS2 CSM1 index unswizzle. 1,046/1,046 (100%) of
-Drakengard's own corpus and 11,117/11,123 (99.95%) of Drakengard 2's decode
-cleanly — verified visually (clean armor/hair/eye/cloth textures, and
-decisively a real "PROJECT: DRAGONSPHERE" developer logo, the game's own
-working title). Drakengard 2 adds a third, non-indexed direct-`PSMCT32`
-texture shape absent from Drakengard 1.
+needs the standard PS2 CSM1 index unswizzle. 130,378/130,464 (99.93%) of
+Drakengard's full corpus (once `\0V3a`-compressed textures are included —
+see below) and **12,348/12,348 (100%)** of Drakengard 2's decode cleanly —
+verified visually (clean armor/hair/eye/cloth textures, and decisively a
+real "PROJECT: DRAGONSPHERE" developer logo, the game's own working
+title). Drakengard 2 adds a third, non-indexed direct-`PSMCT32` texture
+shape absent from Drakengard 1. Drakengard 2's last 6 decode failures
+turned out to be a register-group-scan bug (a coincidental byte match
+inside a large pixel payload accepted as a real `BITBLTBUF` group, or a
+multi-pixel-group particle-atlas shape the scanner's old "stop at exactly
+2 groups" logic never looked past) — not the swizzle-variant bug it was
+originally suspected to be; fixed by validating each candidate group's
+`DPSM` against the format's known-real enum values and its declared
+payload size against the remaining buffer, and by not hardcoding the
+group-count stop condition.
 
 **Confirmed and decoded: `CSFg` mesh geometry, both sub-formats**
 (`tools/shared/cavia-csfg.ts` + `cavia-csfg-vu1.ts`) — positions, normals,
 skin weights, UVs, triangle-strip topology, and world-space scale, cracked
 via a `re-codebreaker` escalation after this project's own header-field-
-stride and float-plausibility-scan approaches stalled. The sibling `wZIM`
+stride and float-plausibility-scan approaches stalled.
+**Drakengard 2's strip-header bit 15** (masking required to parse since it
+was first found, semantics unresolved for a full session despite real
+correlational evidence) turned out to be a backface-culling
+reversed-winding flag, solved via a second escalation that reapplied this
+same format's own already-validated face-vs-vertex-normal winding check
+(see `game-re-method/verification-techniques.md`'s "Reapply an
+already-validated technique" section) — gated by a *different*,
+previously-"unresolved" sub-block `flags` bit (`0x400`) nobody had
+connected to the strip question at all. The sibling `wZIM`
 texture format's hardware-packet-embedding convention was a reasonable
 first hypothesis for *ordinary* `CSFg` and was explicitly tested and
 refuted there — see
@@ -223,36 +241,71 @@ conversion, not exactly unit-scaled. See
 `docs/drakengard/ps2/data-structure.md` §10/§10.1 for the full byte-level
 writeup of all five.
 
-Real, whole-ISO pipeline numbers: Drakengard — 1,046 textures, 12 model
-packages → glTF (16,746 verts, 21,167 tris, all skinned+animated), 995
-audio files (~26s wall time). Drakengard 2 — 11,117 textures, **528 model
-packages** → glTF (716,082 verts, 869,285 tris, all 528 skinned, 310 with
-baked animation), 1,900 audio files (~100s wall time) — **528/528 (100%)**
-of the skeleton corpus, not a narrow subset the way Drakengard 1's own
-12/297 is (DG2 keeps most character/enemy packages directly at
-`D_IMAGE.BIN`'s top level rather than nested inside `tmp_pack.txt.bin`-style
-wrappers; the ~285 Drakengard-1 packages that don't reach a glTF are a new,
-honestly-tracked open item, `dod1-nested-tmppack-models`). Live Playwright
-verification on both games: a real character (`model_0000_CAIM` /
-`model_0024_EVENT_CAIM`) renders correctly standing and fully textured; the
-baked sword-combo animation visibly plays frame to frame (screenshot
-pixel-sampling showed real per-frame differences, not a static image); real
-texture atlas browsing and real `<audio>` playback (`currentTime` advancing)
-both confirmed; zero browser console errors across both games.
+**Solved (2026-08-15 pass): `\0V3a`, an 81%-of-`IMAGE.BIN`-bytes compressed
+leaf format that a prior session's plan had misattributed to a "297 total
+`mmodel.bin` packages, only 12 reachable" framing.** That "297" figure was
+simply wrong — no bug, just an unaudited/uncommitted probe from an earlier
+session; a fresh recursive walk mirroring the real container-walking code
+found the true uncompressed-portion count is **12**, already 100% covered.
+The real missing content (readable fragments — `"mmodel"`, `"CJFg"`, a
+literal byte-for-byte `fpk`-header-prefix match — found embedded in an
+"unclassified leaf" bucket; see
+`game-re-lessons/embedded-known-name-fragments-signal-compressed-sibling-content.md`)
+was inside `\0V3a`: a proprietary 32-byte header wrapping a chain of
+independent 262,144-byte **LZO1X** blocks (only the wrapper is custom, the
+codec is stock LZO), solved via `re-codebreaker` and shipped as
+`tools/shared/cavia-lz0.ts`. Both games use it byte-identically — 662/662
+Drakengard 1 blobs and 1,225/1,225 Drakengard 2 blobs decompress
+byte-exact. Wired transparently into `walkCaviaContainer`
+(`tools/shared/cavia-archive.ts`) so every existing consumer (both games'
+model/audio walkers) picks it up with zero per-caller changes — a shared-
+code fix that benefits Drakengard 2's own pipeline automatically next time
+it rebuilds. Also solved this pass: the `fpk` directory entry's "extra"
+field (dual-purpose — a `\0V3a` blob's own decompressed size, confirmed
+662/662 exact; or, in every non-`IMAGE.BIN` archive checked, a short
+content-type tag, decisively reversed-ASCII for 3 of 4 archives against
+real filenames already known from this game's own manifest text).
+
+Real, whole-ISO pipeline numbers: Drakengard — **130,378 textures, 3,380
+model packages** → glTF (918,091 verts, 980,565 tris, all 3,380 skinned,
+1,040 with baked animation), 995 audio files, 135,745 manifest entries,
+4.3 GB output (~20 min wall time — up from 1,046 textures/12
+models/16,746 verts/~26s before `\0V3a` was wired in, a ~280x jump in
+model coverage from one format crack). A random 15-glTF sample (spanning
+both the original and newly-reachable character/prop names) passes the
+Khronos validator with 0 errors each. Drakengard 2 — 11,117 textures,
+**528 model packages** → glTF (716,082 verts, 869,285 tris, all 528
+skinned, 310 with baked animation), 1,900 audio files (~100s wall time) —
+**528/528 (100%)** of the skeleton corpus even before this pass's `\0V3a`
+wiring reaches DG2's pipeline too (tracked as `dod2-v3a-textures-unwired`
+in `docs/drakengard2/TODO.md` for its own texture corpus specifically; DG2
+keeps most character/enemy packages directly at `D_IMAGE.BIN`'s top level
+rather than nested inside compressed wrappers, unlike Drakengard 1). Live
+Playwright verification on both games (pre-`\0V3a`, not re-run at the new
+scale — the render logic is unchanged, only data volume grew): a real
+character (`model_0000_CAIM` / `model_0024_EVENT_CAIM`) renders correctly
+standing and fully textured; the baked sword-combo animation visibly plays
+frame to frame (screenshot pixel-sampling showed real per-frame
+differences, not a static image); real texture atlas browsing and real
+`<audio>` playback (`currentTime` advancing) both confirmed; zero browser
+console errors across both games.
 
 Full findings, confidence-graded (confirmed/rendered/hypothesis) per the
 project's own convention: `docs/drakengard/ps2/data-structure.md`,
 `docs/drakengard2/ps2/data-structure.md`. Sequencing/status:
 `docs/drakengard/plan.md`, `docs/drakengard2/plan.md`. Open items:
 `docs/drakengard/TODO.md`, `docs/drakengard2/TODO.md` — what remains is
-genuinely secondary: the compressed `mvNN.bin` subtitle-text blobs (header
-shape and high entropy confirmed, checked against `ancient` with no
-known-codec match — likely a custom in-house scheme), `CMFf`'s second
-per-joint track's semantics, a DG2 `CSFg` strip-flag bit with real but
-inconclusive correlational evidence, DG2's still-unidentified `kvm1.60`
-format (scoped — 75 instances via a full walk, structured header, moderate
-entropy — but not decoded), and the Drakengard-1-only
-`dod1-nested-tmppack-models` gap above.
+genuinely secondary: the compressed `mvNN.bin` subtitle-text blobs (ruled
+out this pass as sharing `\0V3a`'s LZO1X codec — different header shape,
+LZO1X fails at every offset tried — likely a separate custom scheme or
+encryption), `CMFf`'s second per-joint track's semantics, DG2's
+still-unidentified `kvm1.60` format (scoped — 75 instances via a full
+walk, structured header, moderate entropy — but not decoded), `SPK0`
+(10% of `IMAGE.BIN`'s bytes, a small container with a nested `DMT0` tag,
+undecoded), wiring `\0V3a` into DG2's own texture pipeline
+(`dod2-v3a-textures-unwired`), the `dpk` entry hash algorithm, and the
+`fpk`/`dpk` magic-check code sites (untraceable via the radare2 MCP's
+`search` tool in this environment — see `game-re-tooling/ps2.md`).
 
 ## Drakengard 3 (PS3)
 
@@ -783,12 +836,340 @@ RAP-required (`NPD.license === 2`) and no `.rap` file exists anywhere in
 this data set — a genuine missing-input blocker per the mission's autonomy
 contract, not chased further.
 
+**Update (2026-08-12 pass, `CRILAYLA` cracked and a real shipped pipeline
+since the recon above was written)**: `CRILAYLA` is a standard CRI codec,
+now fully decoded (`tools/shared/crilayla.ts`, corpus-wide byte-exact
+verified, 1,679/1,679 entries). The three nested `AUDIO/NIER_*.CPK`
+archives (BGM/English voice/English movie-audio-mix) are fully decoded and
+shipped as a real MP3 pipeline, 4,501/4,501 clips, 0 failures
+(`tools/nier/audio-assets.ts`, `tools/shared/cri-aax.ts`). **The game is
+now registered** (`id: 'nier'`, `platform: 'ps3'`). `KPKy` (recursive
+container), `MTMI`/`sall`/`CTFd`/`CPF*` (inner CRILAYLA magics) have
+confirmed structural shapes but not full field-level decodes. **A focused
+pre-rendered-video/FMV search this pass reached a definitive, evidenced
+negative**: no CRI Sofdec/USM, Bink, ASF, or RIFF/AVI video container
+exists anywhere in the decrypted base game — confirmed via four
+independent full-corpus-coverage angles (size-outlier hunt, exhaustive
+full-content magic-byte scan, `KPKy` leaf-name census, and a full `EVENT/`
+subtree structural survey showing every cutscene is real-time in-engine
+staging data, not monolithic video files — see
+`content-type-absence-needs-multiple-independent-angles.md` for the
+reusable technique). The negative is narrowly scoped: `EBOOT.BIN` (absent
+from this dump) and the still-RAP-blocked `DLC01.EDAT` are the only two
+unexamined pockets where video could still exist. A future session
+shouldn't re-run this search from scratch — see
+`docs/nier/ps3/data-structure.md` §10 before starting.
+
 Full writeup, byte tables, and the paths-tried table for the still-open
 custom Cavia formats: `docs/nier/ps3/data-structure.md`. Sequencing:
-`docs/nier/plan.md`. Open items: `docs/nier/TODO.md`. **Not yet a
-registered Seer game** (`src/game-id.ts`/`game-config.ts`) — deliberately
-deferred until at least one real asset type flows through a working
-`buildAssets` step, matching this project's own history with Drakengard 3.
+`docs/nier/plan.md`. Open items: `docs/nier/TODO.md`.
+
+**Update (2026-08-16 pass)**: two real structural cracks, plus an X360
+cross-verify closed. `.MDP`'s `"lzo\0"`-tagged wrapper's "probably plain
+LZO1x" hunch is **refuted** with a decisive control test (a terminator-
+seeking decode variant's natural stop position was start-offset-independent
+— the fingerprint of a random walk hitting a rare terminator pattern, not
+real decompression; new lesson
+`lzo-style-decode-start-offset-independence-refutes-stream.md`) — the real
+structure is fixed 131,072-byte physical pages of mostly-uncompressed data
+with small per-page metadata records, confirmed byte-exact across PS3+X360.
+`KPKy`'s directory offset fields are now confirmed **self-relative** to
+their own record's file position (15 independent byte-exact target matches
+across 3 samples), and its `MESH` sub-chunk's own TLV grammar is fully
+decoded end-to-end — a materials/shader library (`TRSP`/`EFFE`/`CSTS`/
+`SAMP`/`MATE`/`VARI`), not raw geometry as originally hypothesized; a real
+`"MergedGeometry0/1/2/..."` sub-mesh name table was also found.
+`nier-x360-cpk-format-crossverify` closed: `CRILAYLA` confirmed byte-exact
+via a genuinely independent cross-platform oracle (0/640,689 bytes differ
+across 4 files where PS3 compresses and X360 ships the same content raw —
+also revealing X360 doesn't CRILAYLA-compress these file types at all).
+
+## NieR (2010, Xbox 360)
+
+**A fourth NieR-corpus platform, first pass.** Same 2010 Cavia game as the
+PS3 original above — triggered by that PS3 pass's own open question
+(`nier-video-blocked`: user reports a real ~3min intro on PS3 boot, but an
+exhaustive PS3-dump search found zero pre-rendered video anywhere). This
+pass used the X360 release (no NPDRM/PKG layer at all, fully readable) as
+an oracle for "does the game even ship pre-rendered FMV" — **answer: yes**.
+
+**Confirmed: real pre-rendered video, shipped.** All 4 real movie files
+(`media/movie/*.sfd`) are plain, standard MPEG-2 Program Stream (magic
+`00 00 01 BA`) — not Bink/WMV (the natural X360-era hypothesis) or CRI
+Sofdec/USM. `TITLE_NIER_ALL.sfd` runs 184.83s (3:04.8), closely matching
+the user's own ~3-minute report, and its decoded frames are visually
+confirmed as NieR's real opening CG. ffmpeg's stock MPEG-PS demuxer reads
+these directly — no custom container parser needed for the video itself.
+
+**Confirmed: a real XDVDFS/GDF disc filesystem, parsed from scratch and
+byte-exact verified** — new shared, general (not NieR-specific) module
+`tools/shared/xdvdfs.ts`, reusable for any future Xbox/X360 title in this
+project family. The computed partition-base offset lands on exactly
+`0x0FD90000`, byte-identical to a known public constant
+(`XboxDev/extract-xiso`'s `GLOBAL_LSEEK_OFFSET`, for hybrid video+game
+discs) — strong independent confirmation, not a coincidence. Directory
+entries are a standard in-place binary search tree (16-bit left/right
+child offsets, ×4, relative to the table's own start) — cross-checked
+against three independent real implementations (`extract-xiso`, `xbiso`,
+`xbfuse`) before implementing from scratch.
+
+**Confirmed cross-platform finding: the same CRI CPK toolchain as the PS3
+release.** `media/layer1.cpk`/`layer2.cpk` are ordinary CRI `CPK`/`@UTF`
+archives (identical packer version string, near-identical directory
+taxonomy/file counts to the PS3 `STABLE.SDAT`'s own CPK) — `cri-cpk.ts`
+applies completely unmodified via a trivial reader-adapter wrapping an
+XDVDFS entry. Not opened further this pass (breadth census only); whether
+the PS3 corpus's already-decoded inner formats carry over byte-identically
+is a real, scoped, unconfirmed follow-up.
+
+**A real, honestly-scoped audio finding, not shipped this pass.** The
+movies' audio elementary stream is CRI AIX (magic `AIXF`), not plain ADX —
+ffprobe/ffmpeg's shallow per-stream codec probe mislabels it `adpcm_adx`,
+and only a full transcode attempt (not container-level probing) reveals
+the mismatch (~99% packet decode error rate). Confirmed via vgmstream (a
+scratch-copy byte-patch worked around vgmstream's own overly strict
+format-recognition gate — see the pitfalls index for the general lesson):
+1 segment, 3 stereo ADX layers, 6 channels total, byte-exact-matching
+duration once opened. Which layer is the intended playback content is
+undetermined, so the shipped MP4s are deliberately video-only rather than
+risking an audibly wrong blind 6→2 downmix (overlapping languages).
+
+Registered as a real Seer platform (`src/game-id.ts`: `'x360'` added to
+`PLATFORM_IDS`; `tools/shared/game-config.ts`: new `platform: 'x360'`
+entry under the existing `id: 'nier'` config). Full writeup:
+`docs/nier/x360/data-structure.md`. Sequencing: `docs/nier/plan.md`. Open
+items: `docs/nier/TODO.md` (`nier-x360-cpk-format-crossverify`,
+`nier-x360-aix-audio`).
+
+## NieR Replicant ver.1.22474487139 (PC, 2021 remaster)
+
+**A third, unrelated NieR-branded title in this corpus** — same publisher
+(Square Enix), but developed by **Toylogic**, not Cavia (the 2010 PS3
+original, above) and not PlatinumGames (NieR:Automata, below). **Confirmed
+zero format continuity with the PS3 original**: no CRI CPK/@UTF/CRILAYLA,
+no PS3 NPDRM. Instead, a completely different in-house container: `.arc`
+files are one or more concatenated whole-file **Zstandard** frames (public
+RFC 8878 codec, standard magic `28 B5 2F FD`) wrapping a custom `PACK`
+container (self-relative-offset directory of named, hashed sub-assets) and
+a `BXON` typed-object header (the engine's own RTTI/reflection convention,
+prefixing every structured resource with a magic + version + type-name
+string). Engine confirmed via `.exe` string census: Audiokinetic Wwise
+(audio) + embedded Lua 5.0.2 (scripting) + D3D11 (BC1-5 block-compressed
+textures) — a consistent `tp`-namespaced in-house C++ codebase throughout
+(`tpArchiveFileParam`, `tpXonAssetHeader`, `tpGxTexHead`), not shared with
+either other NieR title's engine. **Registered as a Seer game**
+(`src/game-id.ts`/`tools/shared/game-config.ts`, id `'nier'`, platform
+`'pc'`).
+
+**Real, high-quality prior art found and used**: the outer Zstandard
+framing was independently derived from raw bytes first, then a
+`WebSearch` surfaced
+[`neptuwunium/kaine`](https://github.com/neptuwunium/kaine) (`yretenai`'s
+tool, GitHub-account-renamed — the original URL 301-redirects) — a real
+C++ extractor + plain-text format research notes covering this exact
+game's `PACK`/`BXON`/`tpArchiveFileParam`/`tpGxTexHead` structs
+byte-exactly. Every struct field is cited from that reference's actual
+`.cpp` pointer arithmetic (not just its `.hpp`/prose notes — see
+`game-re-lessons/self-relative-offset-needs-cpp-arithmetic-not-prose.md`).
+For `data/sound/`'s Wwise `AKPK` container (a genuinely separate, later
+format, see below), the reference was instead the community QuickBMS
+script `bnnm/wwiser-utils/scripts/wwise_pck_extractor.bms` — same
+"derived-from-reference, then independently re-verified byte-exact"
+confidence discipline.
+
+**Confirmed and shipped: `tpGxTexHead` textures, full corpus.**
+18,320/18,474 real textures (99.2%) decoded — 19,635/19,635 archive
+entries walked (base game + DLC), 0 read/decode failures. `.arc`'s master
+index (`info.arc` → `BXON(tpArchiveFileParam)`) was verified via a real
+cross-check: this project's own independently-derived raw zstd-frame count
+per archive (zero knowledge of `info.arc`'s contents) agreed exactly with
+`info.arc`'s own declared per-archive file counts, for all 6 base archives
++ the DLC archive. `ArchiveFileParam.hash` is standard FNV-1 32-bit,
+solved via a systematic known-plaintext sweep, confirmed 100%
+(19,635/19,635). Extractors: `tools/nier/build-assets.ts`,
+`tools/nier/run-textures-batched.sh` (memory-safe batched runner —
+`tools/shared/nier-pc-archive.ts`'s texture decode saw a real ~9GB-RSS
+incident on one long-running process before this fix), `tools/shared/
+nier-pc-archive.ts`, `tools/shared/dds.ts` (extended with BC2/BC5).
+
+**Confirmed and shipped: `data/movie/` — `MARC`-wrapped standard ASF/
+WMV2+WMA2 video, 9/9 files, 0 failures.** A trivial 24-byte custom header
+(byte-exact `payloadSize === fileSize - payloadOffset` invariant, 0
+deviations) wraps a genuinely standard Microsoft ASF container — no
+game-specific video/audio codec work needed. Transcoded to H.264/AAC MP4
+via ffmpeg's `subfile` pseudo-protocol (reads the payload directly from
+its real byte range within the `.arc` file, no stripped-copy intermediate
+needed even for the ~660MB largest source). A real, confirmed source-data
+quirk (not a pipeline bug, see `game-re-lessons/container-declared-size-
+may-be-stale-not-decoder-bug.md`): two attract-mode files' ASF headers are
+stale, declaring the size/duration of an unrelated, much smaller sibling
+file — ffmpeg correctly, cleanly respects the container's own (wrong)
+metadata. `tools/shared/marc-container.ts` + `tools/nier/
+movie-assets-pc.ts`.
+
+**Confirmed and shipped: `data/sound/` — Audiokinetic Wwise `AKPK`
+packages, 28,632/28,632 real clips decoded (100%), 0 failures, 0 name
+collisions.** `AKPK` is a real, public, non-game-specific Audiokinetic
+container format. A real structural discovery was needed to get to 100%:
+Wwise's standard "streamed with prefetch" pattern means a minority of a
+bank's embedded `DIDX` entries are deliberately truncated fragments (real
+complete audio lives elsewhere, matched by numeric Wwise object id) rather
+than complete streams — see `game-re-lessons/wwise-prefetch-fragment-vs-
+complete-embedded-audio.md` for the local, self-contained discriminator
+(compare a `DIDX` entry's own embedded `RIFF`-declared length against the
+directory's declared size). Real breakdown: 17,233 `stream.pck` +
+608 `stream2.pck` (plain standalone streams) + 10,791 `media.pck`-bank
+entries (5,413 English + 5,378 Japanese genuinely unique complete
+voice-line entries; a further 305 prefetch fragments correctly skipped).
+Decoded via vgmstream-cli (reused, not re-derived) + ffmpeg. Extractors:
+`tools/shared/nier-pc-akpk.ts`, `tools/nier/audio-assets-pc.ts`,
+`tools/nier/run-audio-batched.sh` (batched/resumable runner — see
+`game-re-lessons/batched-resume-reprobe-cost-linear-in-corpus-size.md` for
+a real resume-path performance bug found and fixed on this exact corpus).
+
+**A real, honestly-flagged cross-corpus lead, explicitly not claimed as
+solved**: this remaster's `.cmfl` motion/animation payloads begin with
+magic `KPK\x7f` — a sibling (shared 3-byte prefix, different terminal
+byte, same "last-byte variant" pattern already seen twice in this
+project's PS2 Cavia corpus) of the still-undecoded PS3 NieR corpus's own
+`KPKy` format, above. Not assumed identical (different studio/engine/
+console generation) — flagged as a two-directions-worth-checking lead,
+tracked in both games' `TODO.md`. The outer `KPK\x7f` container structure
+(chunk count + monotonic offset table) is itself confirmed, byte-exact,
+across the whole real `motion/*` namespace (151/151); per-chunk internal
+content (bone/keyframe data) is still open, as are `.rmesh` (mesh
+geometry, 3,729 instances, magic confirmed `BXON` but type/layout
+undecoded) and a long tail of other still-uncracked extensions.
+
+Full writeup: `docs/nier/pc/data-structure.md` (a platform doc alongside
+`docs/nier/ps3/data-structure.md`, sharing the top-level
+`docs/nier/plan.md`/`docs/nier/TODO.md`).
+
+## NieR:Automata (PC, Steam)
+
+**A different, unrelated title from the NieR (2010, PS3) entry above** —
+same publisher (Square Enix), same "NieR" branding, but developed by
+**PlatinumGames**, not Cavia, and a much later (2017) release on a
+different platform entirely. **Confirmed zero engine continuity with
+Cavia's NieR (2010)** — zero `cavia` string hits anywhere in
+`NieRAutomata.exe`. **Registered as a Seer game** (`platform: 'pc'`) as of
+a 2026-08-10 second pass — first shipped asset type is textures, 2,632 real
+`type: "texture"` entries decoded corpus-wide (all 24 `.cpk` archives,
+2,969 `.wtp`/`.dtt` entries scanned, 0 read failures, 10 unsupported-
+pixel-format failures) — see `docs/nierautomata/pc/data-structure.md` §16
+and `tools/nierautomata/build-assets.ts`. A third pass the same day added a
+second real asset type, meshes — see below. Chose textures over the first
+(recon) pass's own "readable text is the fastest path" recommendation
+because this project's viewer had no browsable text/data-table tab (unlike
+`valkyrie`'s `data-view.ts`) — textures reused the already-built
+`type: "texture"` PNG-atlas viewer path with zero new UI work, which won
+out over a format that was genuinely faster to *decode* but would have
+needed new UI to actually ship. Worth remembering as a general prioritization
+rule for a "pick the faster of two viable first-asset candidates" call: weigh
+existing-infra reuse, not just raw decode effort.
+
+**Confirmed: PS3 NieR's CRI `CPK`/`@UTF`/`CRILAYLA` container work
+transfers byte-for-byte unmodified** to this unrelated title —
+`tools/shared/cri-cpk.ts`/`crilayla.ts` worked against real `.cpk` files
+with zero code changes, including hitting the exact same `TocOffset >=
+0x800` boundary-case `fileOffsetBase` rule (`TocOffset = 2048 = 0x800`
+exactly, in both titles independently). CRI Middleware really is used
+industry-wide across unrelated Japanese-publisher titles spanning multiple
+console generations, not just within one developer's output — reinforces
+checking for it on any new PS2/PS3/PC-era Japanese-publisher target before
+re-deriving a container format from scratch. Unlike the PS3 release, the
+PC release has **no NPDRM/encryption wrapper at all** — plain,
+unencrypted files throughout, so `ps3-edat.ts`/`ps3-sdat-reader.ts` don't
+apply here.
+
+**Confirmed: a genuinely different, PlatinumGames in-house engine** — not
+Cavia's, not Unreal Engine 3 — via direct C++ mangled-namespace evidence:
+Audiokinetic Wwise and Geomerics Enlighten are both linked in directly
+(their own public namespaces appear nested inside the game's own `lib`/`Hw`
+wrapper layer), plus a literal linked-in CRI Middleware copyright string
+and `CriFsBinder`/`CriFsGroupLoader` symbols confirming CRI's own
+CPK-reading library is used directly, not reimplemented.
+
+**Three new formats identified; two now decoded well past container shape**.
+The generic PlatinumGames `DAT\0` resource-bundle container (wraps almost
+the entire corpus regardless of file extension) now has 2 of its 3 previously-
+unknown header fields decoded: a per-entry hash table and a per-entry real
+(unpadded) size table, both found via the same style of arithmetic-invariant
+sweep that first confirmed the outer `tableEnd = headerSize + count*4`
+shape — see `game-re-method/verification-techniques.md`'s "header
+count/table-start/table-end" technique entry, and `tools/shared/
+nierautomata-dat-bundle.ts`. The `WTB`/`WTA`/`WTP` texture family
+(PlatinumGames' own texture-archive format, shared with the studio's other
+titles — Bayonetta, Vanquish, MGR:Revengeance, Astral Chain) is now decoded
+down to a real per-texture/mip offset+size table whose format field matches
+the actual Microsoft DXGI enum (`tools/shared/nierautomata-wtb.ts`) — but
+turned out to be **unnecessary for pixel extraction**: the paired `.wtp`/
+embedded-`DDS` payload is always a complete, standalone, spec-conformant
+DDS file on its own, so the shipped pipeline decodes that directly via a
+new general-purpose `tools/shared/dds.ts` (Microsoft DDS container + BC1/
+BC3 block decompression, hand-rolled from the public spec — small,
+deterministic block math, not a codec worth distrusting a reimplementation
+of; verified via byte-exact mip-chain and cubemap face-major layout
+invariants against real files, not just "renders look right"). `dds.ts` is
+plausibly upstream-worthy (`game-re-tooling/seer-upstream.md`) — zero
+game-specific logic, any project needing DDS/BC1/BC3 could reuse it as-is.
+A real trap hit along the way: a sub-resource tagged `"XML\0"` inside the
+`DAT` bundle turned out to be dense binary data, not literal text — see
+`game-re-lessons/chunk-tag-name-mimics-unrelated-format.md`.
+
+**Confirmed and decoded: `WMB3` mesh format, with real, game-specific prior
+art** — a 2026-08-10 third pass found two independent, actively-maintained,
+NieR:Automata-*specific* open-source Blender importer/exporter projects
+(`WoefulWolf/NieR2Blender_2_8`, `ArthurHeitmann/Nier2Blender2NieR`) via a
+plain `WebSearch`, cloned and read directly rather than hand-deriving from
+scratch — both agree byte-for-byte on the struct layout independently, a
+strong `romhacking-community-tools-first.md` win. Real corrections/
+refinements past the prior art itself: a wrong per-vertex normal formula in
+both reference tools (`byte*2/255`, never unit-length — neither tool's own
+Blender importer actually reads the field, so the bug was never caught;
+fixed via `byte/127.5-1`, verified against a real unit-length invariant —
+see `game-re-lessons/reference-tool-field-never-consumed-by-its-own-
+importer.md`); a used-vertex-set compaction for large world/terrain meshes
+whose declared `vertexCount` is a loose, not tight, per-mesh bound (both
+reference tools already solve this in their own `clear_unused_vertex()`
+helper, which a naive struct-field port misses — see
+`game-re-lessons/declared-range-field-loose-for-bulk-records.md`; also
+fixed an 80s→1.1s performance cliff on the same file); and a general
+`meshStart`-range form for mesh→material linkage past the reference tools'
+own index-0-only assumption, which breaks on any multi-LOD file. Also fixed
+a real gap in the already-shipped `WTB\0` texture-header parser (an
+optional 4th texture-identifier table the original recon sample never
+exercised — `game-re-lessons/format-field-width-unexercised-by-first-
+corpus.md`'s pattern). Shipped a from-scratch glTF 2.0 exporter
+(`tools/shared/nierautomata-wmb3-gltf.ts`, no umodel-equivalent exists for
+this engine) — **1,819/1,867 (97.4%) of the real corpus decoded and shipped
+as glTF**, 0 Khronos glTF-validator errors/warnings across ~83 real files
+sampled. A real manifest name-collision bug between texture and mesh
+entries sharing one source `.dtt` file was found and fixed along the way —
+see `game-re-lessons/slugified-name-collision-overwrites-output.md`'s
+second instance. Deliberately deferred, both real and scoped: skinning
+(bones/boneMap/boneSet fully decoded, not yet baked into glTF `skins`) and
+material→texture pixel linkage (a global identifier index resolves 99.97%
+of real material texture refs to a `WTB\0` entry *location* corpus-wide,
+but per-entry sub-texture cropping from a shared multi-texture `DDS`
+payload needs a texture-pipeline extension not built this pass). Full
+writeup: `docs/nierautomata/pc/data-structure.md` §18.
+
+**Confirmed: audio moved from CRI ADX/HCA (PS3 NieR) to Audiokinetic
+Wwise** — `BKHD` SoundBank chunks both embedded inside `DAT` bundles and as
+standalone `.bnk`/`.wem`/`.wsp`/`.wai` files outside any CPK. Video is CRI
+`USM` (own `CRID` magic, embeds the same `@UTF` table format as CPK).
+Lighting is Geomerics Enlighten (`.enlMeta`/`.rss`, undecoded, licensed
+third-party GI middleware, likely low priority).
+
+Full-corpus TOC survey (cheap — never required reading a multi-GB file's
+bulk content): 9,040 files across 24 real `.cpk` archives (corrected from
+an initial miscount of 25), 22.4GB decompressed, only 11 distinct
+extensions (a much flatter taxonomy than PS3 NieR's 34, since almost
+everything funnels through the one `DAT` bundle container).
+
+Full writeup: `docs/nierautomata/pc/data-structure.md`. Sequencing:
+`docs/nierautomata/plan.md`. Open items: `docs/nierautomata/TODO.md`.
 
 ## Dragon's Crown (PS3 + PS4)
 
@@ -1105,3 +1486,126 @@ boundary field, silently negative — was caught only by a synthetic
 round-trip unit test, never manifesting as a visible failure against real
 corpus data (the affected block just silently decoded 0 vertices instead
 of throwing). Full writeup: `docs/chaoslegion/ps2/data-structure.md` §13.
+
+**Solved (2026-08-10 pass): the FMV audio "sounds wrong" bug report was
+real, and its root cause was a byte-order bug invisible to every
+structural check previously used to call this "confirmed."** The FMV
+audio decoder assumed little-endian 16-bit PCM throughout; the game's own
+raw bytes are big-endian on 15 of 16 audio-bearing clips (the 16th, an
+externally-sourced logo/theme-song vanity card, is genuinely the
+opposite — no header field distinguishes the two cases). Found via lag-1
+sample autocorrelation (wrong order ≈0.00, right order 0.85-0.98, a
+70-1,000x margin on every clip) and confirmed visually via spectrogram
+(flat broadband noise → real harmonic/dynamic structure), fixed with a
+per-clip data-driven auto-detector rather than a hardcoded byte order
+(`detect_pcm16_byte_order()` in `tools/chaoslegion/fmv_common.py`),
+re-verified end-to-end including on the shipped `.mp4` and live in the
+browser. Also re-checked (per this pass's own brief) and downgraded the
+original single-clip "0.99995 toggle cross-correlation" figure, which was
+measured on the pre-fix decode and doesn't hold as a corpus-wide constant
+(0.37-0.96 whole-clip, 0.20-1.0 by window, across 4 clips re-checked) —
+the practical toggle==0-only dedup choice is unchanged, just now honestly
+labeled "best available" rather than "proven." Same pass, real progress
+(not full closure) on "more music": segmented the ~287 MB SE/voice region
+beyond the 17 known BGM tracks into 525 short (<2.5s) SFX-shaped samples
+(correctly *not* labeled music) plus 2 large (242.6 MB + 52.0 MB)
+terminator-free spans confirmed as real structured audio via spectrogram
+but left unshipped — channel count is genuinely unresolved (weak/
+inconsistent 2ch/4ch correlation, unlike the confirmed BGM stereo
+signal) and no internal track-boundary convention was found for them.
+Also found and documented a new general pitfall along the way: reusing
+the BGM region's stride-based multi-channel-grouping technique unmodified
+on the much denser SE/voice region catastrophically false-merged
+unrelated terminators into a bogus "8,843-second track" — see
+`game-re-lessons/stride-grouping-false-merges-in-dense-marker-regions.md`.
+Full writeup: `docs/chaoslegion/ps2/data-structure.md` §9.4 (correction
+block) and new §9.7; open items: `docs/chaoslegion/TODO.md`
+(`cl-xag-se-voice-long-spans`, `cl-fmv-toggle-not-uniform-duplicate`).
+
+## ZOE2 / ANUBIS — Zone of the Enders: The 2nd Runner (PS2 + PS3, Konami)
+
+**Project: `~/Development/flower`, game id `zoe2anubis`, platforms `ps2` +
+`ps3`**
+
+### PS3 — "ZOE HD Collection" build (2026-08-14, companion pass)
+
+`docs/zoe2anubis/ps3/`, tools prefixed `ps3*` in `tools/zoe2anubis/`. Key
+finding: **`STAGE.DAT` is MD5-identical to the PS2 disc's copy** — the same
+still-open mesh-vertex/texture-pixel puzzles carry over unchanged (see
+`byte-identical-cross-platform-archive-does-not-bypass-sibling-puzzle.md`).
+`ZoE2/bin/*.bin` (130 per-stage files, initially hypothesized to hold
+re-encoded mesh/texture data) turned out to be **compiled PS2 EE/MIPS
+R5900 machine-code overlays** bound to one constant fixed load address
+(`0x00261D80`) — confirmed via opcode-shape census + a byte-exact function
+prologue/epilogue idiom + retained PS2 SDK debug strings (`libmpeg`,
+`libipu`, `libscn.h`) — not assets at all (see
+`script-files-may-be-native-code-bound-to-fixed-memory-map.md`). The
+genuinely new, solved PS3-side asset: **HVSTEX compressed texture bank**
+(`HVSTEX/Compressed/v2/*.tga.dxt5.zzd`, 325 files, UI/manual/logo art) —
+`u32 LE` decompressed-size header + raw zlib → standard DDS/DXT5, opened
+natively by Pillow, 325/325 verified. Also found: an accidental leftover
+**CVS developer working-copy tree** at `ZoE2/stage/{init,ca01}/` (real
+`CVS/Root`/`Repository` metadata) containing plaintext `.atr` skeleton/bone-
+hierarchy files (real Jehuty bone names, e.g. `SKL_HIP`/`SKL_CHEST`/
+`SKL_ARM_LU`) and `.tex` files that independently re-derive the PS2 model
+container's `{magic,c2,off,size}` chunk grammar + `hi16*0x10+lo16` offset
+formula on unrelated, uncompressed bytes (pixel decode still open) — see
+`shipped-disc-leftover-vcs-tree-plaintext-oracle.md`. Full detail:
+`docs/zoe2anubis/ps3/data-structure.md`; open items:
+`docs/zoe2anubis/ps3/TODO.md`.
+
+### PS2
+
+(registered as a Seer game alongside the Cavia/Capcom titles; docs at
+`docs/zoe2anubis/ps2/`, tools at `tools/zoe2anubis/`). Konami MGS-family
+engine, **not** Cavia — same console generation as Drakengard 1/2 but a
+completely different developer/format family; the Cavia shared decoders
+have zero applicability here.
+
+**Solved (2026-08-12 .. 2026-08-16, passes 1-9):**
+- **STAGE.DAT cipher** — the Konami MGS2-family STAGE cipher: root keystream
+  (`keyX' = LO32(keyX*0x02E90EDD)+keyY`, the R5900 **3-operand `mult rd,rs,rt`**
+  that capstone/radare2 both misdecode as "invalid" — the decoder needs to
+  know the EE writes the product-low to `rd`), per-folder re-seed from a
+  folder-name hash, per-file re-seed from the first u16 (`^0x9385`); payloads
+  are raw deflate. Cross-validated byte-exact against `kellymoen/MGDecrypt`
+  (its ZOE2 path is buggy — real folder-table tags are at +0x00, not +0x04).
+- **VOX.DAT** — 1922 flat PS-ADPCM clips (`00 7F AC 44` anchors), mono
+  voice + stereo music, 44.1 kHz; byte-exact C decoder vs MGS2-Audio-Tool.
+- **Stage model container** — folder-table `tag` = hash of the resource's
+  file *extension* (`hash("mdz")==0x003B12FB`, `hash("tex")==0x001E5452`;
+  the early "mesh/bbox/skeleton" class labels were wrong), entry field 2 =
+  full-filename hash resolved against ELF strings; runtime resource
+  registry (16-byte `{hash,0,ram_ptr,1}` records) resolves blob hashes to
+  EE RAM in the PCSX2 savestates.
+- **`.tex` texture format** — chunk records are GS `TEX0` values, payload
+  is a `PSMCT32` staging rect, `PSMT4`/`PSMT8` views by `TBP0` delta,
+  per-desc CLUT pointer; desc's first two words are one 64-bit GS `CLAMP`
+  register giving every sub-rect origin+size (the loader's in-place vertex
+  UV rewrite reproduced byte-exact, 36,741/36,741). 10,656 views decoded.
+- **`.mdz` model format (pass 7, vertex record corrected pass 9)** — header
+  FLAGS word + 0x80-byte world-space node records + 0x20-byte batches +
+  s16 triangle-strip vertices in **three VU1-verified layouts** selected by
+  header flags: lit 18 B `{uv, adc|scalar, unit normal ×4096, position ×16}`,
+  prelit 18 B `{uv, adc|scalar, RGB 0-255, position ×1}`, short 12 B
+  (bit2). Positions plain node-local × absolute node matrix; node bbox is a
+  containment AABB (100.000% corpus-wide, 2,501 blobs / 4.23M vertices;
+  ADC strip invariant exact 412,318/412,318). Field roles proved by
+  decoding the load-time-built VIF packet chains in EE RAM and
+  disassembling the VU1 kernels in `vu1MicroMem.bin` (see
+  `game-re-tooling/ps2.md`, savestate-VU1 section). Passes 7/8 had the
+  unit normal decoded as the position — the placement layer still rendered
+  a convincing mech (see `game-re-lessons/
+  model-silhouette-render-confirmed-by-placement-layer.md`). 48 models
+  ship as glTF with NORMAL/COLOR_0.
+
+Tools: `stagedec.py`/`stageextract.py`, `voxextract.py`+`psadpcm_fast.c`,
+`texdecode.py`+`ps2gs.py`, `mdzdecode.py`, `vudis.py` (VU microcode
+disassembler, reusable on any PS2 title), `mdzverify.py` (re-runnable
+corpus proof), `modelprobe.py` (legacy names). Ground truth: three PCSX2
+savestates at `data/zoe2anubis/{vr-menu,running-ingame,in-vr-mosquito}`.
+
+**Open:** stream-header record semantics, VOX clip→dialogue mapping, the
+`.mdz` batch `+0x0C` bitfield's per-bit meaning and the vertex `+0x04`
+scalar (see `docs/zoe2anubis/ps2/TODO.md`). Docs:
+`docs/zoe2anubis/ps2/data-structure.md` (§4.10 pass-9 correction block).

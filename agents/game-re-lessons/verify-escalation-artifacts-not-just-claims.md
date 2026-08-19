@@ -162,3 +162,39 @@ when a claim feels suspicious — it's cheap enough to be routine, and a
 byte-level disassembly claim is exactly the kind of thing that's trivial
 to silently get wrong (an off-by-a-few-bytes offset, a transposed hex
 digit) while still producing a plausible-reading final report.
+
+Eighth instance, the *transposed keyed mapping*: a fork's otherwise-superb
+battle-presentation trace (Spirit of Excalibur, 2026-08 — dozens of
+byte-cited findings, all of which held) delivered a 9-case jump-table
+"case → handler" map with **cases 6 and 8 swapped**. The integrating agent
+caught it only because it had independently derived the same table earlier
+and, on the conflict, hand-decoded the raw `DC.W` PC-relative displacements
+from the disassembly to arbitrate — keeping its own mapping and folding the
+fork's (correct) per-case content into the right slots. The general rule:
+when integrating a specialist's **keyed mapping** (jump table, opcode→handler,
+id→resource), re-derive the key column from the raw bytes even when every
+individual entry's *content* is verifiably right — key↔value pairing errors
+survive content-level verification, and a transposed pair poisons exactly two
+entries while everything else checks out.
+
+Ninth instance, and the cheapest tell to screen for: **a claim backed by a
+list of confirming instances instead of a coverage fraction is hiding its
+denominator.** Phantasie III (Amiga, `nicodemus` project): a stood-down
+`re-codebreaker` volunteered two corroborating findings. One was a corpus
+invariant stated with its denominator — "verified across 58 of 58 padded
+files, zero deviations" — which re-ran at exactly 58/58 and was kept. The
+other claimed a grid's cell value was "essentially a function of" its
+4-neighbour occupancy mask, and evidenced it by *enumerating ~20 values that
+each occurred at exactly one mask*. Re-running the same tabulation as a
+census over the whole population gave **195 of 311 cells (62.7%)** — 116
+cells break the rule, including every `0xF3`-`0xF8` variant, one of which
+alone spans 8 different masks. The listed values were real; they were simply
+the subset that worked, with the failures never counted. Note this is a
+different failure from instance 6: there the denominator existed but silently
+excluded cases, here there was no denominator at all. The screen is
+mechanical — before documenting any "X is essentially/basically a function of
+Y" or "X always corresponds to Y", check whether the evidence is a fraction
+over the full population or a list of examples, and if it's a list, re-run it
+as a census and write down the percentage. Anything at 62.7% is a signal
+worth recording as a hypothesis, never a decode (see the verification bar in
+`game-re.md`: a ~70% shape match is not decoded).

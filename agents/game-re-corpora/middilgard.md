@@ -178,8 +178,60 @@ than a byte-diff. See `docs/wime/dosvga/frml-extra-frames.md` and
 far-pointer addressing model cheaply" section (the technique that made a
 *scoped*, non-full-binary x86 disassembly pass cheap enough to do here).
 
+**WIME's combat system is completely decoded AND reimplemented (2026-08)** —
+resolver arithmetic (`docs/wime/amiga/game-logic.md` § Combat System: two
+power pools, warded capacity/overflow, both casualty paths, the split
+hp-damage model), presentation (`battle-screen-presentation.md`: slots,
+army stacks, orders Charge/Engage/Withdraw/Retreat from the order-bar
+string, 300/180-tick pacing, verbatim message cluster at file offsets
+79450–80155, attended-vs-ignored sub-mode split), and a tested headless
+port (`src/engine/BattleSystem.ts`) plus viewer battle sandbox/stage. The
+resolver never reads `unitClass`/`morale`/`armor`; the Balrog 7-slot cap
+is display-only. The Ring is donned mid-battle by a wounded surviving
+bearer (attended battles only) and removed post-battle ("suddenly
+reappears" — no wear limit); the undying (Nazgûl/Balrog *index ranges*)
+are "driven from the field" in ignored-battle summaries.
+
+**Spirit AND Vengeance combat + scene exploration are completely decoded
+(2026-08 campaign)** — `docs/spirit/amiga/{game-logic,battle-screen-presentation,exploration}.md`
+and the Vengeance twins. Key transferables: both share the 40-slot force
+model, `_Reaction` grudge memory, duel champion-swap, click-gated army
+rounds with a 36px front-line march gate — but the divergence catalogue is
+the moral: Vengeance hits on threshold 40 vs Spirit's 50, **swaps the two
+`dmgThreshold` field roles**, shifts the render-object struct +4 bytes,
+and generalizes Spirit's one-off multi-door table into per-location
+4-slot door arrays. Exploration: scenes are static backdrops with fixed
+hotspots — no free in-scene movement exists. The A4-trampoline→symbol
+resolver (see `game-re-method/finding-the-reader.md`) was decisive in all
+five campaign runs; displacements never transfer between `Excal` and
+`ExcalII`.
+
+**WIME's Commodore 64 and Amstrad CPC releases are separate 8-bit games
+(6502 / Z80), not `.res` ports — both substantially cracked in one 2026-08
+push** (docs: `docs/wime/c64/engine.md`, `docs/wime/cpc/engine.md`;
+extractors/renderers under `tools/wime/c64|cpc/`; open items as
+`wime-c64-*`/`wime-cpc-*` rows in `docs/wime/TODO.md`). **C64:** NIBTools
+raw-GCR dumps, custom sector headers over a bone-stock CBM filesystem (both
+platform traps now in `game-re-tooling/c64.md`); the extractor's unhonoured
+final-sector byte count masqueraded for two sessions as an RLE mystery —
+sourced `extracted-file-sizes-all-multiples-of-block-payload.md`. PORT
+portraits (20×25 cells, row-major) and BLOCK scene backdrops (10×8 cells,
+column-major) are both the multicolor bitmap+screen+colour-RAM three-part
+payload — the "unknown palette" never existed (sourced the attribute-RAM
+bullet in `palette-storage-quirks.md`); portraits verified 33/33 against the
+game's own TEXT name files. **CPC:** Extended DSK + "Laser Load" fastloader
+whose five load-call argument sets are the entire disk map (verified by
+rendering the title/victory screens raw at predicted addresses — big CPC art
+is uncompressed screen dumps; don't assume the C64's RLE container
+transfers); 168 8×8 mode-0 tiles stored serpentine, read off the game's own
+blitter after a wrong 34×16×32 "confirmed" decode — sourced
+`serpentine-row-order-mimics-mirrored-rows.md` and
+`shared-prefixes-at-guessed-stride-fake-animation-frames.md`, plus
+`game-re-tooling/cpc.md`. Both ports share the strategic-map grid
+(102×130, ~92% cell agreement).
+
 Sourced `header-shape-ambiguous-pixel-encoding.md`, `byte-scan-tag-byte-vs-wrong-stride.md`, `bitfield-spans-multiple-addressable-bytes.md`, `negative-from-addressing-root-not-shapes.md`, `seeded-prng-stable-not-random.md`, `runtime-only-value-often-static.md`, `audio-byte-order-measurable.md`, `optional-per-record-compression.md`, `partial-resolution-rate-is-noise.md`, `bitfield-residue-unread-past-cited-trace-window.md`, `rle-decode-succeeds-on-garbage.md`, `emulator-harness-pc-range-completion-defeated.md`, `text-field-periodic-interleave-byte.md`, `canned-save-state-mirrors-exe-struct.md`, `tile-grid-dimension-needs-render-not-just-bytecount.md`, `emulator-harness-input-boundary-not-algorithm.md`, `next-record-preview-defeats-stride-detection.md`, `port-reverses-whole-header-word-not-per-field.md`, `byte-value-collision-defeats-marker-only-guard.md`, `hand-computed-test-fixture-vs-real-run.md`, `producer-fix-inert-without-consumer-audit.md`, `adjacent-ramp-table-masks-off-by-one-record-start.md`, `pre-decompression-guard-uses-decompressed-threshold.md`, `cross-platform-string-delta-reveals-stride-vs-offset.md`, `vm-bytecode-embeds-platform-addresses.md`, `traced-calling-convention-unverified-against-corpus.md`, `packed-exe-mimics-variable-length-records.md`,
-`undecoded-format-may-be-compressed-with-known-codec.md`, `bytecode-trace-in-range-result-can-still-be-noise.md`, `constant-valued-field-poisons-shared-wellformedness-gate.md`.
+`undecoded-format-may-be-compressed-with-known-codec.md`, `bytecode-trace-in-range-result-can-still-be-noise.md`, `constant-valued-field-poisons-shared-wellformedness-gate.md`, `extracted-file-sizes-all-multiples-of-block-payload.md`, `serpentine-row-order-mimics-mirrored-rows.md`, `shared-prefixes-at-guessed-stride-fake-animation-frames.md`.
 
 Docs are structured per game/platform under `docs/<game>/<platform>/`, with a strict convention worth copying: **format docs carry only confirmed information, and every eliminated theory is written up in `docs/reference/eliminated/`** so no search is ever repeated.
 

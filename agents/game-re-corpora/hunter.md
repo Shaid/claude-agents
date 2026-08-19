@@ -265,6 +265,126 @@ sprite by computed range/bearing) wasn't traced. See
 `docs/explore/Wings/data-structure.md`, "`flags1=0x06` composite struct
 (CONFIRMED — 2D animation-chain node, not a 3D model)".
 
+**Sixth session traced the runtime frame-selection code the fifth session
+left open** — `DDD.BOLT` is file ID 6, loaded only by hunk4 (the dogfight-
+mode overlay) at 2 call sites. Found a real, code-confirmed 3×3 world-to-
+camera rotation + dual perspective-divide pipeline (hunk4 CODE+`0x1129a`,
+overturning the fifth session's own "no perspective-divide anywhere"
+negative — the earlier `DIVS` grep window was simply too narrow) feeding a
+discretized "closing" state machine that drives the already-confirmed
+12-frame zoom-scale bank with 0 slack against its clamp range. Also traced
+the shared blitter draw routine (hunk0 CODE+`0x7c8a`, resolved via the
+project's A4-trampoline formula) that every sprite-draw call site funnels
+through. See `docs/explore/Wings/data-structure.md`, "DDD.BOLT enemy-plane
+sprite-selection pipeline".
+
+**Seventh (follow-up) session corrected a subsequent summary that
+overstated confidence** ("we understand how dogfight mode works" was true
+only of sprite *selection*, not screen *composition*) — traced forward
+from the same confirmed call sites and found DDD.BOLT's group 42 is
+mixed-purpose, not a pure enemy-plane bank: the previously-unexplained
+"tunnel/hangar-interior" frames (idx 49-59) are **static cockpit canopy-
+strut/window-frame HUD chrome**, confirmed by call sites that push a
+literal `(0,0)` position (letting each frame's own baked-in anchor place
+it) and by the same two frames being blitted into *both* halves of the
+double-buffered display once at dogfight-mode init (drawn once, never
+redrawn — the standard Amiga trick for unchanging content); a small
+crosshair/gunsight reticle (idx 72) is drawn the same way; and a pilot
+head-turn portrait sub-bank (idx 100-111) turned out to be a **proximity-
+triggered scripted "close pass" reaction cue** (a real bounding-box test
+against the tracked enemy position kicks off a state sequencer that also
+draws a small close-range biplane-detail sub-bank), not a continuous
+player-driven look-around mechanic. Also found (not fully closed) a
+likely resolution path for the long-open palette-hardware-write question:
+a real per-colour fade routine and a `SetColour`-shaped hunk0 helper
+(CODE+`0x8750`). **Still open:** which specific asset (if any) the
+confirmed general-purpose full-`BitMap` blit call actually draws as the
+sky/world backdrop (the `BitMap*` pointer it reads is populated by
+generic, non-DDD-specific hunk0 code, not traced back to its trigger), and
+whether the player's own plane/cockpit exterior is ever rendered (no
+evidence found either way — absence-of-evidence, not confirmed absence).
+Both are flagged as needing a live amiberry capture, not attempted this
+(static-only) session. The "2D scaled sprites, not real 3D" conclusion is
+reaffirmed, not undermined — see `docs/explore/Wings/data-structure.md`,
+"Dogfight screen composition", and `docs/explore/Wings/TODO.md` for the
+itemized open list.
+
+**Eighth session, triggered by 3 user-supplied Amiberry `.uss` savestates +
+screenshots (parsed offline, no live emulator), found the "2D scaled
+sprites, not real 3D" conclusion above was too broad**: the dogfight
+ground/sky visual is a genuine, code-confirmed **live polygon renderer**,
+not a static asset or a sprite. A fixed world-space quadrilateral (hunk4
+CODE+`0xddd6`) is rotated by the same heading/pitch/roll triple and
+rotation-matrix routine (`LAB_10668`, CODE+`0x10668`) previously thought
+scoped only to the small cockpit compass gauge, projected via a point-
+transform trampoline, clipped against the viewport with a real
+Sutherland-Hodgman-style algorithm (CODE+`0x10264`), and its edges drawn
+with hand-written octant-specialized Bresenham EOR line rasterizers
+(CODE+`0xf886` etc.) — plus a separate Amiga-blitter flat-colour fill
+(CODE+`0xf698`, real `BLTCON0`/`BLTCON1`/`BLTSIZE` register writes) for the
+solid ground/sky split underneath the lines. This resolves the session's
+long-open `wings-ddd-backdrop-asset` mystery (the backdrop isn't a loaded
+BOLT frame at all) and narrows the enemy-plane sprite-scaling finding to
+what it was actually shown to cover: the enemy plane and all HUD/cockpit
+chrome are still 2D sprite art, but the ground/horizon element is real,
+live 3D geometry. **Two generalizable technique findings** came out of the
+savestate work: recovering a hunk's runtime load address via byte-signature
+matching against inflated savestate RAM chunks (works cleanly, 0
+deviation across all 3 saves), and a real gap — the `"CPU "` savestate
+chunk's internal layout could not be reverse-engineered this session (see
+`game-re-tooling/amiga.md`'s "Offline `.uss` savestate analysis" section),
+so the whole finding is a **static-disassembly-confirmed mechanism**,
+cross-checked only indirectly against the screenshots' visual content, not
+a live-PC-confirmed trace.
+
+**A follow-up (offline, still no live emulator) session then closed both of
+that gap's two open pieces.** Disassembling the shared trampoline landing
+pad (hunk0 CODE+`0x907C`/`0x908E`) found it's the AmigaDOS/`blink`
+`OVERLAY`-linker's own lazy-binding resolver (`OpenLibrary("dos.library")`
++ `Seek()`+`LoadSeg()` + self-modifying-code patch), not projection code —
+and byte-inspecting the two ground-renderer trampoline slots' own 8-byte
+hunk1 metadata (`[BSR.W cascade][1-byte segment#][3-byte BE hunk-relative
+offset]`) resolved them to real, previously-undisassembled hunk4 targets: a
+full 3×3-rotate-plus-perspective-divide projection routine, and a *second*,
+independent hardware-blitter line-draw-mode setup distinct from the CPU/EOR
+rasterizer. Separately, the `"CPU "` chunk format was fully cracked (not
+just gapped-around) by fetching `tonioni/WinUAE`'s and `midwan/amiberry`'s
+(exact `v8.2.2` tag) `newcpu.cpp` and hand-deriving `save_cpu()`'s byte
+layout per CPU model — the chunk is a **68060** (not 68030) dump, whose
+128-line/4-way split I+D cache arrays make it ~22.7 KB, an exact byte-count
+match confirming both the model and the field layout simultaneously; all 3
+savestates' extracted PC lands outside every Wings hunk (`$4FF8xxxx`-
+`$4FFAxxxx`), a genuine finding (these captures land inside WHDLoad's
+`OSEmu` resident interrupt-trap layer, not Wings' own code) rather than a
+decode failure.
+
+**A further LIVE session (amiberry MCP, explicitly user-approved) then
+tested the whole mechanism against a running emulator** — and got a clean
+split result. **Worked decisively**: reading real emulated RAM at the
+ground-fill FULL/PARTIAL config global (`-10322`/`-10324` off the confirmed
+small-data base, itself independently re-verified live at all three
+savestates as `$00012346`) while the emulator sat paused at each of the 3
+supplied captured moments gave a byte-exact match to the doc's own
+FULL/PARTIAL constants (`default-9`=PARTIAL, `default-10`=FULL,
+`default-8`=uninitialized/non-dogfight-scene), upgrading that mapping from
+plausible-inference to live-confirmed. The live-debugging *attempt* itself
+also motivated a closer static re-read of the ground-quad setup routine
+that found real structure two prior sessions' summaries had glossed over:
+it internally calls the second (hardware-blitter) line rasterizer 3
+separate times with distinct coordinates, directly confirming the two
+rasterization mechanisms genuinely co-occur in one call chain rather than
+being alternate paths. **Failed instructively**: breakpoint-based
+execution tracing (the task's primary suggested method) hit a real,
+twice-reproduced tooling wall — `resume_emulation` with any breakpoint
+armed permanently kills the amiberry IPC socket even in the previously-
+documented "safe" call order, and `debug_continue` alone doesn't reliably
+advance a CPU that's paused inside a WHDLoad/OSEmu interrupt-wait loop
+(interrupts likely freeze along with scheduling while paused) — see
+`amiberry-live-capture-workflow.md`'s sharpened breakpoint bullet for the
+generalized lesson. See `docs/explore/Wings/data-structure.md`, "Dogfight
+screen composition" §§7-8 (§8 is the LIVE-DEBUGGED session, clearly marked
+off from the static-only work above it), and `docs/explore/Wings/TODO.md`.
+
 Gunship 2000 AGA (MicroProse, 1993, Amiga AGA port, JOTD WHDLoad): fresh-start
 project, docs at `docs/explore/Gunship2000AGA/` (`data-structure.md`,
 `TODO.md`). Load chain is 3 cooperating executables (`Gunship 2000` bootstrap
@@ -434,3 +554,117 @@ no music/sound file identified yet (no standard IFF audio magic anywhere on
 disk). See `docs/explore/Zeewolf/data-structure.md` and `TODO.md`. Music/SFX
 for both Zeewolf games confirmed **Allister Brimble** (a prior Adrian
 Cummings attribution was checked and is wrong).
+
+Frontier: Elite II (David Braben/Frontier Developments, 1993, Amiga —
+David Braben's next game after Virus below, on a distinct but lineage-
+related engine): the FE2 savegame container (5 shipped "Data Disk" files)
+was solved via `re-codebreaker` — self-keying word-stream cipher +
+zero-RLE, byte-exact round-trip; see `docs/formats/fe2-savegame.md`. A
+later session cracked the **3D ship/station/object model format**
+end-to-end: a 300-slot `u16` BE self-relative pointer table at
+`file+0x28804` (stop condition: 2 consecutive zero slots past index 2 —
+reading past the real end walks into the first real model's own header
+bytes, since small header fields coincidentally look like more valid table
+offsets), each model a 15-field header + a vertex table (8 encodings:
+literal + 7 computed-from-other-vertices forms including two genuinely
+dynamic ones, `rand`/`lerp`) + a normal table + a **32-opcode display-list
+bytecode** (opcode = low 5 bits of a `u16`; TRI/QUAD/MIRRORED_TRI/
+MIRRORED_QUAD/LINE are the geometry-producing subset, `MODEL`/
+`MODEL_SCALE` are submodel references — the single most common non-trivial
+opcode at 1,255 hits corpus-wide, not expanded into an assembled scene
+graph this pass). Cracked by finding a **real, actively-maintained
+community project with a from-scratch decompiler/recompiler for this exact
+bytecode**, `watsonmw/fe2-intro` (confirmed to actually exist by cloning
+it, not just trusting the `WebSearch` citation — see
+`websearch-cited-repo-may-not-exist.md`); its `assets.c` declared table
+offsets for an `AssetsRead_Amiga_Orig` executable variant that matched this
+project's real binary byte-for-byte (cross-confirmed via two independent
+offset coincidences with prior sessions' own findings before trusting it).
+Its shipped CLI hardcoded a *different*, newer exe variant's table
+locations, so a small (~12-line) patch was needed to add an `-orig` flag
+selecting the offsets its own `assets.c` already declared for our variant
+— then its `-dump-game-models`/`-dump-intro-models`/`-dump-galmap-models`
+flags ran headless (`SDL_VIDEODRIVER=dummy`) directly against the real
+executable with **zero parse errors** across 230+109+12 models. Since the
+repo states no license, its source was read as a **specification only** (no
+code copied/vendored) to write a fully independent from-scratch Python
+reimplementation (`tools/frontier/frontier_models.py`) — a control-flow
+walker following both sides of every conditional branch, verified
+byte-exact against the oracle's own text dump across the *whole* corpus:
+1,402/1,402 face+line instructions, 2,619/2,619 literal vertices, 929/929
+normals, including confirmed-real edge cases (negative "parent-relative"
+vertex indices that looked like decode bugs until they turned up
+byte-identical in the independently-produced oracle output too).
+
+A follow-up session cracked **submodel scene-graph assembly**
+(`tools/frontier/frontier_scenegraph.py`): the full matrix stack
+`MODEL`/`MODEL_SCALE`/`MATRIX_SETUP`/`MATRIX_TRANSFORM`/`MATRIX_COPY`
+imply, derived from fe2-intro's own `render.c` (the *renderer*, not just
+its decompiler — confirmed buildable on Linux via manual `-lSDL2 -lm`
+linking, since its CMakeLists.txt has no Linux target block). Along the
+way, found and fixed two real bugs in the *base* (previously "confirmed")
+decoder: (1) the vertex-table length field was misidentified —
+`(normalsOffset - vertexDataOffset) / 4` is the real count (229/229 exact
+vs. the oracle; the old field matched 0/229 and silently over-read into
+adjacent normal/code data as "extra vertices" no existing check ever
+inspected); (2) face/line vertex-index fields use the SAME doubled
+comment-index + odd/even mirror-slot scheme as avg/add construction args,
+not raw record indices (30.8% of all face refs are odd — impossible under
+a raw scheme; this fix alone raised flat face resolution from 73.9% to
+98.3%). Submodel assembly itself is confirmed at the instruction-decode
+level (1,025/1,025 MODEL/MODEL_SCALE + 237/237 MATRIX_TRANSFORM fields
+exact vs. the oracle) and via a 111/111 zero-submodel-model regression
+check (assembled output must equal the flat export exactly); composed
+multi-submodel *geometry* has visual/bounding-box sanity only (no live
+amiberry capture this pass — see `frontier-submodel-live-verify` in
+`docs/explore/Frontier/TODO.md`). `public/assets/frontier/amiga/meshes/`
+ships composed, multi-part OBJ meshes (169/230 models) superseding the
+flat per-model export. **A follow-up session wired the assembled meshes
+into this project's real, generic glTF-based 3D viewer** (the same
+`type: 'mesh'`/`modelFormat: 'gltf'` convention Hunter/Carrier
+Command/Epic already used) via a clean language bridge, with zero changes
+to the already-verified decoder/assembler: the Python exporter
+additionally writes a non-web geometry cache (`build/cache/frontier/
+assembled/model_NNN.json` — resolved world-space face points + Amiga
+12-bit colour + primitive kind, since plain OBJ can't carry per-face
+colour), and a new `tools/frontier/build-gltf.mjs` (closely templated on
+`tools/epic/build.mjs`) reads that cache and writes real `.glb` files
+(161/169 — the other 8 resolve only `line`-kind records, no polygon
+surface) plus merges the generic manifest fields in place (Frontier's
+manifest already lived at the exact path the viewer's `${ASSET_BASE}`
+convention expects, unlike Epic, so no second manifest file was needed).
+The game itself had never been registered in the shared viewer at all
+(`src/game-id.ts`'s `GAME_IDS` / `tools/shared/game-config.ts`'s
+`GAME_CONFIGS`) despite substantial existing `public/assets/frontier/`
+output — a distinct, easy-to-miss gap from the already-known "pipeline step not registered" trap. The largest station model (54,
+12,587 submodel instances, 342,154 vertices) needed `UNSIGNED_INT`
+glTF indices, not `UNSIGNED_SHORT` (Epic's objects never approached the
+65,535-vertex cap). Live-verified with a Playwright sweep against
+`npm run dev` (0 failed requests, 0 console errors across a 12-model
+index sweep + 4 named spot-checks) and the full 161-file corpus through
+the *real* Khronos glTF validator run in-process (`validateBytes()`,
+not a CLI sample) — 0 errors/warnings. Full spec:
+`docs/explore/Frontier/data-structure.md`.
+Open: the `COMPLEX` opcode's bezier-surface interior mini-VM, a
+`LINES`-mode glTF fallback for the 8 line-only models, and 7 of 15
+header fields — see `docs/explore/Frontier/TODO.md`.
+
+Virus (Firebird/Telecomsoft, 1988, Amiga — Braben's earlier Zarch-derived
+title, the fractal-landscape engine Frontier's own terrain lineage traces
+back to): confirmed **no stored 3D object/model format exists at all** —
+unlike Frontier's ships/stations above, Virus's landscape (and, per the
+disassembled code, its only other rendered content) is 100% procedural:
+an explicit, code-confirmed bounded work-queue recursively subdivides
+quads via fractal midpoint displacement (a shared 2-longword
+additive-recurrence PRNG perturbs each new point in full 3D, reused
+verbatim for particle/spore placement) with adaptive screen-space-size LOD
+termination and a standard fixed-point perspective-divide draw path. See
+`docs/explore/Virus/data-structure.md`. This is a useful engine-lineage
+data point for the family: needing (Frontier) vs. not needing (Virus)
+explicit stored vertex/polygon data tracks directly with whether the game
+has discrete objects to render at all, not with shared engine ancestry —
+don't assume one Braben-lineage title's asset format (or absence of one)
+transfers to another without checking. Disk image structure (raw
+non-AmigaDOS custom track dump, ~8000-byte track-slot pitch) and two
+still-unidentified data regions remain open — see
+`docs/explore/Virus/TODO.md`.

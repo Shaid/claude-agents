@@ -37,3 +37,29 @@ Useful companions for the same investigation: L/R channel correlation (near 1.0
 means mono content stored as stereo, which usually means speech), and long-term
 average spectrum (speech concentrates 300 Hz - 1 kHz with very little above
 4 kHz).
+
+**Byte order can vary *per file* within one game's own corpus, with zero
+header field announcing it — don't stop at "pick one for the whole
+format."** Confirmed on Chaos Legion (PS2)'s FMV audio
+(`chaoslegion`/flower project): 15 of 16 audio-bearing clips are
+big-endian 16-bit PCM, but one clip (a "Liv" logo/theme-song vanity card,
+plausibly authored by an external production house rather than the
+game's own in-house FMV pipeline) is little-endian — the *opposite* byte
+order, with an equally decisive margin. The two cases' `SShd` sub-headers
+are byte-identical (same `format_tag`/`sample_rate`/`channels`, same
+unlabeled reserved fields) — nothing in the container format distinguishes
+them. This is exactly the class of bug that passed every prior
+structural/statistical check (duration-from-byte-count, RMS/peak range,
+even a cross-track cross-correlation check) silently, because none of
+those checks are sensitive to a per-sample byte swap — duration only
+depends on byte *count*, and RMS/peak of scrambled samples still land in a
+plausible numeric range. The general fix: run the discriminator
+(mean-squared first difference / "roughness," or mean absolute
+sample-to-sample difference) **per file**, not once for the format, and
+auto-select per file — treating byte order as a fixed, corpus-wide
+constant is itself an unverified assumption. A spectrogram
+(`ffmpeg -lavfi showspectrumpic`) makes the same point visually: wrong
+byte order renders as flat, uniform-energy broadband noise across the
+whole frequency range; correct byte order shows normal energy roll-off
+with frequency plus real transient/dynamic structure — a fast way to
+sanity-check a fix by eye before trusting the numeric margin alone.

@@ -28,3 +28,27 @@ stay distinct after normalization. Do this check by default for any
 label-derived batch of filenames — it costs one line and catches a class of
 bug that produces no symptom other than quietly-wrong content in a file
 that otherwise looks completely valid.
+
+**A second instance, different root cause, same symptom: two different
+pipeline *steps* deriving a name from the same source key, not two
+different labels colliding after normalization.** Confirmed on NieR:
+Automata (PC)'s mesh pipeline (`~/Development/flower`,
+`tools/nierautomata/build-assets.ts`): a texture-extraction step and a
+mesh-extraction step both independently derive a manifest entry's `name`
+from the exact same `(dirName, fileName)` pair of one source `.dtt`
+archive entry (e.g. `wd1/g10722.dtt`, which genuinely contains both a real
+texture sub-resource and a real mesh sub-resource) via the *same*
+`slugName()` helper — with no punctuation/case ambiguity at all, just two
+different asset *types* sharing one filename-derived key. The shared
+upsert-by-name manifest merge silently dropped whichever entry got pushed
+second. Caught only by a smoke-test run showing the manifest's total entry
+count hadn't grown after adding a whole new asset type — not by any
+per-name uniqueness check, since each *individual* pipeline step's own
+`usedNames` collision-avoidance set is local to that step and never sees
+the other step's names. **Fix, generalized**: whenever more than one
+pipeline step can independently produce a manifest entry from the same
+underlying source key (file/entry name, object ID), include the asset
+*type* in the derived name (e.g. a `_mesh`/`_texture` suffix) — a
+uniqueness check scoped to one step's own `usedNames` set cannot catch a
+cross-step collision; the discriminator has to be baked into the name
+itself.

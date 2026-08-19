@@ -17,6 +17,24 @@ very different reliability:
   of accesses. This is countable. If the roots are complete, the access set is
   complete, and a negative over it is real.
 
+**First establish how many roots the binary actually has — one compiler
+convention does not mean one addressing mode.** The chain below is written
+for a pure SAS/C small-data binary where A4 is the only base, but real
+binaries mix. Phantasie III (Amiga, `nicodemus`) reaches its library bases
+through A4 (`GfxBase` at `-0x56D2(A4)`, so `A4 = DATA + 0x7FFE`) while
+reaching its *own* globals by absolute-long-plus-relocation (`lea $2BCE.l`)
+in the same functions. Either census alone leaves a silent hole:
+A4-relative accesses carry **no relocation entry**, so a reloc-table walk
+is structurally blind to them, and an A4-displacement scan says nothing
+about relocated absolute operands. A load-bearing "written but never read"
+verdict there — two runtime palette slots with exactly one reference each
+in the whole executable, their own store — only became decidable after
+running *both*: a flat-list walk of all 6,838 relocation entries, **and** a
+separate word-scan of the CODE hunk for each slot's own A4 displacement
+(`addr - 0x7FFE`), which returned zero at any alignment. Cheap tell that
+you're in a mixed binary: disassemble any one function and look for both
+`(d16,A4)` operands and reloc-patched absolute longs in the same body.
+
 For SAS/C small-data 68k the root chain is:
 
 1. No absolute relocations point into the table (check the hunk's reloc block) —
@@ -90,6 +108,21 @@ array is not one constant, it's a *family* of constants parameterized by
 index, and a grep for only the family's zero-offset member is shape-based
 in disguise.
 
+The **mirror** of that hole bites when you search for one *entry's* address
+instead of the array's: an entry reached only by a runtime index off the
+array base (`lea $BASE.l,a0; move.l (a0,d0.l),d1`) has its own address appear
+nowhere in any instruction, so a whole-binary search for that 4-byte value
+finds zero hits even though the entry is live. Confirmed on Phantasie III
+(Amiga, `nicodemus` project): two filename-template strings were about to be
+written up as "dead strings, unreferenced in this build" on exactly that
+evidence — the search would have caught any `movea.l $slot.l,a0`, and
+correctly found none, because the real consumer indexes a contiguous
+filename-pointer array from its base with a runtime resource-type id. Rule of
+thumb covering both directions: **a pointer/data table has exactly one
+address guaranteed to appear literally in code — its base.** Zero hits on an
+individual entry is the *expected* result for an indexed table, not evidence
+of anything; resolve the base first, then work out the index domain.
+
 **A negative can also be an artifact of the search *tool*, not just its
 shape — re-run a load-bearing zero-hit result with an independent, simpler
 method before trusting it.** Hunter (Amiga, `hunter` project): a prior
@@ -114,6 +147,33 @@ search implementation) — it's minutes of work and it overturned a
 "confirmed" verdict a prior session had closed with a full closure
 argument.
 
+**The same root-vs-shape distinction settles "does a hidden Nth case exist"
+questions about a value's whole domain, not just "does a consumer exist" —
+census every *write* to the controlling variable, not just its reads.**
+Phantasie III (Amiga, `nicodemus` project): a domain expert recalled "three,
+maybe four" non-overworld maps (three were already found and decoded —
+two castle interiors plus a Netherworld) and asked whether a fourth was
+real or a fuzzy memory. The map-switch routine's own dispatch logic
+(`and.w #3,d0` on the active-map-id global) would *structurally* also
+accept map ids the game was never observed to use (3, 5, 6, 7 — anything
+sharing the same low 2 bits as the known ids), so tracing the dispatch arms
+alone could only ever answer "what does the code do *if* asked for id N",
+not "is the game ever asked for id N". The decisive check was root-based on
+the *write* side instead: a raw byte-pattern census of every
+`move.w #imm,ABS.L`/`clr.w ABS.L` instruction writing to that one global
+across the whole CODE hunk, enumerating **every value the binary ever
+assigns to it, anywhere** — not inferring the domain from what one dispatch
+path happens to test for. The census found writes at seven distinct call
+sites and confirmed the assigned-value set was exactly `{0, 1, 2, 4}`, never
+3 or anything else — a complete, mechanically verifiable negative on "does
+a fourth map id ever get requested," settling a question no amount of
+dispatch-arm tracing could close by itself. General shape: when the
+question is "what is the whole domain of values X ever takes" rather than
+"does anything read X," the addressing root to enumerate is every
+**write** site to X's storage location, not every read/branch/consumer —
+reads only tell you what the code *could* do with a value, writes tell you
+what values actually occur.
+
 **The same "structurally cannot exist" root cause applies to *content*
 searches, not just consumer searches — and a noted-but-unexplained anomaly
 can be the resolving fact, not a distraction from it.** Phantasie III
@@ -129,3 +189,26 @@ that finally cracked it had flagged the size mismatch as a peripheral
 I add") — the fix was recognizing the anomaly *was* the answer (no base
 exists; the references are runtime BSS variables, not stored content), not
 a side detail to verify away before returning to the main search.
+
+**A load-bearing byte value can be structurally absent from every
+instruction because the code computes it via a runtime table lookup one
+hop away from where the search was aimed — the fix is tracing the id's own
+consumer, not widening the constant search.** Chaos Legion (PS2, `flower`
+project): "find the audio region's track LBAs" first tried searching
+`SLUS_206.95`'s EE text for the LBAs as absolute `u32` constants, as
+relative sector offsets, and as `lui`-built immediates — all root-based in
+spirit (searching for the value itself, not an instruction shape) but all
+came back empty, because the driver never materializes an LBA as an
+immediate anywhere: `SdrXagStandby(tbl_idx)` only enqueues an index: the
+real resolution happens one function later, in the IOP driver's own
+`XagCdRead` → `CdFileOpen(fno)`, which uses `fno` as a direct index into a
+*second, previously unknown* 8-byte-stride `(size, LBA)` table at a
+completely different data address. No amount of searching for the LBA
+*value* could find this, because the LBA is data at a computed address,
+not a literal operand in any instruction — the addressing root here is
+"trace the id-taking call's own body to find what table it indexes",
+not "search for the resulting value". General shape: when a resource-load
+call takes only a small integer id and a value search for what that id
+*should* resolve to comes back empty, suspect a hidden runtime table
+lookup inside the id's consumer before concluding the value isn't derivable
+from static analysis at all.
