@@ -27,6 +27,7 @@
 /agents/game-re-tooling/genesis-reference/
 !/agents/explorer.md
 !/agents/reviewer.md
+!/agents/ghidra-disasm.md
 
 !/skills
 /skills/*
