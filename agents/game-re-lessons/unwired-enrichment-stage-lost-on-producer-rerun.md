@@ -1,9 +1,9 @@
 # Re-running an automated pipeline producer step can silently discard a separate, un-wired enrichment step's annotations on the same artifact
 
-**When it bites:** a project has a two-stage relationship on one output
-artifact (typically `manifest.json` or an equivalent index/summary file) —
-an automated, pipeline-registered "producer" step that (re)writes the
-artifact from scratch every run, and a separate, deliberately-standalone
+**When it bites:** you're about to re-run a pipeline producer step (e.g. `build-assets`) for any reason, such as a perf check or a scoped smoke test, and that step rewrites a shared artifact like `manifest.json` that a separate standalone enrichment script later mutates in place. Also: enrichment fields (aliases, signatures) are suddenly missing while the producer reported success.
+
+The setup: an automated, pipeline-registered "producer" step that
+(re)writes the artifact from scratch every run, and a separate, deliberately-standalone
 "enrichment" step (a CLI script with its own `main()`, not wired into
 `game-config.ts`/the pipeline's step list — see
 `step-runs-standalone-but-not-pipeline-registered.md` for the *different*

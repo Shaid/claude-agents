@@ -30,3 +30,22 @@ other platform's endianness — proof the two ports share byte-identical
 underlying tables, not just "a similar format" — while the same files'
 whole-file raw/swap percentages (looking at the mixed regions too) were
 far less conclusive on their own.
+
+**When two cross-port files are the exact same size and record layout but
+fail an md5/byte-identity check, try re-parsing the whole record at the
+other platform's endianness before concluding a structural difference** —
+the layout and every count can be identical, with per-field endianness the
+only thing that changed. Confirmed on Eye of the Beholder II (Amiga,
+`crawl` project): `ITEM.DAT`/`ITEMTYPE.DAT` are exactly the same size as
+the DOS port's own files (10,385 / 1,026 bytes) but not md5-identical
+(unlike this same corpus's `.DEC`/`.DCR`, which really are byte-identical
+across platforms). Parsing DOS's already-confirmed 14-byte item record /
+16-byte item-type record layout unchanged, but reading every multi-byte
+subfield big-endian instead of little-endian, immediately reproduced DOS's
+own exact `numItems`/`numNames`/`numTypes` counts (434/123/64) and landed
+exactly on EOF with zero residue for both files — decisive confirmation
+the whole record layout carried over unchanged and only the byte order
+differs. A whole-file leading `u16` count field flipping from nonsense
+(`45569`) to the sibling port's own exact value under the other endianness
+is a strong, cheap first check before assuming any deeper structural
+divergence.

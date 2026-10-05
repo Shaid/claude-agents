@@ -33,3 +33,27 @@ check, not just internal-deviation-count = 0. If nesting is involved (a
 chain inside another chain's element), check *each level's* terminal value
 against *that level's own* independently-known boundary — passing the
 outer check doesn't imply the inner one is measuring the same thing.
+
+**Sharper variant: a chain can be perfectly self-consistent while every
+field in it is read from the wrong byte offset — a constant phase shift,
+not just a unit mismatch.** Pool of Radiance's (Amiga, `crawl`) `.dax`
+directory format has a leading 2-byte file-level `headerSize` field before
+entry 0. An initial guess that skipped this leading field and instead
+treated its bytes as part of entry 0's own layout (`[u16][u16 id][u32
+offset][u16 compressedLength]`, no separate header) still chained
+perfectly: `dataOffset[n+1] == dataOffset[n] + compressedLength[n]` held
+with zero deviation across all 843 entries in the corpus, and the running
+total even closed near the real file size (landing exactly `fileSize - 2`
+short, every single file). That final-value near-miss looked like
+corroborating evidence rather than the tell that it actually was. The
+model was wrong — every field in every entry was being read 2 bytes off
+from its true position — and was only caught by finding a real reference
+implementation (`pooldata.py`) and hand-deriving the first two entries'
+exact byte offsets against it. **The general trap: a phase-shifted
+(constant-offset) misreading of a fixed-stride record array can still
+telescope into a self-consistent running sum, because the chain arithmetic
+only tests relationships *between* fields within a record, never each
+field's absolute position.** A chain closing near — but not exactly at —
+an independent boundary (off by a small constant like 2, not by a
+percentage) is itself a specific signal worth chasing down as a probable
+leading-field/phase-shift bug, not just "close enough, call it confirmed."

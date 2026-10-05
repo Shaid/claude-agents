@@ -59,7 +59,7 @@ a *second* independent reference implementation (a different emulator
 project, same target hardware) for any instruction/register whose behavior
 reads ambiguous from the first source alone — real, cheap insurance against
 a single-source transcription bug (confirmed catching a real opcode-family
-mix-up this way, see `game-re.md`'s pitfalls index for the specific case).
+mix-up this way, see `game-re-lessons/INDEX.md` for the specific case).
 
 ## The boot harness — the actually hard part
 
@@ -102,6 +102,23 @@ scratch):
   `unbounded-transitive-jump-chain-in-fixed-buffer.md` and (if walking
   several independent parallel execution threads sharing one resource
   pool) `shared-lifo-worklist-starves-parallel-thread-priority.md`.
+- **A companion coprocessor/MCU sharing the same RAM doesn't need
+  emulating just because the boot sequence depends on it once.** If the
+  coprocessor's only jobs the main CPU depends on are (a) a one-time
+  hardware-configuration step performed *before* the main CPU is released
+  from reset (a memory-mapper config, a boot handshake) and (b) writing a
+  handful of status/result bytes the main CPU only ever polls, you can
+  skip emulating (a) entirely (hard-wire the config you already know is
+  live, exactly as if the coprocessor had already run) and skip (b) with
+  small, clearly-labeled stub values instead of building a second CPU
+  core. Finding which shared-RAM bytes need stubbing is cheap: when the
+  harness hangs in a poll loop, an exhaustive whole-ROM/binary scan for
+  that address's literal encoding, checked for "100% reads, zero writers
+  in the main CPU's own code," is strong evidence the value comes from the
+  unemulated coprocessor rather than a bug in your harness. See
+  `coprocessor-status-byte-all-reads-no-writes.md`. This turns "build a
+  second CPU emulator" into "read a handful of comparison operands out of
+  the disassembly" for boards where the coprocessor's role is narrow.
 
 ## Validation without the reimplementation-era's usual oracles
 

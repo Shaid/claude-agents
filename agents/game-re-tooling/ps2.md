@@ -97,6 +97,60 @@ don't skip the instruction or trust radare2's register guesses. The
 "product of zero" reading usually means the disassembler picked the wrong
 register field.
 
+**The real, general fix for this whole class of misdecode (not just
+`MULT`/`MADD`) is Ghidra headless batch analysis with the EE SLEIGH
+language directly — confirmed decoding ALL R5900 MMI/VU0-macromode
+instructions correctly, not just the two hand-documented above.** No live
+GhidraMCP server or GUI session is needed; `analyzeHeadless` works
+standalone as a real fallback when the MCP connection isn't reachable:
+
+```
+analyzeHeadless <projectDir> <projectName> -import <file> \
+  -loader BinaryLoader -loader-baseAddr 0x<loadAddr> -loader-blockName ram \
+  -processor r5900:LE:32:default
+```
+
+Key points: (1) this works on a **raw, headerless code blob** too, not
+just a real PS2 ELF/IRX — `ghidra-emotionengine-reloaded`'s PS2 loaders
+aren't needed if you already know the load address (e.g. a decompressed
+code overlay pulled out of a game's own resource container); Ghidra's
+stock `BinaryLoader` plus an explicit `-loader-baseAddr` and the
+extension's own `r5900:LE:32:default` processor id is enough. (2) Confirmed
+zero unimplemented/bad-opcode instructions across a 277,453-instruction,
+1.2 MB real game module (`sq`/`lq` 128-bit quadword moves, `lqc2`/`sqc2`,
+and VU0-macromode arithmetic all decoded cleanly) where radare2/capstone
+misread the same bytes as `addu.qb`/`ext`/`aver_u.h`/`xori.b` garbage —
+`~/Development/valkyrie`'s VP2 battle-engine-overlay investigation,
+`docs/valkyrieprofile2/ps2/battle-logic.md` § 2.1. Prefer this whenever a
+target needs more than a handful of hand-decoded instructions; the
+MULT/MADD hand-decode above is still useful for a quick radare2-only spot
+check, but stop reaching for it as the primary strategy once real function
+census/call-graph/decompilation work is needed.
+
+(3) **A raw `BinaryLoader` import with no declared entry point defeats
+headless auto-analysis's Function Start Search** — it seeds disassembly
+from call targets and known entry points, and a raw code blob imported
+this way has neither, so real code sitting right after a small fixed
+header (e.g. VP2's `SP*` dungeon-script overlays, whose real code starts
+at a constant file offset `0x80` past an `MWo3` header) gets silently
+skipped; auto-analysis only finds later functions reachable by a `jal`
+from somewhere it *did* find. Confirmed on 2 more VP2 overlay files
+(`docs/valkyrieprofile2/ps2/battle-logic.md` § 12.2) — zero
+unimplemented/bad-instruction warnings in the real code once fixed. Fix
+with a small Ghidra post-script forcing disassembly to start at the
+known offset:
+
+```java
+Address entry = currentProgram.getMinAddress().add(0x80);
+disassemble(entry);
+createFunction(entry, null);
+```
+
+Note `getImageBase()` returns `0` for a raw `BinaryLoader` import (no
+image base concept without a real container format) — use
+`getMinAddress()` instead, which reflects the `-loader-baseAddr` you
+passed in.
+
 ## IOP modules
 
 PS2 titles bundle IOP (I/O Processor) driver modules as small standalone

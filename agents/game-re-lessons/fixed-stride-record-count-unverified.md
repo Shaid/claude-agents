@@ -63,3 +63,49 @@ see where a table stops being a table. Where two candidate counts exist, prefer
 the one the container's own bookkeeping supports over the one a related
 structure suggests — and treat a degraded correlation or an impossible overlap
 as an over-read hypothesis first, noise second.
+
+## The same trap with a stride confirmed against a single-record file
+
+A record *stride* (not just a count) verified only against a corpus member
+that happens to have exactly one record of that type can't discriminate a
+correct stride from a wrong-but-large-enough one — with only one record,
+every field read at any stride at least as large as the true one still lands
+inside that same record's own real bytes and can look totally plausible,
+because there is no second record boundary to walk into and corrupt.
+
+Confirmed on Metal Gear Rising: Revengeance (PC, `flower` project)'s `WMB4`
+mesh format: the `meshes[]` record stride was pinned at 56 bytes from the
+one real sample available early in the pass, `ba0012.wmb` (`numMeshes=1`) —
+every field (name offset, bounding box, one batch-index array, one
+material-index array) decoded to plausible values, because a single 56- or
+68-byte record both fit entirely inside that one real record's true 68-byte
+span with room to spare, so the shorter guess simply never read the last 12
+bytes rather than reading garbage. Running the corpus-wide pipeline for the
+first time surfaced the bug immediately and unambiguously: 752 of 1,453 real
+files threw out-of-range errors, **every one** a multi-mesh file (`em*`
+skinned enemy models, `numMeshes` in the dozens) and **always** starting at
+the *second* record — with garbage values that were themselves recognizable
+IEEE754 float bit patterns reinterpreted as offsets (e.g. `1029824172` =
+the u32 view of a small float like `0.055`), direct evidence of reading the
+wrong byte range rather than the file being corrupt. The fix: a brute-force
+stride sweep (every 4-byte-aligned candidate across a plausible range,
+keeping any stride where *every* record's own leading offset-shaped field
+lands in-bounds) against the first available multi-record file found the
+one clean fit (68 bytes) in seconds. Re-verified against the original
+single-record file under the corrected stride: identical values as before
+(the shorter guess wasn't merely "close," it silently under-read a real,
+larger struct that happened to still work for one instance).
+
+**The general move:** a stride/struct-size claim backed by only one real
+multi-field record is unverified in the same sense a *count* backed by
+division alone is unverified — both need a second, independent record to
+falsify against. When only one instance of a repeating structure exists in
+your current sample, say so explicitly in the doc ("confirmed only against
+a single-record file; stride unconfirmed at n>1") rather than stating the
+stride as settled, and prioritize finding or generating a multi-record
+sample before shipping a corpus-wide pipeline built on it. Symptom to watch
+for once you do have a bigger corpus: failures (or garbage) that cluster
+specifically in files/records *after the first* of a given repeating
+structure, and garbage values that decode as plausible floats or other
+familiar bit patterns when reinterpreted — both point at a phase/stride
+error in the reader, not corrupt source data.

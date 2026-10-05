@@ -1,12 +1,6 @@
-# A CRI `@UTF` binary table's strings are Shift-JIS, not UTF-8, on a Japanese-developed title
+# A Japanese-developed title's text field decodes to mojibake OR silent garbage under an ASCII/UTF-8 assumption — always re-check as Shift-JIS
 
-**When it bites:** decoding a CRI Middleware `@UTF` self-describing binary
-table (the format underlying `CPK`, `ACB`, `CSB`, and other CRI containers)
-and a subset of string-column values — usually filenames or cue/track
-titles, not every string in the table — come out as mojibake (garbled
-multi-byte sequences, replacement characters, or nonsense punctuation)
-while the rest of the table (numeric columns, row counts, offsets) parses
-perfectly cleanly.
+**When it bites:** a Japanese-developed title's text field decodes oddly under an ASCII/UTF-8 assumption. Either some CRI `@UTF` table strings (CPK/ACB/CSB filenames, cue titles) come out as mojibake while numeric columns parse fine, or a printable-ASCII filter (`c>=32 && c<127`) yields short, meaningless fragments that look like truncation noise rather than failure.
 
 Confirmed on NieR (2010, PS3, `flower` project): `tools/shared/cri-cpk.ts`'s
 `UtfTable` string decoder (`cstr()`) was hardcoded to `Buffer.toString
@@ -40,3 +34,25 @@ strict Shift-JIS on a handful of characters (notably the long vowel mark
 `ー`, which strict Shift-JIS maps to the fullwidth reverse solidus `＼`
 instead) — cosmetic only if Node's ICU build lacks a `cp932` decoder (it
 commonly does), and irrelevant to any functional/structural decode.
+
+**The silent-drop variant (confirmed on Valkyrie Profile, PSX,
+`valkyrie` project).** A BGM sequence header's 4-byte "cue tag" field had
+been documented across two prior passes as "blank on most songs, a
+truncated ASCII/Shift-JIS fragment on the rest" — the existing decode
+path filtered to printable ASCII (`c>=32 && c<127`) and dropped every
+other byte, so a real 4-byte value made of two Shift-JIS characters
+(e.g. `93 6f 8f ea`) produced whatever single stray byte in the run
+happened to be ASCII-range (`0x6f`='o'), read as meaningless noise.
+Re-decoding the exact same raw bytes with `TextDecoder('shift_jis')`
+instead of the ASCII filter revealed real, meaningful Japanese words
+(戦闘="battle", 固定="fixed", 精神="spirit", 不安="anxiety", 登場=
+"entrance"...), several repeating across multiple unrelated real song
+titles — the decisive signature of a real composer/category tag, not
+truncation garbage. **The general tell:** if a field decoded via an
+ASCII-only filter or byte-range check yields short, semantically
+meaningless single letters or fragments — not obviously wrong (no
+replacement characters, no visible mojibake) — and the game has any
+Japanese development provenance, re-decode the *raw* bytes as Shift-JIS
+before writing the field off as unrecoverable truncation noise. An
+ASCII filter is not a neutral "best effort" decode here — it silently
+produces plausible-looking wrong output instead of failing loudly.

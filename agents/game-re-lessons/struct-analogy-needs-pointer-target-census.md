@@ -56,6 +56,29 @@ already-solved format Y because it has the same number/shape of
 pointer-ish fields" is the basis for a semantic label, resolve the
 pointers corpus-wide before writing the label down.
 
+**A third variant needs the pointed-to bytes actually decoded, not just
+resolved to a type/role.** Knights of the Round (CPS1, `kolbold` project):
+a mechanism found while tracing a boot-init routine looked like a strong
+candidate for "the per-level palette selector" this project had been
+searching for — structurally, it paralleled an already-confirmed in-game
+palette-copy pathway almost exactly (an index register selecting one of
+several ROM addresses from a pointer table, each address landing inside
+the assembled ROM, each feeding the same kind of copy-to-hardware-palette-
+RAM loop already confirmed elsewhere). Decoding two of the pointer table's
+actual targets with the project's own already-confirmed palette-word
+format showed near-uniform pure-white blocks with one distinct terminal
+color — the shape of a screen-flash/transition-effect frame sequence, not
+distinct per-stage color schemes — and the index register itself turned
+out to be generic scratch reused by 100+ unrelated call sites elsewhere in
+the ROM (see `locally-indexed-substructures.md`), not a stable "current
+stage" variable. No sibling-project or cross-format shape was involved
+here at all — the false lead came purely from within-game structural
+parallelism to an already-solved mechanism. The fix is the same: resolve
+and decode what the candidate mechanism's own data actually *is* (using
+formats/decoders already confirmed for this exact game) before writing up
+a semantic hypothesis, even when the surrounding structure looks like an
+obvious fit for what you were hoping to find.
+
 **The same trap has a code-side twin: a matched instruction-sequence
 signature isn't proof of the same scope either.** The same Wings session
 also grepped all disassembled code for the exact `MULS`+`ASR`+`ADD`

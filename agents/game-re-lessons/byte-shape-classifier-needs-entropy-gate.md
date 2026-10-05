@@ -62,3 +62,29 @@ hypothesis, not a final verdict). A classifier's positive rate is evidence
 worth investigating, not evidence a decode attempt should trust blindly
 before checking whether a completely different format explains the hits
 better.
+
+**A third mode, confirmed on a genuinely different heuristic (lag-1
+autocorrelation, not a narrow nibble-range shape test): searching for
+*unmarked raw PCM* in a general data segment produces the same kind of
+false positive, for the same underlying reason — real game data is
+routinely self-correlated too, not just audio.** Midwinter 2 (Amiga,
+`hunter` project): hunting for a static PCM sample bank feeding a confirmed
+Paula sound driver (whose voice-block sample-pointer fields are populated
+only at runtime, zero-filled at rest), a sliding-window scan of hunk1 DATA
+scored windows by lag-1 sample-to-sample autocorrelation + distinct-byte-
+count + non-zero fraction — the same technique that reliably flags
+unmarked raw PCM elsewhere in this account (see
+`audio-byte-order-measurable.md`'s sibling oracle). It returned 6
+candidates with |r1| in the 0.5-0.8 range, a score band real audio
+occupies — but direct byte inspection of all 6 found none were audio: they
+were already-known ASCII text tables and small structured numeric/
+coordinate tables, whose byte-to-byte values are also strongly correlated
+(adjacent characters in a word, adjacent coordinates in a table row) for
+reasons that have nothing to do with sound. **Fix, same as above: treat a
+heuristic's positive bucket as a lead to open and inspect, never a result
+to ship** — for raw-PCM search specifically, autocorrelation alone is too
+weak a discriminator against other correlated structured data; pair it with
+a positive check the sibling formats don't share (byte-value range breadth/
+near-uniform histogram spanning most of 0-255, which real 8-bit PCM shows
+and small text/coordinate alphabets don't) or fall back to direct listening/
+rendering before calling a candidate "found."

@@ -42,3 +42,26 @@ across the whole project (not just your own files) after every such
 resolution — it will show the *other* session's call sites breaking or
 compiling clean against your change, which is the fastest signal of
 whether you actually converged or just moved the collision.
+
+**Same collision, prose-doc variant: a duplicate section-number heading,
+not a duplicate code signature.** Confirmed on Valkyrie Profile (PSX,
+`valkyrie`): both the main session and a concurrently-running `re-oracle`
+escalation independently wrote a new `### 20.40` heading into the same
+long-lived spec file (`data-structure.md`) at nearly the same moment —
+detected the same way (repeated `Edit` "file has been modified since read"
+errors, confirmed by polling `md5sum`/`wc -l` until two consecutive reads
+agreed the file had stopped changing). The escalation self-resolved by
+renumbering its own copy to `### 20.41` as a stopgap. Once the fork's task
+showed completed and the file was stable, the concrete reconciliation
+recipe was: (1) diff both versions and pick the more complete/correct one
+(here, the escalation's — it had traced more callers and caught two defects
+in the other draft); (2) delete the inferior duplicate section entirely,
+not just its heading; (3) renumber the surviving section back down to the
+number it should have had, including rewriting any "supplement to §N"
+framing that only made sense while it was a second, later section; (4)
+**grep the whole project's doc tree for stray references to the temporary
+number** (`grep -rn "20\.41" docs/`), not just the file that collided —
+cross-references in a sibling doc (here, `battle-logic.md`) can cite either
+section number and need fixing too. Skipping step 4 leaves dangling
+citations that silently point at a section number that no longer exists
+anywhere.

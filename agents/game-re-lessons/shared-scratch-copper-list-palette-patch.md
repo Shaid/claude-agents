@@ -39,6 +39,32 @@ loads which file) forward to its `LEA <source>,A0` / `BSR
 <patch-routine>` / `install-copper-list` triplet — the source operand of
 that `LEA` is the authoritative table, not whatever a shape-scan turns up.
 
+**A render routine with no load call site of its own inherits its ONLY
+caller's already-traced palette — check the call chain, not local
+structure, before falling back to "borrow a plausible-looking palette by
+analogy."** Some HUD/overlay content (a minimap, a status icon composite)
+is drawn by a routine that isn't itself reached via a `LEA <filename>,A0`
++ crunched-size-immediate load call (the technique above finds a
+*screen's* own palette) — it's pure code, only ever called from inside an
+already-solved sibling screen's own render routine. In that case the
+overlay's real active palette is simply whatever that one caller had
+already installed, by construction: trace the routine's caller (and its
+caller, if more than one hop deep) up to a call site already documented in
+your own palette-install table, rather than continuing to search for the
+overlay's own independent source. Confirmed on Jungle Strike AGA:
+`statmapN`'s mission-status-minimap icon glyphs had been rendered for
+multiple sessions against the world-map palette "by analogy" (no
+independent evidence); its render routine (`LAB_0712`) has exactly one
+caller (`LAB_0700`), which itself has exactly one caller (`LAB_06FB`) —
+and `LAB_06FB` turned out to be the exact same `LEA <source>,A0` / `BSR
+LAB_0528` / `MOVE.L #<copper-list>,128(A5)` call site already documented
+as the `status` screen's own palette install, with the minimap render
+sandwiched between the patch and the hardware install. The minimap's real
+palette was `STATUS_PALETTE_12BIT`, not the world-map palette — a `grep`
+for the render routine's own label name across the rest of the
+disassembly (to count/locate its callers) was the whole technique, no new
+disassembly needed.
+
 A useful corroborating check once you have a candidate real palette but a
 static render still doesn't fully match a reference screenshot: a static
 UI/HUD asset frequently contains only the *empty* frame (borders, labels,

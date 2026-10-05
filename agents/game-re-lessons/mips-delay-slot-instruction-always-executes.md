@@ -1,73 +1,28 @@
 # A MIPS branch's delay-slot instruction executes on BOTH the taken and not-taken path — reading it as "belongs to the not-taken branch" silently mis-derives a formula
 
-**When it bites:** hand-deriving an arithmetic formula (a size, an offset,
-a scaled index) from a disassembled MIPS function that contains a
-conditional branch (`beqz`/`bnez`/`beq`/`bne`/etc.) immediately followed
-by an ALU instruction that writes to a register also used after the
-branch target — on PS1, PS2 (EE/IOP), PSP (Allegrex), N64, or any other
-MIPS-family target this project's corpus spans.
+**When it bites:** reading MIPS (PS1, PS2, PSP, N64) where a branch or `jr`/`j` is followed by an instruction writing a register used afterwards — deriving a formula, a loop's accept/reject sense, or a return value (`$v0` set in a loop-exit delay slot). Also: citing an instruction address, placing a function boundary after `jr $ra`, or verify scripts that count words from an anchor.
 
-## The trap
+The instruction after a branch is issued before the branch resolves, so it runs on **every** path. Top-to-bottom reading treats it as the first line of the fall-through block; it is not. The skipped block is only what follows the delay slot. Errors are silent: no crash, just a plausible wrong size, a reversed accept/reject, a wrong return value, or an address four bytes off.
 
-MIPS is classically pipelined with a **branch delay slot**: the
-instruction immediately after a branch always executes, regardless of
-whether the branch is taken, *before* control transfers. A disassembly
-listing like:
+**Check / fix:**
+- For every branch whose next instruction writes a live register, trace register state on the taken and not-taken paths **separately**, starting both *after* the delay slot. Separate "what decides the branch" (the pre-slot value) from "what survives past it" (the slot's write).
+- Decide a loop's accept/reject sense by what each destination *does next* (reaches the epilogue with the slot value intact vs. re-enters the loop head), not by which side looks like the normal path.
+- Apply the same check to the function's own return register at its own `jr $ra`.
+- A function's last word is often the store in the `jr $ra` delay slot: the boundary is `jr + 8`, not `jr + 4`. Confirm a guessed function start with a real `jal` caller; a "function" that begins with a `nop`/junk single instruction is the tell.
+- When citing an address, re-read and decode the raw word there first; better, make the citation a real-corpus test assertion (`expect(word(addr)).toBe(0x…)`).
+- In verify scripts, never destructure a word window by position; use an exact-address accessor (`wordAt(img, addr)`) with addresses copied from the transcript.
+- When several branches feed one exit, don't trust a careful hand-trace — run the bytes in a tiny scoped MIPS interpreter (`hand-traced-byte-shuffle-needs-independent-resimulation.md`).
+- Validate any derived formula against real bytes with an exact-match invariant before shipping it.
 
-```
-lw   v0, 0x20(a0)
-lw   v1, 0x28(a0)
-beqz v1, 0x4aac0        ; if v1==0, skip to label
-sll  a0, v0, 2          ; delay slot -- LOOKS like "the not-taken-path body"
-addu v0, a0, a0         ; only runs if branch NOT taken
-addu v0, v0, v1
-addu a0, v0, a0
-0x4aac0:
-; ... uses a0 here
-```
+**Canonical example:** Valkyrie Profile: Lenneth (PSP) `BOOT.BIN` `fcn.0004aaa4` (PFS header→trailer size): `beqz v1,…` with `sll a0,v0,2` in the delay slot. Read as conditional, "`field28==0` leaves `a0` untouched"; actually `a0 = field28==0 ? entryCount*4 : entryCount*12 + field28`. Verified exactly: `dataSectorCount*2048 + roundUp(result,2048) == fileSize` on the 515,420,160-byte archive.
 
-reads, at a skim, as "if `v1==0`, jump past this multiply-and-add block,
-so `a0` still holds its original value at the label." That reading is
-**wrong**: the delay-slot instruction (`sll a0, v0, 2`) executes on
-*every* path, taken or not, because it's issued before the branch
-resolves. So even on the `v1==0` (branch-taken) path, `a0` gets
-overwritten to `v0*4` before control reaches the label — the "skipped"
-block is only the instructions *after* the delay slot, not the delay slot
-itself.
+**Variants (all `valkyrie`, VP1 PSX):**
+- *Citation* — Combo Potion's `sb $v0,0x653($a0)` sits at `0x8009a900` in the `jr` delay slot; the `jr` address `0x8009a8fc` was cited in five places, caught only by a probe decoding `03e00008`.
+- *Loop sense reversed* — `FUN_8003506c`: `beq $v0,$zero,0x8003547c` with `addu $v0,$t0,$zero` in the slot; the branch target is the epilogue returning the current primitive, so taken = ACCEPT, fall-through = REJECT/continue.
+- *Boundary after `jr`* — next functions start at `0x8004740c` and `0x80046f8c`, not `0x80047408`/`0x80046f88` (made twice in one investigation).
+- *Positional verify script* — `verify-aoe-splash-damage-fcn800720a8.ts` produced ~13 spurious `[FAIL]`s from miscounted nops/delay slots.
+- *Return value* — `func_0x80013DD0`: loop exit `beq` to the sole `jr $ra` with `addiu $v0,$zero,1` in the slot returns `1`, not the `slti` result `0`; an interpreter run caught what the hand-trace missed.
 
-## Confirmed case
+Related: `self-consistent-chain-wrong-unit.md`, `negative-from-addressing-root-not-shapes.md`.
 
-Valkyrie Profile: Lenneth (PSP), `BOOT.BIN`'s `PSPVAL1.PFS` header-to-
-trailer-size function (`fcn.0004aaa4`) has exactly this shape. The
-correct reading — verified by re-deriving the formula in Python and
-matching it byte-exact against the real 515,420,160-byte archive file —
-is:
-
-```
-a0 = (header.field28 == 0) ? header.entryCount * 4      // delay-slot multiply always applies
-                             : header.entryCount * 12 + header.field28
-```
-
-A skim-level reading (treating the delay slot as conditional) would have
-produced "when `field28==0`, `a0` is untouched" — silently wrong, and the
-kind of error that wouldn't show up as a crash, just as a plausible-but-
-incorrect trailer offset/size a few thousand bytes off from the real one
-(see `game-re-lessons/self-consistent-chain-wrong-unit.md` and
-`negative-from-addressing-root-not-shapes.md` for sibling "plausible but
-wrong arithmetic" failure classes).
-
-## Fix / general defense
-
-When a disassembled MIPS function's branch immediately precedes an ALU
-instruction whose destination register is read again after the branch
-target, **always ask "does the delay-slot instruction run on both
-paths?" before trusting an instruction-order reading of the surrounding
-control flow** — the answer is yes unless the target CPU is documented as
-non-delay-slot (rare in this project's corpus; PS1/PS2/PSP/N64 all use
-classic MIPS I/II-family delay slots). Re-derive the formula by hand,
-tracing register writes on *both* the taken and not-taken paths
-separately, rather than reading top-to-bottom as if it were a non-
-pipelined ISA. A cheap independent check once the formula is derived:
-compute it against real file/struct bytes and require an exact match
-(here, `header.dataSectorCount * 2048 + roundUp(formula_result, 2048) ==
-fileSize`, 0 deviation) before trusting it in a shipped decoder.
+**History:** 6 recorded instances (valkyrie VP-PSP, VP1 PSX) — full log in `_archive/mips-delay-slot-instruction-always-executes.md`.

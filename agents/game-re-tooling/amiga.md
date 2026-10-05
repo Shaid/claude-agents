@@ -7,12 +7,20 @@ has been granted.
 
 ## Ghidra
 
-A working HUNK loader **is** installed — `ghidra-amiga` (author "Bartman/Abyss",
-builds on lab313ru's `ghidra_amiga_ldr` plus WHDLoad support), at
-`~/.config/ghidra/ghidra_12.1.2_PUBLIC/Extensions/ghidra-amiga/`. (That's the
-real per-user extensions path this Ghidra build resolves to — not the legacy
+A HUNK loader extension exists for this machine — `ghidra-amiga` (author
+"Bartman/Abyss", builds on lab313ru's `ghidra_amiga_ldr` plus WHDLoad
+support) — but **verify it's actually installed before planning around
+it**: the expected location is
+`~/.config/ghidra/ghidra_12.1.2_PUBLIC/Extensions/ghidra-amiga/` (the real
+per-user extensions path this Ghidra build resolves to — not the legacy
 `~/.ghidra/.ghidra_12.1.2_PUBLIC/` most other Ghidra documentation assumes;
-see `game-re-tooling/ghidra-loaders.md` for why.) It ships Amiga NDK 3.9
+see `game-re-tooling/ghidra-loaders.md` for why), yet a 2026-09-01 session
+found **no `Extensions/` directory at all** — only unbuilt source at
+`~/Development/ghidra_amiga_ldr` (gradle-buildable). The same session also
+found the IRA binary, radare2, and capstone all absent — tool inventory
+drifts, check before you commit to a route, and if everything is missing
+use the extension-free headless fallback below rather than stalling. When
+present, the extension ships Amiga NDK 3.9
 datatypes for accurate struct typing and its own `ghidra_scripts/`
 (`ApplyRegBase.java` for custom hardware register overlays, `CopperList.java`
 for Copper-list analysis, `ExportFunctionsHeadless.java`). Confirmed working
@@ -24,6 +32,66 @@ for quick interactive byte-pattern work. Own this tool's Amiga usage from
 the `amiga-disasm` agent, not `ghidra-disasm` — the latter doesn't carry the
 small-data/`A4`/hunk-offset context Ghidra's raw output needs interpreting
 against.
+
+### Extension-free headless fallback: pre-relocate in Python, import raw
+
+Verified end-to-end (Treasures of the Savage Frontier, 37-hunk overlay
+executable): when no HUNK loader is available, apply the relocations
+yourself and Ghidra needs no loader at all.
+
+1. A ~100-line Python hunk parser lays hunks out contiguously from a
+   chosen base (e.g. `0x10000`), applies every `HUNK_RELOC32` entry
+   (add each target hunk's assigned base to the stored longword), and
+   emits a flat relocated image + a hunk→base/file-offset map JSON.
+   (Overlay-executable trap: the root hunk-header size table can declare
+   more entries than `last-first+1` real hunks — size the table from
+   `last-first+1`, not from `table_size`.)
+2. `analyzeHeadless <proj> -import flat.bin -processor
+   "68000:BE:32:default"` — absolute operands now resolve correctly with
+   the stock raw-binary importer, and the decompiler works.
+3. Cite findings as flat address + real file offset via the map.
+
+Ghidra-12 headless traps hit on the way (each cost real time):
+
+- Needs `JAVA_HOME` exported (this machine:
+  `~/.local/opt/jdk-21.0.12.1+1`).
+- Ghidra 12 **rejects Jython post-scripts** outright ("Ghidra was not
+  started with PyGhidra") — write post-scripts in Java.
+- `-scriptPath` pointing at a session scratchpad dies with an OSGi
+  bundle error — copy scripts to `~/ghidra_scripts/` and point there.
+  `DumpRegion.java` (force-disassembles and prints an arbitrary hex
+  start/end range) already lives there from the Treasures session.
+- Auto-analysis on a raw import finds near-zero references to strings/
+  data (the referencing code was never disassembled, and PC-relative
+  refs aren't in any reloc table) — don't trust its xref lists; scan
+  bytes in Python instead: big-endian abs32 value scans for relocated
+  addresses, and PC-relative displacement scans (`pea (d16,PC)` =
+  `48 7A`, `jsr (d16,PC)` = `4E BA`, `jsr (d16,A4)` = `4E AC` for
+  SAS/Lattice small-data calls, resolved via the `A4 = DATA hunk base +
+  0x7FFE` formula documented under Static disassembly below; far stubs
+  are `4EF9 <abs32>` sequences in the DATA hunk).
+- **Default auto-analysis (recursive descent from known entry points)
+  under-covers a large hand-optimized 68k binary the exact same way IRA's
+  `-preproc` does (see "Large hand-optimized binary" below) — same root
+  cause, different tool.** Confirmed on Midwinter (1) (`hunter`, 183 KB
+  single-CODE-hunk executable): a default headless pass found only
+  566 of an eventual ~1046 functions and near-zero hardware-register
+  hits, because recursive descent has no static edge to follow across
+  runtime-computed jump tables and other indirect-dispatch gaps — a
+  coverage gap that looks like a clean, unremarkable analysis result,
+  not an error. **Fix:** write a small Java `GhidraScript` that does a
+  forced linear sweep of the whole code region — starting at the block's
+  first address, call `disassemble(addr)` at each position; if it
+  succeeds, advance past the resulting instruction; if it fails
+  (mid-instruction start, inline data), skip 2 bytes and retry — then
+  call `analyzeAll(currentProgram)` once the sweep finishes so the
+  now-much-larger instruction set gets proper function/xref analysis.
+  This alone took the Midwinter pass from 566 to 1046 functions (92%
+  coverage) and revealed hardware-register references the default pass
+  had completely missed. Reuse across a project: run this once per
+  target as an early step, then do further headless passes
+  (`-process <file> -noanalysis -postScript X.java`) against the same
+  already-swept project rather than re-importing raw each time.
 
 ## Static disassembly
 
@@ -52,7 +120,19 @@ against.
   file_offset + (SECSTRT_n_addr - hunk_n_file_data_start)`, both sides read
   straight off the hunk header parse) and use it to predict where an
   already-known file offset should land — then confirm the clean
-  disassembly's label sits exactly there. **Small single-CODE-hunk
+  disassembly's label sits exactly there. **The same delta bites in
+  reverse, once the `.asm` exists**: whenever a `.cnf` declares more than
+  one CODE/DATA range spanning more than one hunk, IRA's printed `;NNNNNN`
+  address column is a synthetic address — each declared hunk's data
+  payload concatenated back-to-back starting at 0 — not the real file
+  offset, and every hunk (and every executable) gets its own constant
+  delta. Never cite a `LAB_xxxx (0xADDR)` value straight off the listing as
+  a file offset without first re-deriving that hunk's delta (find one known
+  byte pattern by raw search, diff its real offset against the listing's
+  address for the same instruction); see
+  `file-offsets-vs-segment-relative.md`'s 4th manifestation for a worked
+  example with three different deltas confirmed across two executables.
+  **Small single-CODE-hunk
   executable (a bootstrap/loader stub, tens of KB):** `-preproc` can
   overcorrect the *other* way, classifying almost the *whole* hunk as data
   (a 15KB Jungle Strike `JStrike` loader: `-preproc` found ~32 bytes of code
@@ -132,6 +212,13 @@ against.
   `mcp__radare2__*`) — interactive disassembly, xrefs, hex dumps, byte-pattern
   search. radare2 is multi-architecture: it's the primary tool for DOS/x86 and
   other non-HUNK targets.
+- **Opening a raw flat 68000 blob (a track-loaded overlay with no HUNK
+  header at all) via `mcp__radare2__open_file`'s `baddr` parameter can
+  silently fail to map the file at the requested address** — `hexdump`/
+  `disassemble` then quietly return raw file offsets, not the game's real
+  runtime addresses, with no error. Verify with a known landmark (a
+  documented header byte pattern) at both `0x0` and `baddr` before trusting
+  any address; see `mcp-r2-baddr-not-applied-raw-file.md`.
 - **Overlay-linked executables** (`blink OVERLAY`-style: a resident root
   hunk set, then one or more additional `HUNK_HEADER`/`HUNK_CODE`/`HUNK_END`
   segments separated by `HUNK_BREAK`, each loaded on demand) defeat both
@@ -167,6 +254,15 @@ against.
   confirmed once per binary via a `HUNK_ABSRELOC32` entry whose
   pre-relocation stored value is exactly `0x7FFE`) and read the flat
   `-binary` disassembly's real addresses directly (`-label=1`).
+  **This overlay shape is a real, confirmed structure in commercial Amiga
+  game executables, not just a DOS-side or GLIB-container-level concept —
+  Treasures of the Savage Frontier's main executable is a 7-segment
+  `HUNK_OVERLAY` binary (1 resident root + 6 on-demand overlays), and its
+  non-resident segments held resource-loading code and string literals a
+  resident-root-only disassembly/string-search pass could never see** — see
+  `game-re-lessons/amiga-overlay-segment-defeats-resident-only-trace.md`.
+  Check for a second `HUNK_HEADER` occurrence early on any target whose
+  call-graph or string search comes back suspiciously empty.
 - **Normalize decimal vs. hex `A4` displacements before concluding "new
   global".** IRA emits A4-relative displacements in **decimal**
   (`-18340(A4)`), while project docs and probe scripts routinely cite the
@@ -176,6 +272,23 @@ against.
   scratch — it was the already-documented `-0x47A4` current-level global).
   Before investigating any `-N(A4)` reference, convert it to hex and grep
   the docs/scripts for both forms.
+- **Confirming/refuting whether SAS/C small-data addressing is a binary's
+  *primary* data-access model needs a reload/auto-increment census, not
+  just a raw displacement-instruction count.** A handful of `d16(A4)`
+  sightings (or their absence) is weak evidence either way — count how
+  often `A4` is *repointed* to a new target via `LEA`/`MOVEA.L` and how
+  often it's used with `(A4)+`/`-(A4)` auto-increment/decrement. A true
+  small-data base is set **once** near program start and held fixed for
+  the binary's lifetime, addressed only via small `d16(A4)` displacements
+  — it is never walked with auto-increment and never reloaded mid-program.
+  Confirmed on Reunion (`methanoid`): a full-corpus census over one
+  152,788-byte CODE hunk found only 76 total `d16(A4)` accesses against
+  5,056 absolute (reloc32-patched) data-reference instructions (~66:1),
+  but the decisive signal was `A4` being reloaded to a *different* target
+  141 times via `LEA`/`MOVEA` (to dozens of distinct labels/computed
+  pointers) plus 65 `(A4)+` post-increment uses — conclusively ruling out
+  the small-data model in favour of `A4` being used as an ordinary
+  general-purpose scratch/loop pointer register, same as `A0`-`A3`/`A5`.
 
 ## Parsing HUNK yourself
 
@@ -326,6 +439,40 @@ the PC-relative brute-force scan once that comes back empty, since an
 empty reloc32 result only rules out "referenced via a relocated pointer
 table," not "referenced at all."
 
+## Planar bitmap decoding — use `@seer-project/gfx`, don't hand-roll
+
+Amiga (and Atari ST) planar bitplane decoding — the actual pixel-unpacking
+math — is already generalized and promoted to `packages/gfx` in the seer
+monorepo (`@seer-project/gfx`; browser-safe, zero Node dependency). Its
+`decodePlanar(data, {width, height, planes, layout, offset?, rowBytes?,
+planeStride?, interleave?})` covers all three layouts seen across sibling
+projects in one parameterized function:
+
+- `'plane-major'` — whole planes stored one after another (crawl's Black
+  Crypt, sprite banks with a trailing mask plane).
+- `'row-interleaved'` — each scanline stores all its planes contiguously,
+  row 0 plane 0 → row 0 plane 1 → … → row 1 plane 0 (ILBM BODY, strike's
+  Jungle Strike screens).
+- `'word-interleaved'` — planes interleaved every `interleave` bytes within
+  a row (default 2 = one word; the native Atari ST layout, nicodemus's
+  Phantasie III containers) — **this isn't ST-exclusive**: confirmed on an
+  Amiga title (Powermonger, `CAPGRAPH`) where one image in an otherwise
+  uniformly plane-major screen corpus used this layout instead — see
+  `single-image-in-uniform-corpus-uses-different-planar-layout.md`.
+
+`expandColorWord`/`expandPalette` (`amiga12` = `$0RGB` word → nibble×17 RGB,
+`amiga24` = AGA `LoadRGB32` longword) and `indicesToRGBA`/`greyscaleRamp`
+round out the package — palette expansion and index→RGBA conversion are
+also already solved, generic, and tested.
+
+**Check for and import this package before writing a new project's own
+planar/palette decoder.** Add it as a `file:../seer/packages/gfx` dependency
+(same pattern as `@seer-project/core`/`@seer-project/pipeline`) — it has
+already saved a from-scratch decoder for three different bit-layouts in one
+session (Powermonger). If a target needs a layout genuinely not covered
+here (e.g. EGA planar, a bit-plane order this package doesn't parameterize),
+extend the package rather than forking the logic into project-local code.
+
 ## Disk images and hardware reference
 
 - **`amitools`** (`xdftool`, `rdbtool`) — read/list/extract AmigaDOS floppy
@@ -399,11 +546,37 @@ mode combination in the target binary (or an authoritative 68k opcode
 table) rather than recalling it from memory — the mistake is invisible
 until a positive-control hit you expected to find doesn't show up.
 
+## IRA's auto-generated `EQU` table as a free "is this hardware register ever touched" oracle
+
+IRA only emits a symbolic `EQU` name (`COLOR02 EQU $DFF184`, `DMACON EQU
+$DFF096`, ...) in the disassembly header for a custom-chip register it
+actually resolved a reference to somewhere in the binary — it doesn't
+pre-populate the whole hardware register map speculatively. This makes a
+plain `grep` of the header's `EQU` block a cheap, tool-verified way to
+prove a **negative** ("this binary never accesses the blitter/Copper") —
+stronger than a zero-hit text search alone, because it also rules out "the
+registers exist in the binary but my search pattern missed them" and "IRA
+silently failed to resolve the reference." Confirmed on Dune (Amiga,
+`wyrm`): hunting for evidence of real-time hardware-scrolled background
+art, a scan of `dune.asm`'s header found `EQU` entries (with real, > 0
+usage counts elsewhere in the file) for `DMACON`, `INTENA`, `AUD0LCH`,
+and `COLOR02` — but **zero** `EQU` entries anywhere for `BPLxPT`,
+`BLTCON0/1`, `BLTAPT`/`BLTDPT`/`BLTBPT`/`BLTCPT`, `BLTSIZE`, `COPJMP`, or
+`COP1LC`/`COP2LC`. Since sibling registers in the same address space *do*
+get resolved and named when actually used, their total absence here is
+direct, tool-independent evidence the game never touches the blitter or
+Copper list after the one-time setup already documented elsewhere in the
+project — not just "a search for those names came up empty." Generalizes
+to any target where the disassembler emits symbols on demand rather than
+up front: an empty symbol table for a whole *category* of address is
+worth checking before concluding a mechanism (hardware scroll, DMA,
+interrupts) is absent from the binary.
+
 ## amiberry — operational detail (permission gate is in `game-re.md`)
 
 Once granted, still keep
   usage narrow (one specific question, get in and out) — see the cost traps
-  below and `amiberry-live-capture-workflow.md` in the pitfalls index for
+  below and `amiberry-live-capture-workflow.md` (`game-re-lessons/`) for
   the operational gotchas once you do have permission. Two cost traps:
   WHDLoad quickstart boot (`--autoload`, `launch_whdload`) can SIGSEGV-loop
   in the JIT recompiler during Kickstart boot regardless of model/ROM/

@@ -1,65 +1,27 @@
-# A bind-pose-only glTF render or validator pass cannot detect a JOINTS_0-index-space bug
+# A bind-pose-only glTF render or validator pass cannot detect ANY skinning bug — joint order, joint field, or inverse bind matrices
 
-**When it bites:** writing a skinned-mesh exporter (any format -> glTF/GLB)
-that resolves each vertex's controlling bone to some kind of "global bone
-index" (a skeleton array position, a hash, a runtime bone ID) and writes
-that value straight into the `JOINTS_0` vertex attribute. Also: reviewing
-or accepting such an exporter as "verified" on the strength of a rest-pose
-render (a T-pose/bind-pose screenshot, a 2D vertex-position scatter plot)
-plus `gltf-transform validate`/the official glTF validator reporting zero
-errors.
+**When it bites:** you're writing or accepting a skinned-mesh exporter (anything → glTF/GLB) as "verified" on a rest-pose render, a vertex scatter plot, or zero errors from `gltf-transform validate`. Above all: the exporter *computes* `inverseBindMatrices` as `inverse(world[joint])` instead of reading a stored bind-matrix palette, in which case every render is zero evidence.
 
-## What went wrong
+At bind pose, `world[j] × IBM[j]` is the identity for every joint. A vertex assigned to the *wrong* joint therefore lands in the same place, and the validator only checks that `JOINTS_0` holds in-range indices. If the IBMs are derived from the same skeleton, this holds for **any** joint assignment, even a random one. Three independent index-space traps are all invisible this way:
+- **Joint order:** `JOINTS_0` holds the vertex's bone position *within that mesh's `skin.joints[]`* (usually DFS order), not the source engine's bone id or array index.
+- **Joint field:** the wrong source field is used as the bone entirely.
+- **Joint value encoding:** the stored index is pre-scaled (e.g. slot ×3) and read raw.
 
-glTF's `JOINTS_0` attribute does not hold a bone ID, a skeleton array
-index, or any format-native identifier — it holds each vertex's bone's
-**position within that mesh's own `skin.joints[]` array**, and that array
-is commonly built in tree-traversal (DFS) order for a clean parent-before-
-children glTF node hierarchy, not in the source format's raw bone-index
-order. A G1M (Koei Tecmo Warriors-engine) -> GLB exporter wrote the
-source format's own resolved bone index (a field literally named
-`matrixId` in the source data) directly into `JOINTS_0`. This is silently
-wrong whenever the DFS traversal order differs from raw bone-index order —
-confirmed on a real 187-bone skeleton, where the two orders diverge
-starting at position 7.
+**Check / fix:**
+1. **Does the source ship bind matrices?** Grep the chunk list for a matrix palette (G1M `MM1G`, etc.) before reconstructing IBMs. A doc note saying "raw bind matrices (not used; world transforms recomposed instead)" means this bug is already written down.
+2. **Use the stored palette as a per-entry oracle.** It settles field, index space and matrix in one pass (`stored-bind-matrix-palette-is-a-per-entry-identity-oracle.md`).
+3. Build `skin.joints[]` in hierarchy order, build `inverseBindMatrices` in the **same** order, and write `JOINTS_0` through an explicit bone → slot inverse map. Bijection check: `order[boneToJointSlot[b]] === b` for every bone. This is necessary but **not sufficient**: it passes when the wrong field is used.
+4. **Check the index encoding:** run a corpus-wide divisibility census on the raw stored joint values (`prescaled-joint-indices-divisibility-census.md`).
+5. **Pose the model** with a real clip, or at least a synthetic per-joint rotation. A bind-pose image is never a skinning check. Bone-local geometry (physics cloth/hair chains) is the natural canary, because it needs a genuinely non-identity bind matrix to reach the body.
 
-**Every check run at the time passed anyway.** `gltf-transform validate`
-(the official Khronos glTF 2.0 conformance validator) reported zero errors:
-`JOINTS_0` values were still valid indices into an array of the right
-length, with no duplicates, so nothing about the accessor's *shape* was
-wrong. A 2D scatter plot of raw decoded vertex positions — done entirely
-independently of the skinning code, as a structural sanity check on
-position decoding — rendered a correct, recognizable T-pose humanoid
-silhouette. Neither check can distinguish this bug from correct code,
-**because at rest pose every joint's world transform composed with that
-same joint's own inverse bind matrix is the identity matrix, for every
-joint, always** — so picking the *wrong* joint index for a vertex still
-applies an identity transform at rest, and the vertex lands in exactly the
-same place either way. The bug is completely invisible until the model is
-actually posed away from bind pose (i.e. animated), at which point vertices
-skinned to the wrong joint tear away from the mesh incoherently.
+The same trap applies to any target that references joints by vertex-local slot: Godot, Unity `BoneWeight`/`bindposes`, COLLADA `<vertex_weights>`.
 
-## The fix, and the test that actually catches this class of bug
+**Canonical example:** chimera's `g1m-gltf.ts` (Koei Tecmo G1M, shared by three titles). Palette entries are `{matrixId, clothId, boneId}`. The exporter used `matrixId` (an index into the `MM1G` IBM palette) as the bone and ignored `boneId`, and it derived IBMs as `inverse(world[joint])`. The bijection round-trip passed, `gltf-validator` showed zero joint errors corpus-wide, and Playwright screenshots of named characters looked right. Cloth and hair (`NUNO`/`NUNV`/`NUNS`, stored bone-local) gave it away: Manuela's robes and Rhea's hair sat heaped at `y ∈ [-13.8, 15.7]` while the body reached `y = 159.4`. Reading the real palette moved 642 of 10,614 Three Houses primitives onto the body and left the rest bit-identical.
 
-1. Build `skin.joints[]` in whatever order the glTF node hierarchy needs
-   (DFS from the skeleton roots is typical).
-2. Build the `inverseBindMatrices` accessor in that **same** order — a
-   second, easy-to-miss instance of the identical index-space confusion:
-   computing IBMs in raw bone-index order while `skin.joints[]` is in DFS
-   order produces the same class of silent, bind-pose-invisible bug.
-3. Build an explicit inverse map (bone/matrixId -> its position/slot within
-   that DFS order) and use *that* — never the raw bone index — whenever
-   writing `JOINTS_0`.
-4. **Verify with a bijection check, not a render**: for every bone `b`,
-   confirm `order[boneToJointSlot[b]] === b`. This is a pure structural
-   check on the two index spaces' consistency — cheap, deterministic, and
-   it is the one check that actually exercises the bug, unlike any
-   render/validator check run at bind pose. (Confirmed 187/187 bones, 0
-   mismatches, after the fix.)
+**Variants (same exporter):**
+- Joint order: the raw `matrixId` was written into `JOINTS_0` while `skin.joints[]` was in DFS order. On a 187-bone skeleton the orders diverge from position 7. After the fix, 187/187 bijection, 0 mismatches.
+- Value encoding: stored bone indices are palette slot ×3 and were read raw for three corpora. That gave the wrong slot for values 3..N-1 and a silent slot-0 fallback above N.
 
-This generalizes past glTF: any export target with a "skin/joints array,
-referenced by vertex-local position rather than by the source engine's own
-bone identifier" convention (Godot's `.gltf`/`.glb` importer, Unity's
-`BoneWeight`/`bindposes` pairing, COLLADA's `<vertex_weights>` `joint`
-input) has the same trap, and the same "rest pose can't distinguish
-correct from wrong" blind spot applies to verifying against any of them.
+**Related, different blind spot:** Parasite Eve (PSX, `parasite`) had a rotation-track off-by-one. It *does* corrupt the bind pose, but the FK distance-preservation check passes because any orthonormal rotation preserves length (`length-invariant-blind-to-track-index-misalignment.md`). If the only verification is an invariant that identity composites or orthonormality satisfy regardless, require a posed render.
+
+**History:** 4 recorded instances (chimera ×3, parasite): full log in `_archive/bind-pose-render-blind-to-joints-index-space-bug.md`.

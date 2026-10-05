@@ -61,3 +61,44 @@ every table in the file.
 narrower stride, shifted offset) applies uniformly to every table in the
 file** — confirm each table independently with its own string-anchor
 search, even when it's structurally adjacent to one you've already solved.
+
+**Second confirmed instance — same technique, but across two REVISIONS of
+the same platform's file, where the whole growth had been modelled as one
+inserted block.** Fire Emblem: Three Houses (Switch, `chimera`): save-slot
+files grew from 152,588 to 154,412 bytes (+1,824) between the header
+`version`-13 and `version`-23 formats. A prior pass modelled the delta as a
+single inserted block (`Items[] + 456 records x 4 bytes = 1,824`, an exact
+but meaningless factorization) and tested the known 60-slot `Character[]`
+roster array at `base + 1824 + i*oldStride` — garbage — then fell back to a
+whole-file brute-force signature scan (thousands of zero-dominated false
+positives) and a "location not found" write-up. The truth: **1,680 of the
+1,824 bytes were inside the array** — every one of the 60 records gained 28
+bytes because two per-class arrays widened 90 -> 100 entries, tracking the
+update's `ClassData` table growing 90 -> 100 rows — plus 144 elsewhere. The
+array base and the id field's in-record offset were unchanged, so
+`base + i*newStride + 0x24` decodes cleanly on 12/12 real saves. A
+whole-array shift can never coincide with a stride change for any `i > 0`,
+so the negative was guaranteed regardless of where the array actually was.
+
+Four cheap tests that find this in minutes, in the order to run them:
+1. **Factor the delta against every known array count first**: for each
+   array of `N` records, check whether `(Δ - r) / N` is a small integer for
+   a small remainder `r` (`1824 = 60 x 28 + 144`) — a per-record growth
+   hypothesis with a clean remainder beats any single-block factorization
+   with none.
+2. **Anchor landmarks OUTSIDE the suspect array** to bound where the growth
+   lives before touching the array: a player-name string, a self-describing
+   block-size field (whose value being *unchanged* proves that block didn't
+   grow), an array of sentinel-filled records — each gives a "+1,680 here,
+   +1,824 there" reading that localizes the growth for free.
+3. **Window-match delta map** (32-byte exact windows, old file -> new file):
+   record `i`'s fields shift by `i x 28` (+56, +84, ...) and the identical
+   empty-record templates recur at the *new* stride — the string-delta
+   trick above, with any repeated byte window standing in for a name.
+4. **Align the old vs new EMPTY-record template** (`difflib` on the two
+   sentinel-filled templates, noise-free since every empty slot is
+   byte-identical) to see exactly where inside the record the bytes were
+   inserted (here: 20 zero bytes before the old exp-array end, 8 appended).
+
+See `docs/fe-threehouses.md` § "Roster/recruitment membership — SOLVED for
+the current format" (2026-09-02) for the worked numbers.

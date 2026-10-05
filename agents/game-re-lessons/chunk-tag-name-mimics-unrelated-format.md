@@ -34,3 +34,25 @@ magic once you look; this case is about a container-internal tag that *is*
 the real, in-use magic for some genuine (if still-undecoded) sub-format —
 the mistake is assuming that sub-format is the well-known one its name
 resembles, not that the tag is fake or misapplied.
+
+**A running an already-built project decoder against the tag and getting
+`true`/a "successful" decode is not the fix — it's the same trap one layer
+down.** Confirmed on Valkyrie Profile 2 (PS2): a real, deliberate (not
+coincidental — fixed, whole-corpus-consistent offset) `"FIS\0"` texture tag
+turned up inside an unrelated resource-directory record type (`PAMM`, which
+this project had never previously found textures inside). The project's own
+already-confirmed `isFisImage()`/`decodeFisImage()` accepted it and returned
+a plausible-shaped image (real width/height, a real pixel-format byte) —
+almost committed "found an embedded texture" on the strength of that alone.
+Reading `isFisImage()`'s own source showed its validity gate is magic-only
+(4 bytes, nothing else) — so "decodes without error" carried no more
+evidence than the raw tag match did. Actually **rendering** the decoded
+pixels caught it: the output was structured noise, not a coherent image (the
+same artifact family already established for this project's own numeric
+records misread as pixels). The generalized rule: when checking a
+suspicious tag by running it through an already-built decoder rather than
+hand-inspecting bytes, that decoder's own "success" signal is only as
+trustworthy as its own validity gate — read the gate function's source (or
+equivalent) before trusting a boolean/no-throw result, and still render or
+otherwise substantively use the decoded output before calling the format
+identification confirmed.

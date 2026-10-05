@@ -1,91 +1,44 @@
-# vanille — Odin Sphere (PS2), Grim Grimoire (PS2), 7 Vanillaware titles registered
+# vanille — Vanillaware: Odin Sphere, Grim Grimoire, Dragon's Crown, Grand Knights History, Muramasa, 13 Sentinels, Unicorn Overlord
 
-**Project root:** `~/Development/vanille` (codename "vanille"; 7 Vanillaware
-titles registered in `src/game-id.ts`, only the two PS2 ones have pipeline
-stages wired).
+**Project root:** `~/Development/vanille` · **Full history/evidence:** `game-re-corpora/details/vanille.md` (read on demand) · **Open work:** `docs/<game>/TODO.md` per game
 
-## CRI ROFS "CVM" container — fully solved (both PS2 titles)
+## Games
+- Odin Sphere (PS2) — `odinsphere`/`ps2` — CVM solved, ADX audio + FMBP models shipped; FECD/FTEX/DTPK/ZLD/ARD identified, not decoded
+- Grim Grimoire (PS2) — `grimgrimoire`/`ps2` — CVM solved, ADX audio + FMBP models shipped
+- Dragon's Crown (PS3) — `dragonscrown`/`ps3` (`ps4` registered, empty) — CPK, FTEX, FMBS models, ACB/AWB (HCA metadata only) shipped
+- Grand Knights History (PSP) — `grandknightshistory`/`psp` — unencrypted CPK; ACB/AWB (ATRAC3 metadata only)
+- Muramasa: The Demon Blade (Wii) — `muramasa`/`wii` — RVZ→FST extracted; FCMP, Wii FMBS (549/621) solved
+- 13 Sentinels: Aegis Rim (Switch) — `13sentinels`/`switch` — CPK + Tegra FTX/NVT textures + 4th FMBS layout shipped
+- Unicorn Overlord (Switch) — `unicornoverlord`/`switch` — CPK + FTX/NVT textures shipped
 
-Odin Sphere (`SLUS_215.77`, US) and Grim Grimoire (`SLUS_216.04`, US) share
-the identical CRI middleware stack (`DVCI/PS2EE Ver.2.73` + `ROFS Ver.1.81`
-embedded in the boot exe): the retail ISO's `DISC.CVM` (99% of disc) is a
-chunked container (`CVMH` + `ZONE` chunks, all BE) wrapping a plain
-ECMA-119 ISO9660 image whose **directory sectors are scrambled** with a
-per-title passphrase; file-data sectors are plaintext. Fully decoded and
-shipped as `tools/shared/rofs-cvm.ts` (ported from roxfan's `cvm_tool`,
-fork: `JayFoxRox/cvm_tool`) + `cvm-export.ts`/`cvm-assets.ts`; specs in
-`docs/odinsphere/ps2/data-structure.md` (§ 3-4) and
-`docs/grimgrimoire/ps2/data-structure.md`.
+## Solved formats → where documented
+- CRI ROFS **CVM** (`CVMH`+`ZONE`, ISO9660 with scrambled directory sectors; passphrase `shinobutan` for both PS2 titles) — fully solved — `docs/odinsphere/ps2/data-structure.md` §3-4, `docs/grimgrimoire/ps2/data-structure.md`, `tools/shared/rofs-cvm.ts`
+- CRI **CPK** (`@UTF` TOC + CRILAYLA; UTF encryption optional per game — DC encrypts, GKH doesn't) — solved — `docs/dragonscrown/ps3/data-structure.md`
+- CRI audio **ADX/AFS/ACB/AWB** (AWB = AFS2 *or* nested-CPK/ITOC; ACB positional cue↔waveform pairing, no cue-graph interpreter; HCA/ATRAC3 decode out of scope) — shipped — `docs/audio-format.md`
+- **FMBP/FMBS** "paper-doll" sprite models — four layouts: PS2 FMBP (LE, VIF-packed), PS3 FMBS (BE, 0xE4 header), Wii FMBS (BE, 0xA0 header at FMBP positions), Switch FMBS (LE, 0x120 header, u64 offsets, normalized UVs) — render-verified — `docs/fmbp-model-format.md`, `tools/shared/fmbp.ts`, `tools/shared/switch-cpk-models.ts`
+- Switch `FTEX`/`FTX0`/`.tex` (NVT) Tegra X1 block-linear BC3/BC4/BC7 (7,301/7,301 payloads) — solved — `docs/switch-ftx-nvt-format.md`, `tools/shared/switch-nvtx.ts`
+- Wii RVZ → decrypted partition → FST extraction; `FCMP` container (LZSS-style, 0xFEE dict start); `RSTM` audio — `docs/muramasa/wii/data-structure.md`, `tools/muramasa/extract.py`
 
-- **Passphrase → 8-byte key**: iterated 32-bit-wrapped sum over the
-  passphrase, byte interleave, then 4 rounds of a 1024-prime-table hash.
-  `shinobutan` → `45E3655352C34C15` (known-answer).
-- **Per-sector cipher**: seed = `key[5]`; per 8-byte chunk, hash of
-  `logicalSector*seed` selects one of 9 fixed byte-mix patterns (XOR/ADD)
-  over key+hash; logical sector = `isoSector + datalocISO.sector −
-  isoStartSector`. Scope: only ISO sectors 16..last-dir-sector.
-- **Both games use the same passphrase `shinobutan`** (Emu-Land CVM
-  password thread + verified: each PVD decrypts to `CD001`). Odin: 3,069
-  files; Grim: 608.
-- Container facts: header +0x24 is an ISO-9660 build timestamp (not a
-  version field); +0x30 flags 0x10 = encrypted TOC; sector table at
-  +0x80..+0x88; "ZONE" chunk's `dataloc1`/`datalocISO` locate a 0x800-byte
-  mystery record stream (sector 2) and the ISO zone (sector 3).
+## Engine-family / cross-project links
+- House formats cross generations: `FTEX` (Odin `.FTP` = DC `.ftx` = Switch), `FMBP`→`FMBS` (distinct sibling magic, per-platform header layouts). Text did not survive: Odin `FECD` vs DC `FMSB`; `ps2_DTPK` has no DC equivalent.
+- CRI stack is per-title configurable (CVM on PS2, CPK on PS3/PSP/Switch) — never assume a container shape transfers.
+- CVM passwords for other CRI titles: Emu-Land thread "Пароли для архивов .CVM (CRI ROFS)" (Yakuza 1/2 `qi2o@9a!`, .hack//G.U. `cc2fuku`, Arcana Heart `zxcv`, PSU `4147a5c2b5fe0357`, …).
+- tri-Ace VP2 (`valkyrie`) is a different PS2 container family (XOR TOC + SLZ). Third-party oracles: roxfan `cvm_tool` (fork `JayFoxRox/cvm_tool`), `vgmstream-cli`, `texture2ddecoder-wasm`.
 
-**CVM password prior art:** the Emu-Land thread "Пароли для архивов .CVM
-(CRI ROFS)" collects passwords for many CRI-CVM PS2 titles (Odin/Grim =
-`shinobutan`; Yakuza 1/2 = `qi2o@9a!`; .hack//G.U. = `cc2fuku`; Sakura
-Taisen = `tinaandluckandru`/`SAGUCHIFUNAYOI`/`itinenmotanai`; Arcana
-Heart = `zxcv`; Nightshade = `PJ234110`; PSU = `4147a5c2b5fe0357`; Melty
-Blood AA = `MELTYBLOOD_AA`; many titles ship unencrypted) — a fast oracle
-for any future CRI-CVM target.
+## Reusable code in this repo
+- `tools/shared/rofs-cvm.ts` — CRI CVM descrambler/reader; `tools/shared/afs.ts` — AFS archive
+- CRI CPK/`@UTF`/CRILAYLA/ADX/ACB/AWB now in `@seer-project/cri` (was `tools/shared/{cri-cpk,adx,acb,awb}.ts`)
+- `tools/shared/fmbp.ts` — PS2/PS3/Wii FMBP/FMBS decoder (header layout auto-detected from `headerSize`)
+- `tools/shared/switch-nvtx.ts` — Tegra X1 deswizzle; `tools/shared/switch-game-assets.ts` — locale-namespaced publisher
+- `tools/shared/manifest-assets.ts` (`upsertManifest()`) — never write `manifest.json` directly
+- `tools/muramasa/extract.py` — generic Wii RVZ → partition → FST extractor
 
-## Inner formats — identified by magic, not yet decoded
+## Know before you start
+- Audio is decoded live: manifests carry byte ranges into `/data/*` (HTTP Range), never raw audio in `public/assets/` (`docs/architecture-overview.md`).
+- Platform-port traps in FMBS: alpha `0xFF==1.0` (not PS2 `0x80`); PS3 part `uv` high 16 bits = undecoded selector; Switch UVs normalized `[0,1]`; Switch `page` field at `+7`.
+- Tegra block height is per-texture (`min(16, next_pow2(ceil(blockRows/8)))`); solid `#00FF00` padding is authored chroma-key, not corruption.
+- Localized CPKs reuse base relative paths — namespace by locale (`wwise-shared-short-id-across-language-variants.md`).
+- `extract.py` flattens directories and drops 21 same-named `.mbs` (642 declared, 621 on disk); `KisukeB_npc00.mbs` renders as a blur (open).
 
-Odin: `.DAT`/`.DAU` = `ps2_DTPK`; `.FTP` = `FTEX` (same family as Dragon's
-Crown PS3); `.MBP` = `FMBP`; `.TXT`/`.SSB`/`.ODB` = `FECD` (BE header +
-Shift-JIS text); `.ZLD` = zone tables pairing `.ARD` area + `.SSB` script
-names; `.ARD` = compressed area data; `.AFS` = standard CRI ADX archives
-(BGM 114 / US_VOICE 472 / VOICE 472 — extents byte-verified against raw
-magic scan). Grim: `.MBP`/`.FTP`/`.TXT`/`.GSB`/`VSD.DAT` + plaintext
-English text near its CVM tail.
-
-## Sibling links
-
-- **House formats cross generations (verified 2026-08-12 by extracting
-  real Dragon's Crown PS3 CPK files and comparing magics):**
-  - `FTEX` textures: Odin `.FTP` (601) **and** Dragon's Crown PS3 `.ftx`
-    (605) both start `FTEX` — same format family, header layout differs
-    per port (Odin's 2nd u32 `0x8084` vs DC's `0xc006e000`-shaped
-    fields; treat as a per-platform variant, see
-    `game-re-lessons/platform-port-swaps-adjacent-header-fields.md`).
-  - `FMBP` model packs: Odin `.MBP` **and** DC `.mbs` both start `FMBP`
-    — the DC doc's earlier "FMBS" guess was wrong, the magic is FMBP.
-  - Text containers did **not** survive the rename: DC `.fms` = `FMSB`,
-    DC `.bsb` = `00 00 00 47`-headed (neither is Odin's `FECD`).
-  - `ps2_DTPK` (Odin `.DAT`/`.DAU`): no DC equivalent found.
-- Same CRI middleware family as Dragon's Crown (PS3) — but that game uses
-  **CPK** (`@UTF` TOC + CRILAYLA), not CVM; the CRI stack is per-title
-  configurable, never assume one container shape transfers.
-- **Grand Knights History (PSP)** is also **CPK**: `GKH.CPK` starts
-  `CPK ` + `ff 00 00 00` + an **unencrypted** `@UTF` packet (CRI CPK's
-  DecryptUTF is optional per game — DC PS3 encrypts, GKH does not).
-  `tools/shared/cri-cpk.ts` transfers with a plaintext option.
-- **Muramasa (Wii)** is a *completely different* container family:
-  a plain Wii disc (game id RSFE7U) in Dolphin **RVZ** form, no CRI
-  stack at all. Fully decoded (`tools/muramasa/extract.py`): RVZ
-  (Zstandard + RVZ packing + Lagged-Fibonacci junk runs, per Dolphin's
-  `WiaAndRvz.md`) → decrypted game-partition stream (RVZ stores Wii
-  partition data decrypted + hashless, bypassing the Wii common key) →
-  main.dol → FST (2,736 entries, file offsets = entry×4 relative to the
-  partition stream) → **2,733 files**. Inner formats: **FCMP** (1,454
-  files — Vanillaware's Wii container wrapping FTEX/FMBS/EMB/NSB/WOLD/
-  _MLI, i.e. the same house formats as Odin/Grim re-magicked),
-  **RSTM** (.brstm Wii DSP ADPCM audio, 1,206), dev file lists leaking
-  the project codename "NinPri". The RVZ→partition pipeline generalizes
-  to any Wii RVZ dump.
-- tri-Ace's VP2 (valkyrie corpus) is a *different* PS2 container family
-  (XOR TOC + SLZ) — Vanillaware ≠ tri-Ace on PS2.
-- `tools/shared/cri-cpk.ts` (Dragon's Crown/GKH CPK) and
-  `tools/shared/rofs-cvm.ts` (Odin/Grim CVM) are the two CRI-shared
-  decoders in this project.
+## Lessons sourced from this corpus
+`directory-align-field-scoped-to-payload-not-table.md`, `platform-port-swaps-adjacent-header-fields.md`, `flat-directory-extraction-collapses-same-named-siblings.md`, `wwise-shared-short-id-across-language-variants.md`, `normalized-uv-passes-structural-checks-renders-blank.md`, `header-field-role-not-transitive-across-sibling-format.md`

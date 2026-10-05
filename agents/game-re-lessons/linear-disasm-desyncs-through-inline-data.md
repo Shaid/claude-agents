@@ -36,6 +36,39 @@ xrefs to 19 known target addresses; the per-offset brute-force scan found
 real, verifiable `BSR`/`LEA` call sites to 15 of them immediately, which then
 traced the 3D-viewport wall-compositing render loop end to end.
 
+**Alternative fix, same failure mode:** rather than hand-rolling the
+per-offset brute-force scan above, radare2's own `aaa` (full auto-analysis)
+does real recursive-descent disassembly — it follows actual branch/call
+targets instead of walking bytes linearly, so it doesn't desync through
+inline data tables the way a from-scratch linear capstone sweep does.
+Confirmed on D&D: Tower of Doom (ddtod, CPS2): a linear capstone sweep from
+the reset vector, grepping for operand references to a known RAM address
+range, found **zero** hits end to end (silently desynced after the first
+conditional branch); `r2 -a m68k -e asm.cpu=68000 -c "aaa"` on the same
+4MB decrypted opcode image found 2469 real functions, and exporting their
+disassembly (`pdf @@f`) and grepping *that* text found the real code
+immediately — including functions r2's own linear view alone would have
+missed. This is a good default first move for a code+data-mixed 68k blob
+before writing a bespoke offset-scanner: cheap (single command), and when
+it *also* comes up empty for a target you have independent reason to
+believe is called (e.g. real, well-formed data reachable only through it),
+that's the point to fall back to the per-offset brute-force technique
+above, since `aaa`'s recursive descent has its own blind spot — it won't
+find code reachable only via an indirect jump/call it can't statically
+resolve (confirmed on the same binary: two functions with real, well-formed
+literal data had zero `axt`-reported callers and zero hits from an
+exhaustive `bsr`/`jsr`-displacement scan across the whole 4MB image,
+meaning they're reached — if at all — by a mechanism neither approach
+covers, e.g. `jsr An` through a runtime-computed register or an
+unresolved jump table).
+
+**Related but distinct failure, fixed-width ISAs:** on a fixed-width ISA
+(AArch64, ARM, MIPS, PowerPC) inline data can't misalign subsequent decodes
+the way it can on 68k, but Capstone's `disasm()` has a different
+byte-width-independent trap with the identical symptom (a whole-segment
+xref/immediate census returns 0 or too-few hits) — see
+`capstone-arm64-disasm-silently-stops-at-undecodable-word.md`.
+
 **Companion gotcha, same script:** capstone's M68K operand-string formatter
 uses a bare `$` prefix for hex immediates and addresses (`bsr.w $2030e`), not
 `0x`. An xref scanner whose regex looks for `0x[0-9a-f]+` in `op_str` will

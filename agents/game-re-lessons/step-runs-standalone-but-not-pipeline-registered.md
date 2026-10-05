@@ -54,3 +54,23 @@ Distinct from `cli-script-main-fires-on-import.md`, which covers the
 effect of importing the file for its exports. This lesson is about a step
 correctly *not* auto-running on import, but then never being invoked by
 anything else either, because it was never registered.
+
+**The registration itself creates a two-file import cycle, and that's
+fine, not a bug to design around.** `game-config.ts` imports `buildAssets`
+from `build-assets.ts` (to register it); `build-assets.ts` typically also
+imports `writeGamesManifest` (or other config helpers) back from
+`game-config.ts`. Confirmed safe and already the working, established
+pattern across many sibling seer projects (drakkhen, kolbold, strike,
+Powermonger, and others) — grep any of their `tools/shared/game-config.ts`
+for `import { buildAssets as ... } from '../<game>/build-assets.ts'` to see
+it in practice. The one thing that makes it safe: **declare the registered
+function with `export function buildAssets(...)` (a hoisted declaration),
+never `export const buildAssets = (...) => {}`** (a `const` arrow is not
+initialized until its line executes, so a consumer on the other side of the
+cycle can observe it as `undefined` depending on which module starts
+evaluating first). Don't "fix" the cycle by inlining config lookups inside
+the step function via a fresh `getGameConfig()` call, either — the function
+already receives its own resolved `config` as a parameter from
+`runPipeline`; use that directly instead of re-deriving it, which is both
+simpler and sidesteps needing to import anything config-lookup-shaped back
+into the step file at all.

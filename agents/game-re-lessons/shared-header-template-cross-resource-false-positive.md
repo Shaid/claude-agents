@@ -45,3 +45,29 @@ compression-related exception of the type you already understand — engines
 that reuse one struct-building code path across multiple loaders are common
 enough that "same template, different consumer" should be a live hypothesis
 from the start, not a last resort.
+
+**The same trap defeats a from-scratch structural search, not just a
+scanner refinement pass, when the search has no address/provenance
+anchor to fall back on.** Valkyrie Profile (PSX, `valkyrie`): searching an
+entire corpus for an unlocated 33-entry/12-byte-stride table (known only
+by its record shape — a flags-byte value range plus a function-pointer
+field passing a validity check) using structural constraints alone did
+turn up a genuine, fully-conforming match: 33 consecutive records,
+correct stride, every flags byte and pointer field passing every
+constraint. It was the wrong table — a completely unrelated dispatch
+table belonging to a different, unidentified subsystem (a different TOC
+slot, pointers clustering in an address range outside every already-
+mapped overlay), which happened to reuse the identical 12-byte record
+convention (id + flags + pointer) as an engine-wide idiom. Because the
+target table's *address* was unknown (that was the entire point of the
+search), there was no way to disambiguate the false hit from structure
+alone — only opening the block, resolving which TOC slot/file contained
+it, and checking whether that provenance was even plausible for the
+target subsystem exposed the mismatch. General takeaway, extended: when a
+structural-only search (no address anchor, no directory/manifest cross-
+check) turns up a hit that satisfies every constraint, that is necessary
+but not sufficient evidence of identity whenever the record shape itself
+could plausibly be an engine-wide convention rather than something unique
+to the one table being hunted — confirm provenance (which container, which
+subsystem, which already-known consumer's own reachable address range)
+before promoting a structural match to a solved location.

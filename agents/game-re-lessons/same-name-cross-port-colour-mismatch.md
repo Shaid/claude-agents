@@ -1,6 +1,6 @@
-# A same-named cross-port asset doesn't have to match colour
+# A same-named cross-port asset doesn't have to match colour — or codec, or role
 
-**When it bites:** a bug report (or your own eyeballing) says platform B's render of a character/asset "looks badly wrong" because it doesn't match platform A's colours for the same-named file, and platform A is treated as automatically-correct ground truth.
+**When it bites:** a bug report (or your own eyeballing) says platform B's render of a character/asset "looks badly wrong" because it doesn't match platform A's colours for the same-named file, and platform A is treated as automatically-correct ground truth. **Also bites earlier, proactively:** you've reverse-engineered a runtime compositing/rendering *mechanism* on platform A involving a named group of files (e.g. "sprite X is a transparent-window overlay, drawn over background layer Y beneath it"), and you're about to carry that same mechanism into platform B's analysis as the working hypothesis for the same-named files, before checking platform B's own decoded asset content.
 
 Two ports of the same game can and do use **deliberately different palettes**
 for the same character, especially when the two platforms have very
@@ -57,3 +57,38 @@ palette" rule would have been wrong; the narrow rule the disassembly
 predicted is what the reference actually obeys. A positive plus a
 same-format negative control is what separates a discovered rule from a
 copied mistake — see `embedded-palette-not-the-installed-palette.md`.
+
+**The same non-transfer applies past colour, to the compositing mechanism
+itself.** A same-named/same-donor-relationship file group can be authored
+through a genuinely different *sub-codec* on a sibling platform, changing
+what mechanism (if any) is needed to reproduce the scene at all — not just
+what it looks like. Confirmed on Dune (Cryo, 1992, `wyrm`): the DOS VGA
+port's ornithopter-cockpit cutscene was established (real disassembly +
+asset shape-matching) as a two-layer runtime composite — `ornycab.hsq`
+decodes via DOS's *sprite* codec with a genuine index-0-transparent
+window cutout, with `dunes*.hsq` (a desert layer) drawn beneath it through
+that cutout. Carrying that finding forward as the working hypothesis for
+the *Amiga* port's identically-named files — same container/codec family,
+even the same donor-palette relationship (`dunes*` borrows `ornycab`'s
+palette on both platforms) — was wrong. On Amiga, `ornycab.hsq` decodes
+through a *completely different* sub-codec available in the same format
+family: the opaque fullscreen-bitstream convention (same as room
+backgrounds), with the desert horizon baked directly into its own pixel
+data at author time — no transparency, no runtime layer needed at all for
+that picture. `dunes*.hsq` on Amiga turned out to be unrelated small
+map-marker icon atlases (dune/rock/building silhouettes, ~20 frames of
+40–200px icons) consumed by a completely different subsystem (the
+world-map/travel-path UI), not a desert backdrop. The tell was cheap and
+visual: opening the already-built PNG assets for both files on the new
+platform took seconds and immediately contradicted the imported premise,
+before any disassembly effort was spent building on it.
+
+**Fix, generalized:** when porting *any* finding — colour, transparency/
+codec choice, or a file's game-logic role — from one platform's analysis
+to a sibling platform that merely shares a container/codec *family* and a
+naming/donor convention, re-verify against that platform's own decoded
+asset content first. A 30-second visual check of the already-built PNGs
+(or a quick structural check — sprite codec vs. opaque-fullscreen codec,
+atlas dimensions) is far cheaper than a disassembly trace built on an
+unverified imported premise, and can outright overturn it before any
+tracing starts.

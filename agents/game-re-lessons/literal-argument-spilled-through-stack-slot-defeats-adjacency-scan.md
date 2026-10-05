@@ -44,3 +44,27 @@ as inconclusive, not as evidence the convention doesn't exist, especially
 when a plausible ground-truth example (a call site whose consumer role is
 already independently confirmed) exists to test the widened scan against
 before trusting either a positive or a negative.
+
+**The same narrow-window trap hits a plain register-move too, not just a
+stack spill/reload — and the fix generalizes past literal arguments to
+any "what does register R get dereferenced with" census.** A script
+built to census every field offset a shared singleton/manager pointer
+gets dereferenced with (across many small consumer files, hunting for
+the pointer's own struct layout) checked only the 1-2 instructions
+immediately after the pointer's load for a dereference, and **missed an
+already-known, previously-hand-confirmed field entirely** (Valkyrie
+Profile 2, PS2, `valkyrie`) — the real dereference sat 3 instructions
+later, past a plain, non-destructive register-to-register move
+(`daddu $other,$ptr,zero`, copying the pointer to a different register
+before the real field access) that the narrow window never looked past.
+**Fix, same shape as the spill/reload case above but for register moves
+instead of memory**: don't stop the forward scan at the first
+non-matching instruction — skip any instruction that doesn't touch the
+tracked register at all, and only stop early if the tracked register is
+actually *overwritten* by something unrelated (a fresh load, an
+unrelated arithmetic result). **Validate the widened scan the same way
+prescribed above**: before trusting any new field the widened census
+surfaces, confirm it correctly re-derives a field whose value is already
+independently known from prior hand-disassembly — the first fix attempt
+here still had a subtly wrong early-break condition and needed a second
+pass before it reliably reproduced the known-good answer.

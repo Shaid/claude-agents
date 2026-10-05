@@ -60,3 +60,49 @@ specific to this shape:
    click coordinates in a row, this is the first thing to suspect — add an
    explicit "switch back to the source tab/filter and re-select the base
    resource" step before each click rather than assuming state persists.
+
+## `hasText` on a `<select><option>` is substring match, not exact match
+
+`page.locator('#some-select option', { hasText: 'Cat' }).first()` matches
+**any** option whose text *contains* `'Cat'` — including `'Catherine'` — and
+silently returns whichever one sorts first in the DOM, not necessarily the
+one you meant. Confirmed losing real time on this: a test meant to select
+the character named exactly "Cat" in a dropdown actually selected
+"Catherine" (which happened to appear earlier in the option list), and the
+mistake was invisible until the two characters' underlying data was
+compared directly — both looked like plausible, successfully-selected
+results.
+
+**Fix:** for an exact-name selection, resolve the exact `<option value>`
+first — loop `await locator('option').all()`, compare
+`(await o.textContent()).trim() === exactName`, and use that `value` with
+`selectOption()` — rather than trusting a `hasText` substring locator's
+`.first()` to be the intended match. This especially bites any game's
+character/item/entity name list, where short-prefix collisions ("Cat" /
+"Catherine", "Al" / "Alois" / "Alois Jr.") are common.
+
+## A just-restarted Vite dev server can produce a stale-looking DOM snapshot that mimics a real app bug
+
+Vite's cold-start dependency pre-bundling ("Re-optimizing dependencies")
+can trigger a live page reload that races with a test's own navigation and
+timing. A single `waitForTimeout(N)` followed by one DOM read can catch the
+page mid-reload: text fields populated by an async render (a title, a
+computed stat count) can show fully correct, final values while a sibling
+element that same render also touched (e.g. a canvas/viewport container)
+still shows its *pre-render* placeholder — looking exactly like a real
+"some code path updates one element but not the other" bug. Confirmed:
+this reproduced consistently against a just-restarted dev server (multiple
+runs, several seconds of wait each) and vanished completely once the exact
+same test ran against an already-warm server that had served at least one
+prior successful request.
+
+**Fix:** after any `npx vite --host &`-style (re)start, do a throwaway
+first navigation and let it fully settle (or explicitly wait for the
+`[vite] connected` websocket message) before running the real test
+sequence — don't trust the very first navigation against a freshly
+(re)started dev server. When in doubt, replace one fixed
+`waitForTimeout` + single DOM read with a short polling loop (sample every
+~500ms, check the condition you actually care about) so a transient
+mid-reload snapshot can't be mistaken for final state, and confirm with an
+actual screenshot (not just text-content assertions) before concluding a
+render is broken.

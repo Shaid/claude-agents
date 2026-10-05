@@ -43,3 +43,22 @@ comment) before shipping — an inverted convention this pervasive is rarely
 confined to one call site, and flipping only some of them regresses the
 rest (see `producer-fix-inert-without-consumer-audit.md` for the general
 "audit every consumer" discipline once a fix is identified).
+
+**A second shape of the same trap: two sibling tables (not two sibling
+fields in one struct) presumed to share one enum, when they genuinely
+don't — and neither one is "wrong".** Don't assume two community-documented
+tables that both enumerate the same domain (e.g. "which playable
+character") use the same numbering just because they came from the same
+author/template family around the same time. Fire Emblem Warriors: Three
+Hopes' `LINKDATA_A.BIN` has three character tables documented by the same
+010-template author; two of them (`CharClassData`, `CharGrowthData`) list
+`29=Constance, 30=Balthus` while the third (`CharMiscData`) lists
+`29=Balthus, 30=Constance` — a real, verified difference (entry 90's
+`unitId=30` record carries `[Brawler, Grappler, WarMaster]`, Balthus's
+canonical class line; `unitId=29` carries `[Mage, Warlock, Gremory]`,
+Constance's), not a transcription slip in either template. The two tables
+genuinely use different ID namespaces. Before treating one table's enum as
+reusable for a second table's same-shaped ID field, cross-check a resolved
+id against a correlated field *in that second table itself* (class/stat/
+height data that differs enough per-character to fingerprint identity)
+rather than assuming the first table's names carry over.

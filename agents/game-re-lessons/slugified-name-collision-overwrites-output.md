@@ -1,54 +1,27 @@
 # A filename slugified from a human-readable label can silently collide
 
-**When it bites:** a pipeline step derives an output filename (or any other
-supposedly-unique key) from an in-game display name/label via a
-`slugify()`-style normalization (lowercase, strip punctuation, collapse to
-hyphens) — for a batch of names that only differ by punctuation or case, not
-by an ID.
+**When it bites:** a pipeline derives output filenames or manifest keys from labels, basenames, "extension-stripped" names, or coarse category + fallback names (`se_waveform_0`) instead of a guaranteed-unique id. Also: several pipeline steps derive names from the same source key, or an upsert-by-name manifest merge exists anywhere downstream.
 
-Confirmed: a script generating one recolored sprite sheet per named
-character grouped in-game entity names and slugified them for the output
-filename. `"GANDALF"` and `"GANDALF'"` (the White) both slugify to
-`gandalf` once the apostrophe is stripped; two structurally distinct
-"Southrons" army groups likewise both slugified to `southrons`. Nothing in
-the pipeline checked for duplicate output paths, so the second write of
-each pair **silently overwrote the first's PNG** — no error, no warning, no
-count mismatch anywhere visible short of opening the file and finding the
-wrong character's colors in it. Caught only by an explicit post-generation
-check: `len(set(output_paths)) == len(entries)`.
+The symptom is always the same and always quiet. The second write overwrites the first, or the manifest upsert drops an entry. Nothing errors and every surviving file looks valid, but it holds the wrong content or the count is short. The root causes differ:
+- Labels that differ only by punctuation or case normalise to one slug.
+- Two pipeline steps (texture and mesh) derive the same name from one source entry, and each step's local `usedNames` set can't see the other's.
+- A basename-only key throws away the directory that made it unique.
+- Stripping an "extension" that is really a sequence number (`.002`…`.016`).
+- A coarse group label combined with a generic per-item fallback index, repeated across hundreds of source files.
 
-**The fix:** whenever a filename/slug is derived from a human-readable label
-rather than a value already guaranteed unique (an index, an ID, a database
-key), either (a) include the guaranteed-unique discriminator in the slug
-too (here: the character's `SAS` index, which is unique by construction
-within the grouping), or (b) explicitly assert uniqueness across all
-generated output paths right after generation and fail loudly on a
-collision, rather than trusting that visually-distinct source strings will
-stay distinct after normalization. Do this check by default for any
-label-derived batch of filenames — it costs one line and catches a class of
-bug that produces no symptom other than quietly-wrong content in a file
-that otherwise looks completely valid.
+**Check / fix:**
+- Build the guaranteed-unique discriminator into the name: an index or id, the asset *type* suffix (`_mesh`/`_texture`) when several steps share a source key, the full relative path with separators replaced (`__`), the full basename with dots replaced rather than truncated, or the source file's own stem (`se_enemy103000_v_waveform_0`). Keep coarse labels as separate `group` fields.
+- Assert uniqueness after generation and fail loudly: `len(set(output_paths)) == len(entries)`. Run it across steps, not per step.
+- Before trusting a naming scheme at corpus scale, run a dedup check over the real listing: `find … | xargs -n1 basename | sort | uniq -d`.
+- Strip an extension only after the corpus confirms it is a shared format suffix, not a numeric or ordinal value unique per file.
+- Reconcile counts exactly: compare the pipeline's reported count with the files on disk and with the final manifest entries per category, including after adding a whole new asset type. A clean exit proves nothing.
 
-**A second instance, different root cause, same symptom: two different
-pipeline *steps* deriving a name from the same source key, not two
-different labels colliding after normalization.** Confirmed on NieR:
-Automata (PC)'s mesh pipeline (`~/Development/flower`,
-`tools/nierautomata/build-assets.ts`): a texture-extraction step and a
-mesh-extraction step both independently derive a manifest entry's `name`
-from the exact same `(dirName, fileName)` pair of one source `.dtt`
-archive entry (e.g. `wd1/g10722.dtt`, which genuinely contains both a real
-texture sub-resource and a real mesh sub-resource) via the *same*
-`slugName()` helper — with no punctuation/case ambiguity at all, just two
-different asset *types* sharing one filename-derived key. The shared
-upsert-by-name manifest merge silently dropped whichever entry got pushed
-second. Caught only by a smoke-test run showing the manifest's total entry
-count hadn't grown after adding a whole new asset type — not by any
-per-name uniqueness check, since each *individual* pipeline step's own
-`usedNames` collision-avoidance set is local to that step and never sees
-the other step's names. **Fix, generalized**: whenever more than one
-pipeline step can independently produce a manifest entry from the same
-underlying source key (file/entry name, object ID), include the asset
-*type* in the derived name (e.g. a `_mesh`/`_texture` suffix) — a
-uniqueness check scoped to one step's own `usedNames` set cannot catch a
-cross-step collision; the discriminator has to be baked into the name
-itself.
+**Canonical example:** Dragon's Crown (PS3, `vanille`, `tools/shared/acb-music.ts`). About 211 CRI ACB banks produced tracks named `${group}_${t.name}`. All 203 `se_*.acb` banks fell back to `waveform_N`, so they collided across banks with different audio. Stdout reported "12281 tracks", but `manifest.json` held 6421, a nonzero and plausible-looking wrong count with no error.
+
+**Variants:**
+- Per-character recolour sheets (project not named in the log): `"GANDALF"` and `"GANDALF'"` both became `gandalf`, and two "Southrons" groups both became `southrons`. Caught by the `len(set(...))` check. The fix was to add the `SAS` index.
+- NieR:Automata (`flower`, `build-assets.ts`): `wd1/g10722.dtt` holds a texture and a mesh, both named by `slugName()`. The manifest count didn't grow after a new asset type was added.
+- Fire Emblem: Engage (`chimera`, `extract_unity_meshes.py`): a `Path.stem` key over 24,755 bundles had 1,685 duplicate basenames (`bg.bundle`, `acc.bundle` per category). It was caught proactively with `uniq -d`.
+- Reunion (Amiga AGA, `methanoid`): `.replace(/\.[^.]+$/,'')` collapsed `ATVEZETO.002–.016` and `RESOUNDS.001–.079`. The pipeline claimed 277 images, there were 264 on disk, and 1 WAV instead of 80.
+
+**History:** 5 recorded instances (recolour-sheet script, flower, chimera, methanoid, vanille): full log in `_archive/slugified-name-collision-overwrites-output.md`.

@@ -89,3 +89,58 @@ tracks for other platforms in
 `boring-resolved-call-can-be-a-real-noop.md`, but the trampoline case
 specifically needs one more hop followed, not a semantic-plausibility
 judgement call).
+
+## PSP `sceMpeg`/`MpegDemux` ATRAC3+ extraction is a confirmed cross-project mechanism — check for it before re-deriving
+
+Any PSP title's movie/cutscene audio track that comes back as ATRAC3+
+inside a PSMF/MPEG-PS-shaped container (`ffprobe` finds the H.264 video
+stream fine via ffmpeg's stock `mpegps` demuxer, but reports **zero** audio
+streams) needs a manual PES-walk — ffmpeg's own demuxer does not recognize
+this substream on its own. `~/Development/valkyrie/tools/shared/
+psp-atrac3p-audio.ts` (built for Valkyrie Profile: Lenneth's PSP remaster)
+implements this: walk `0xBD` (`private_stream_1`) PES packets, strip a
+4-byte PSP mux sub-header, concatenate into a "slot stream" framed by a
+`0x0F 0xD0` sync word + a 2-byte size code, then wrap the resulting raw
+ATRAC3+ elementary stream in a minimal hand-built Sony OMA/`"EA3"` header
+so ffmpeg's stock `atrac3plus` decoder can take it from there — zero
+codec reimplementation needed (per
+`standard-codec-delegate-to-trusted-decoder-not-hand-reimplementation.md`).
+
+**Confirmed to transfer byte-exact to a second, unrelated PSP title**: The
+3rd Birthday (`~/Development/parasite`) ported the module verbatim and it
+walked a real PSMF sample to 692 frames of a constant 744 bytes with zero
+remainder, decoding to real non-degenerate PCM — the framing is PSP-SDK-
+wide (`sceMpeg`), not specific to either game. Per
+`game-re-tooling/seer-upstream.md`'s "one project needing it is a maybe;
+two confirms it" rule, this module is now a real `@seer-project/pipeline`
+promotion candidate (not yet migrated as of either project's own pass —
+check both projects' `tools/shared/psp-atrac3p-audio.ts` for drift before
+assuming they're still identical, and prefer extending/upstreaming over
+maintaining a third divergent copy if a future project needs it too).
+
+## Retail `~PSP`-tagged EBOOTs need KIRK/AMCTRL decryption this account has no tooling for yet
+
+A PSP retail `eboot.bin` that starts with the literal `~PSP` tag is Sony's
+scrambled/encrypted executable format (KIRK CMD1 + AMCTRL), not a plain
+ELF — `readelf`/`rabin2`/radare2's native PSP ELF auto-detection (see
+above) cannot touch it until it's decrypted first. Confirmed on The 3rd
+Birthday (`~/Development/parasite`): `eboot.bin` opens with `~PSP`, and a
+sibling `boot.bin` some retail dumps ship alongside it was **entirely
+zero-filled**, not a usable pre-decrypted fallback (don't assume a
+same-directory `boot.bin` is always a decrypted copy of `eboot.bin` — check
+its actual bytes before relying on it). No decryption tool was available
+in that project's environment: no `prxdecrypter`, no PPSSPP install (whose
+`Core/ELF/ParamSFO.cpp`/`Core/HLE` machinery embeds real per-title KIRK
+keys and could decrypt many commercial titles), no standalone kirk-engine
+library. Building a from-scratch KIRK CMD1 decryptor plus sourcing the
+correct per-title key is a real, non-trivial undertaking, not a quick
+fallback — treat an encrypted `~PSP` EBOOT as **blocked** for disassembly
+until one of those tools (or their embedded keys) is actually available in
+the environment, rather than spending session time hand-rolling the
+crypto. This is the account's first PSP title to actually hit this wall
+(Valkyrie Profile: Lenneth's `BOOT.BIN`/`*_master.prx` files were
+apparently unencrypted or already-decrypted dumps — no `~PSP` tag was
+reported there); if a future PSP project needs real EBOOT decryption,
+start by checking whether PPSSPP (source or a built copy) is available to
+either decrypt via its own code path or be scripted/headless-run to dump
+the decrypted image, before attempting a from-scratch KIRK implementation.

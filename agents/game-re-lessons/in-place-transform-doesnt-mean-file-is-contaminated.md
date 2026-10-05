@@ -1,8 +1,6 @@
 # In-place-transform-doesn't-mean-file-is-contaminated
 
-## When it bites
-
-A code-verified vertex/pixel transform runs **in place** on a loaded buffer,
+**When it bites:** A code-verified vertex/pixel transform runs **in place** on a loaded buffer,
 and a sibling doc/brief explains away weird-looking extracted data as
 "already-transformed values mixed with raw data" — before you check whether
 the file you're reading is actually the buffer the transform touched, and

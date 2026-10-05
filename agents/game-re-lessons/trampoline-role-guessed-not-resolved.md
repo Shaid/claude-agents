@@ -81,3 +81,26 @@ or surrounding arithmetic shape alone — resolve every such call site's
 `HUNK_RELOC32` entry individually, even when both candidates are already
 fully understood, and even mid-trace through a long formula where most of
 the preceding calls turned out to resolve "as expected."
+
+**A third shape, upstream of both above: two functions calling the same
+shared helper is not evidence either is reachable from the other.**
+Confirmed on Valkyrie Profile (PSX, MIPS): while tracing a resource-type
+handler resolved via its jump-table slot, its body called a small shared
+helper (a `{w,h}`-reshaping routine used to prep a VRAM upload). A search
+for that helper's other references turned up a second, much larger and
+more elaborate function that *also* called it — and, without checking
+that second function's own callers, several hundred instructions of its
+branchy body got traced as if it were a continuation of the handler under
+investigation. It wasn't: `xrefs_to` on the shared helper showed exactly
+two fully independent call sites (the real handler, and this unrelated
+function — itself called from two addresses with no path back to the
+handler at all). The real handler was five instructions long and did
+nothing else. **Fix:** when a "second, more complex" function turns up
+only because it shares a callee with your actual target, check *that
+function's own* `xrefs_to`/callers before spending effort on its body —
+sharing a callee proves the two functions exist in the same binary, not
+that one calls or is reachable from the other. This is the same discipline
+as the trampoline-resolution fix above (verify the concrete call-graph
+edge, don't infer it) applied one hop further out: a plausible-looking
+adjacency (shared callee, shared constant, shared table) is not a
+resolved edge until you've checked it directly.

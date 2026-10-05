@@ -61,3 +61,32 @@ base) mod 2^16 == transferLen - 20`, exact across all 72 songs), and
 with setup VCMDs (TEMPO/VOLUME/PAN/program select) before notes; the
 wrong model's "track starts" were dangling loop-ends and ties, which are
 syntactically valid but musically impossible.
+
+**Full-corpus consumed-byte audits need an instrumented, look-ahead
+decode -- not the production decoder, which usually hides the answer.**
+When re-verifying "the decoder's own read cursor lands on exactly the
+declared `compressedSize`/length field" at scale, don't just call the
+already-committed decode function again on more samples: many production
+decoders (reasonably) pre-slice their input buffer to exactly the declared
+length before decoding, which makes "decoded without a bounds error"
+uninformative about whether the algorithm would have stopped early or run
+past that boundary given more room -- the pre-slice silently converts both
+failure modes into "ran out of input," indistinguishable from "stopped at
+exactly the right place." Confirmed on Valkyrie Profile (PSX, `valkyrie`)'s
+"SLZ" container (round 209): auditing the codec's `compressedSize`-equals-
+consumed-bytes claim at full-corpus scale (26,911 blocks, not the original
+10-sample check) required writing a local *instrumented* copy of each
+decoder that (a) is handed extra look-ahead bytes past the declared
+length, taken from the real, contiguous next bytes on disc, and (b)
+returns exactly how many input bytes it consumed and *why* it stopped
+(end-sentinel hit / input exhausted / output buffer filled) -- then
+comparing that consumed count to the declared length exactly. Only this
+caught a real, previously-uncharacterized per-subtype coverage gap in the
+existing "confirmed" claim (the original check had only ever sampled one
+of two sibling decode paths sharing the same length field -- see
+`abi-verification-sample-mistaken-for-full-call-graph.md` for the general
+"a small sample covers one sub-path, not the whole population" shape) and
+led directly to finding a real alignment-rounding term in a sibling field
+(`formula-check-small-sample-misses-conditional-rounding-term.md`). The
+technique generalizes past LZ/RLE codecs to any "decoder consumes exactly
+N declared bytes" claim on any format.

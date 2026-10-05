@@ -42,3 +42,18 @@ vs ROM releases), `same-name-cross-port-colour-mismatch.md` (cross-port
 colour truth), `embedded-palette-not-the-installed-palette.md` (a parsed
 embedded palette isn't the installed one — here the *reference tool's*
 palette was installed and the embedded one was dead).
+
+**Same trap, fork-shaped: two forks of one community tool can document
+DIFFERENT format revisions.** Fire Emblem: Three Houses (Switch,
+`chimera`): `imouto1994/fe3h-editor` (README: "v1.0.2") only describes the
+older 152,588-byte save layout (`Character` stride `0x230`) and throws on
+anything else, while its same-lineage sibling `Xzonn/Fe3hSaveEditor` gates
+on the header's version word (`V1000` = 12/13 vs `V1001` = 23) and carries
+the current 154,412-byte layout (stride `0x24C`, `MAX_CLASS 100`). A pass
+that read only the first fork verified it byte-exact against the project's
+two old-revision saves and then concluded the current revision was
+"unlocated" — the second fork already had it. **Before trusting any
+community tool's struct, read its version/size gate (`switch (SaveVersion)`,
+`if (SizeOfFile != ...)`, a `V1000`/`V1001` enum) and check which revision
+your files actually are; if the tool rejects your file's size or version,
+look for a sibling fork that accepts it before deriving anything.**

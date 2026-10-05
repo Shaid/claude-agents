@@ -39,6 +39,16 @@ a ~4.8x larger true population, and the "sub-format" fraction resolved
 cleanly to 304/12,938 (2.4%) once counted correctly, not 231/2,691 (8.6%)
 as the shallow scan implied.
 
+**A third undercount mechanism, and the most severe: compressed container
+members carry no magic at all** — so unlike the two above, no amount of
+neighbouring-magic grepping or alignment tuning can recover them; the bytes
+simply aren't in the file in the form being searched for. See
+`compressed-container-members-invisible-to-magic-scan.md` (54.5% of one
+game's resources compressed; a 198-vs-6,923 undercount that invalidated an
+entire "this asset does not exist anywhere" negative). It reaches the same
+remedy as part 1 below, which is a third independent reason to make that
+remedy the default rather than the cross-check.
+
 **Fix, two parts:**
 
 1. **Always prefer a structured container/directory walk over a raw

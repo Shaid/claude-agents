@@ -45,3 +45,33 @@ A "domain refuted" claim rests on the same load-bearing-negative standard as
 enumerating every write site to the disambiguating variable is strong. Treat
 a domain conclusion resting only on an ambiguous-range index as a hypothesis,
 not a ruling-out, until you've checked its writers.
+
+## A footer/header value equalling a plausible real-world constant is not proof of that field's role
+
+The same weakness shows up in the opposite direction — building a domain **up**
+instead of ruling one **out** — when the "evidence" is a numeric coincidence
+rather than a range/count match. A trailing footer value decoding to `320`/
+`240`/`224` inside a hypothesized image-format record looks like strong
+confirmation of "this is a screen-dimension field," especially when a second,
+derived value also matches a real algorithm's expected output (e.g. correct
+4:2:0 chroma-subsampling rounding math on top of that dimension). It's still
+only a coincidence-of-magnitude until the actual consumer code is traced —
+plenty of unrelated fields (camera/projection constants, viewport half-extents,
+tile-grid pitches) legitimately hold the same small set of "nice" round
+numbers that also happen to be common screen resolutions.
+
+Confirmed on Parasite Eve (PSX): a chunk3 sub-resource's footer decoded to
+values matching `320x240`/`320x224` with textbook-correct chroma-subsampling
+rounding, matching a community forum's claim that this slot held a background
+image (see `romhacking-community-tools-first.md` for when forum/fan claims
+*are* trustworthy — this one wasn't, for this specific field). A
+`ghidra-disasm` trace of the real consumer showed the record is actually a
+camera-position/trigger/tile-scatter 3D scene table; the "dimensions" were
+projection/viewport constants that only coincidentally equalled real PS1
+screen resolutions. No amount of additional numeric-plausibility checking
+(more rounding-formula matches, more corpus-wide consistency) would have
+caught this — only tracing what instruction actually reads the field settled
+it. Treat a numeric match to a well-known domain constant (screen size, frame
+rate, a hardware register width) as an interesting lead worth a code trace,
+never as confirmation on its own — the same standard as this file's index/
+range-match sections above, applied to values rather than shapes.

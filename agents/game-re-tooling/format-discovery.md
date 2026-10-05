@@ -104,3 +104,21 @@ ST shortcut.** For those platforms the prior art lives in the Amiga demoscene
 and preservation communities (EAB, aminet, the `ancient` codec corpus), not
 in game-modding directories — see `game-re-tooling/amiga.md` and
 `game-re-tooling/atari-st.md`.
+
+## A `WebFetch` 403 on a forum page doesn't mean the lead is dead — read `WebSearch`'s own snippets
+
+`WebFetch` on `forum.xentax.com` (and likely other RE-forum hosts with
+bot-blocking) returns a bare HTTP 403 with no page content. Before writing
+the lead off, re-run `WebSearch` with a specific/quoted query targeting
+that exact page (e.g. `"<game name>" pkg format site:forum.xentax.com` or
+just the exact filenames involved) — its own indexed result **snippets**
+routinely quote real, load-bearing technical prose straight from the
+blocked page (struct field descriptions, offsets, magic bytes) even though
+the page itself was never successfully fetched. Confirmed on The 3rd
+Birthday (PSP, `~/Development/parasite`): a 2010-era XeNTaX thread 403'd
+under `WebFetch`, but `WebSearch`'s snippets alone gave the exact segment
+size (0x800) and file-table start offset (0x72C) needed to crack the
+`3rd.fsd`/`3rd.pkg` container — both independently re-verified against the
+real files afterward, not taken on faith. Try a few differently-worded
+`WebSearch` queries against the same URL/topic before concluding a blocked
+page has nothing left to offer.

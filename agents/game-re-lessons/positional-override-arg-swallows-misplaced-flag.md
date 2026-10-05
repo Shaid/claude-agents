@@ -1,10 +1,26 @@
-# Positional override arg silently swallows a misplaced flag
+# Positional override arg silently swallows a misplaced flag — or any argument you pass an ad-hoc probe
 
 **When it bites:** a pipeline/stage CLI script that accepts an optional
 positional override (e.g. an explicit romfs/data-dir path, falling back to
 auto-detection when omitted) throws a confusing "not found" error at a path
 that is obviously not a real path — often literally the `--flag=value` string
 you just passed.
+
+**The nastier variant: no error at all.** The same swallow hits *any*
+argument you hand a throwaway probe that imports one of these helpers, and
+there the failure is usually **silent**. A probe taking package indices
+positionally (`npx tsx build/probe/sibling.ts 15 16 27`) made
+`requireRomfs('few-threehopes')` read `process.argv[2] === "15"` as the
+romfs root; `RdbSource.openAll()` found no `.rdb` under
+`15/File/CMN/...`, returned `[]`, every loop body was skipped, and the
+script printed **nothing and exited 0**. That reads as a real negative
+result — "nothing matches this filter" — which is exactly the sort of false
+absence that gets written into a doc, and it cost several cycles chasing a
+nonexistent filter bug. **Pass probe arguments through environment
+variables** (`PKGS=15,16,27 npx tsx ...`), never positionally, in any
+project using this convention — and treat "a corpus scan produced no output
+and exited 0" as suspect until a nonzero records-examined counter says
+otherwise.
 
 ## What happened
 

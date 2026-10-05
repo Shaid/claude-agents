@@ -1,82 +1,23 @@
 # A byte-pattern census of an indexed-addressing instruction cannot identify what it operates on
 
-**When it bites:** you've scanned a binary for a specific instruction encoding
-— `BTST #n,(An,Dn)`, `MOVE.B (An,Dn),Dm`, anything using a base register plus
-index — found several byte-identical hits, and are about to report them as
-multiple accesses to the same table.
+**When it bites:** a census of an instruction encoding (`BTST #n,(An,Dn)`, `MOVE.B (An,Dn),Dm`, `sw reg,0x570(base)`), a text grep for a literal field offset (`43(A0)`), or a bit-immediate scan near a known field access has returned hits, and you are about to count them as accesses to one specific table/struct field.
 
-An indexed-addressing instruction encodes the *offset within a record* and the
-registers involved. It does **not** encode which table the base register points
-at. `BTST #0,(A0,D0.L)` means "test bit 0 of the byte at `A0 + D0`" and nothing
-more. Two byte-identical instructions can operate on completely unrelated data
-structures.
+Instruction bytes encode an offset and register numbers, not which table the base register points at. Byte-identical instructions — or any `+43` displacement — can touch unrelated structures. Identity lives in the instruction that loads the base (`LEA`/`MOVEA`/`lui+lw`/prologue argument), independently corroborated by the index stride (the table's record size).
 
-The identity lives in the **preceding `LEA`** that loads the base register, and
-is independently corroborated by the **index stride** (the record size the index
-is scaled by).
+**Check / fix:**
+- For **every** hit, resolve the base register to its defining instruction and confirm the table; check the index stride matches that table's record size. Two agreeing signals is the bar; an unresolvable base is *unclassified*, not a match.
+- **Automated lookback heuristics fail under idiom repetition**: a function that reloads a global context pointer many times will out-compete a one-time prologue definition of the real base. Widen lookback to the function start, or hand-check several hits' true defining instruction before trusting a negative (same fix as `nearest-preceding-immediate-is-not-dataflow.md`, for operand identity).
+- **For bit-immediate censuses** (`andi`/`ori` `0x40`/`0x80`/`0xc0` near a field access), check which register the masking instruction actually writes/reads and that it was loaded from the target offset. Proximity is a candidate filter, never evidence — sibling fields often share small bit values.
+- **Exhaustive provenance is a closure method**: when the hit set is small, resolving *every* hit (all write forms that can address the offset, e.g. `MOVE.B`/`ADDI.B`/`CLR.B`) upgrades "N candidates, none traced" to "confirmed absent".
 
-Worked example (War in Middle Earth, Amiga, `middilgard` project). A census
-found four byte-identical `08 30 00 00 08 00` instructions and they were
-reported as four tests of the same item-inventory bit. Three were false
-positives:
+**Canonical example:** War in Middle Earth (Amiga, `middilgard`): four byte-identical `08 30 00 00 08 00` (`BTST #0,(A0,D0.L)`) were reported as four tests of one inventory bit. Bases and strides: `0x0B06E` and `0x0F726` — `LEA -16772(A4)` (location+0x08), ×10 → location `regionFlags`; `0x0F41C` — `LEA -25094(A4)` (entity+0x10), ×38 → the real item bit; `0x10436` — `LEA -11124(A4)`, ×2 → combat force-slot word array. Three false positives.
 
-| Site | Preceding base | Stride | Actually tests |
-|---|---|---|---|
-| `0x0B06E` | `LEA -16772(A4)` = `location[0]+0x08` | ×10 | location `regionFlags` bit 8 |
-| `0x0F41C` | `LEA -25094(A4)` = `entity[0]+0x10` | ×38 | **items bit 8 — the real hit** |
-| `0x0F726` | `LEA -16772(A4)` = `location[0]+0x08` | ×10 | location `regionFlags` bit 8 |
-| `0x10436` | `LEA -11124(A4)` = `DATA+0x548A` | ×2 | combat force-slot subordinate bit 8 |
+**Variants:**
+- *Text grep of an offset* — Vengeance of Excalibur (`middilgard`): ~120 writes to `43(A0)/43(A1)` in named gameplay functions all hit an item-list struct, none the VM's PC field.
+- *Exhaustive closure* — Black Crypt (`crawl`): 19 write sites to `byte +0x07` across the 166 KB image all resolved (via `MOVEQ #type,D3` type-filter arguments) to other record kinds → feature confirmed dead.
+- *Lookback mislabel* — Valkyrie Profile PSX: `sw s1,0x570(s0)` was the right hit, but `s0` (prologue parameter, ~200 instructions back) was labelled the battle context because the function repeats `lui/lw ctx` 252 times; the clean "no actor-relative writer" negative was wrong.
+- *Shared bit values* — Valkyrie Profile PSX: `ori $v1,$v1,0x80` next to an `obj+0xe8` load actually set bit 7 of `obj+0xc6` (the kind byte).
 
-Four identical instructions, four different data structures. The strides
-corroborate the bases independently: 10 is the location table's record size, 2 is
-a word array's, and only 38 is the entity stride.
+Related: false-negative faces in `narrow-opcode-form-census-false-negative.md` and `bitfield-spans-multiple-addressable-bytes.md`; general fix `negative-from-addressing-root-not-shapes.md`.
 
-**Fix:** for every hit in an indexed-addressing census, resolve the base register
-back to its `LEA`/`MOVEA` and confirm the target table, then check the index
-stride matches that table's record size. Two independent signals agreeing is the
-bar; the instruction bytes alone are not evidence of anything. If you cannot
-resolve the base, the hit is unclassified — not a match.
-
-**The same failure mode hits a plain literal-offset text grep, not just a raw
-opcode-encoding census.** Confirmed on Vengeance of Excalibur (`middilgard`):
-having traced the exact struct byte offset (`+43`) a bytecode-VM instruction
-uses as its "current program counter" field, a `grep`-style search for every
-`MOVE.B ...,43(A0)`/`43(A1)` write across the whole 75,000-line disassembly
-turned up ~120 hits, ~50 with literal immediates in named gameplay functions
-(`_GetItem`, `_DropItem`, `_UseItem`, `_DoCombAction`, `_FightDone`, `_Trade`,
-…). None of them touch the VM's PC — every one operates on a completely
-different C struct (an item/inventory-list record) that happens to place an
-unrelated field at the identical small numeric offset. A bare offset number,
-grepped as text, carries exactly as little provenance as a raw indexed-
-addressing opcode encoding does — in both cases the fix is the same: resolve
-what register/pointer is being indexed at each hit (here, what the
-preceding `MOVEA.L`/argument load actually assigns to `A0`) before counting
-a hit as evidence about a specific struct's field.
-
-This is the false-*positive* face of the same shape-based-evidence failure that
-produces false negatives in
-`bitfield-spans-multiple-addressable-bytes.md` (a bit test you cannot find
-because you searched the wrong byte) and
-`narrow-opcode-form-census-false-negative.md` (a consumer you cannot find
-because you searched the wrong opcode form). Raw-opcode censuses fail in both
-directions, and neither direction is safe without provenance:
-`negative-from-addressing-root-not-shapes.md` is the general fix.
-
-**Doing this exhaustively over a whole census — not just spot-checking a
-few hits — turns a doc's "N candidate writers, none traced" hedge into a
-genuine, citable closure.** Confirmed on Black Crypt (Amiga, `crawl`):
-an open item read "11 candidate `byte +0x07` writers exist... none was
-traced to the object array." A full census of *every* byte-writing
-instruction touching that field offset across the whole 166 KB code+data
-image (not just `MOVE.B` — every form that can address an odd offset:
-`ADDI.B`/`CLR.B` too) found 19 write sites; resolving every single one's
-base-register provenance back to a confirmed type-filter constant (a
-`MOVEQ #type,D3` argument to an already-verified type-filtered lookup
-helper) or a type-specific field pattern showed all 19 belonged to *other*
-record kinds, none to the one the open item asked about. Because the
-provenance-resolution was applied to literally every hit rather than a
-sample, the result upgrades from "still not found" to "confirmed absent" —
-a real, positive finding (the feature is provably dead/unreachable code),
-not just an unresolved residue. The technique doesn't change; what changes
-is treating "resolve provenance for every hit" as a closure method in its
-own right when the candidate count is small enough to be exhaustive.
+**History:** 5 recorded instances (middilgard ×2, crawl, valkyrie ×2) — full log in `_archive/indexed-operand-needs-base-provenance.md`.

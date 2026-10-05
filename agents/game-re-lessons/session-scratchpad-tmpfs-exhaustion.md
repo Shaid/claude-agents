@@ -1,11 +1,17 @@
-# The session-shared scratchpad tmpfs can fill to 100% mid-task, breaking every Bash call including trivial ones
+# The session-shared scratchpad tmpfs — or the real project disk itself — can already be nearly full before you write a single byte
 
 **When it bites:** a Bash tool call fails with `Command output was lost:
 the temp filesystem at .../tasks is full (0MB free)` — including for a
 command as trivial as `echo hi` — partway through a session, especially
 one where multiple agents (a forked escalation, a background subagent, an
 earlier pass of the same overall session) have run substantial work before
-you.
+you. **Or:** you're about to launch (or already launched) a large/
+unknown-total-size batch extraction or pipeline stage targeting the
+project's own real disk (exactly what this file's own advice tells you to
+do instead of the scratchpad) — check `df` on that target filesystem too,
+not just `/tmp`, since a shared dev machine's main disk can independently
+be at or near 100% used for reasons that have nothing to do with your
+task.
 
 The scratchpad directory this agent is told to use for temp files
 (`/tmp/claude-<uid>/<project>/<session-uuid>/scratchpad/`) is **shared
@@ -43,6 +49,31 @@ exactly this) instead, and use the scratchpad only for genuinely temporary
 probe scripts and small intermediate files. If real disk is also tight,
 check `df -h` on the *target* filesystem before launching, not just after
 a failure.
+
+**The real project disk is not automatically safe headroom, and a large
+batch job should check it *during* the run, not just once before
+starting.** Confirmed on Fire Emblem: Engage (`chimera` project): a new
+`AnimationClip` extraction pipeline stage was correctly targeted at the
+project's own `build/cache/`/`public/assets/` trees (not the scratchpad,
+per this file's own advice) and launched as a background job over the
+full 24,755-bundle corpus. A `df -h` check made partway through — prompted
+by nothing more than routine progress monitoring, not a failure — showed
+the machine's real `/home` volume at **100% used, only ~3.5GB free**
+(944/950GB used), a pre-existing condition unrelated to this task, while
+the run's own intermediate cache had *already* reached 1.3GB at 65%
+scanned (real per-clip data can run to ~1MB each for the corpus's largest
+combat animations). The job was killed and its partial output deleted
+rather than risk exhausting a disk shared with other concurrent work on
+the machine. Two takeaways beyond "check `df` before launching": (1) for
+a batch job whose total output size isn't already known, run a small
+bounded sample first (a `--filter`/`--limit` slice) and extrapolate its
+per-item size to the full corpus *before* committing to an unattended full
+run — this would have flagged the multi-GB projection in seconds instead
+of minutes into a live run; (2) `df` the real target filesystem again
+partway through a long-running background batch job, not only once at the
+start — free space is a moving target on a shared machine, and a job that
+looked safe to launch can still be riding a disk toward 0% free by the
+time it's halfway done.
 
 **Recovery, and the judgment call it requires**: `df -h /tmp` confirms the
 symptom (near-100% used, near-0 available) once at least one Bash call

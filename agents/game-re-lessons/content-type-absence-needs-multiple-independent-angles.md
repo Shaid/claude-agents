@@ -1,110 +1,22 @@
 # "Does content-type X exist anywhere in this corpus" needs several structurally-different search angles agreeing, not one
 
-**When it bites:** the task is to conclusively confirm or rule out whether
-a whole *category* of content exists anywhere in a game's data (pre-
-rendered video/FMV, a cut feature, a whole asset class the user is
-confident must be present) — as opposed to decoding a format you already
-know is there. A single search technique coming back empty is tempting to
-report as "not present," but one empty search only rules out the one way
-that technique could have found the thing.
+**When it bites:** you're about to write a load-bearing "X doesn't exist in this game" negative, about a whole category (FMV, a cut feature, an asset class the user insists is there), from one empty search. Also: the corpus is a pre-extracted dump (Switch RomFS, ISO), where the extraction itself may have silently dropped files or whole NSPs.
 
-**Each search technique is structurally blind to some ways the content
-could hide, and a different technique is blind to different ways.** A
-magic-byte scan misses content wrapped in an undecoded compression/
-encryption layer it can't see through. A file-size histogram misses
-content stored in many small pieces rather than one big file. A directory/
-extension survey misses content sitting inside an already-catalogued
-container under an unexpected sub-name. None of these alone is a strong
-negative; agreement across several *orthogonal* techniques is.
+Every search technique is blind to some hiding places, and each technique is blind to different ones. An empty result rules out only what that one technique could have seen. A negative is strong only when orthogonal angles agree, and only over a corpus you've confirmed is complete.
 
-**The four-angle combination that worked** (NieR, 2010, PS3, `flower`
-project — conclusively ruled out any pre-rendered video/FMV in the whole
-decrypted base-game data set, a real user-disputed question, not a routine
-non-finding):
+**Check / fix — run these angles, with the cheapest first:**
+0. **Is the corpus complete?** Compare the extraction tool's own listing (`hactool --listromfs`) file count against the extracted tree. Then `find data -iname '*.nsp'` and check which NSPs and NCAs the pipeline actually processed. A largest-NSP/largest-NCA-only extractor silently skips DLC. Switch DLC NSPs need `--titlekey` but no `--basenca`.
+1. **Size-outlier hunt** against the content type's typical size (FMV is tens of MB or more). This misses content stored small or split into pieces.
+2. **Exhaustive full-content magic scan** of every byte, after decoding every known compression or encryption layer, including dedicated passes over oversized files. This misses still-undecoded codecs, and short hits need falsifying (`short-magic-hit-in-high-entropy-region-needs-falsification.md`).
+3. **Name/keyword census** of filenames, directories, and leaf names inside partially solved containers (`movie`, `cutscene`, `fmv`, `trailer`, format conventions like `.2DV`). This misses content with no self-describing name.
+4. **Structural shape argument** for the most likely region. For example, real video is one monolithic stream per clip, while real-time cutscenes are many small typed files. This gives positive evidence for the alternative.
 
-1. **Size-outlier hunt.** The target content type has a known typical size
-   profile (FMV clips are typically tens of MB+) — sort every corpus entry
-   by size and check whether anything of that scale exists outside
-   already-explained categories. Catches "ships as one big standalone
-   file," misses anything smaller or split into pieces.
-2. **Exhaustive full-content magic-byte scan** — not a sample, not just
-   file headers. Every already-known compression/encryption layer gets
-   decoded first so the scan sees real content, not compressed noise; every
-   byte of every entry gets searched, including a dedicated pass over any
-   files too large to decode/hold entirely in memory at once. Catches
-   "ships with a recognizable container signature somewhere in a file,"
-   misses content wrapped in a *still-undecoded* codec (see
-   `short-magic-hit-in-high-entropy-region-needs-falsification.md` for the
-   false-positive risk this angle carries) or referenced only by name.
-3. **Leaf-name/keyword census inside already-partially-solved container
-   formats**, plus a corpus-wide filename/directory keyword search for the
-   content type's own vocabulary (`movie`, `cutscene`, `fmv`, `trailer`,
-   and any format-specific naming convention already seen, like a `.2DV`
-   extension literally decoding to "2D Video"). Catches "referenced by name
-   even if not yet format-decoded," misses content with no self-describing
-   name at all.
-4. **A structural "shape" argument for the single most-likely-candidate
-   content region**, independent of any byte search. Real pre-rendered
-   video is architecturally *one big monolithic stream per clip*; the
-   NieR case's most-likely region (a per-scene cutscene-staging directory,
-   56% of the whole corpus) instead showed *every single scene* built from
-   many small, independently-typed files (character meshes, per-camera-cut
-   keyframe tracks, particle effects, captions, scripts) — the opposite
-   shape, and itself real positive evidence for "this is rendered in real
-   time," not just an absence of evidence for video. This angle catches
-   what the byte-level angles structurally cannot: content that would be
-   *architecturally* wrong for the format even if a byte scan somehow
-   missed a signature.
-5. **Cross-check the extraction tool's own archive/container listing
-   against what's actually on disk**, when the corpus is a pre-extracted
-   dump (a Switch NCA's RomFS, a PS-family ISO, any packed-then-unpacked
-   source). A full-content magic-byte scan (angle 2) can only find what
-   was actually extracted — it is structurally blind to files the
-   extraction step silently dropped. Confirmed on Fire Emblem: Three
-   Houses (Switch, `chimera` project): a corpus-wide scan of every
-   decompressed entry in the game's main archive found zero bytes of the
-   audio container's inner magic, even though 265 entries shared its
-   *outer* magic (an internal type-tag field distinguished them as an
-   unrelated sub-resource, not audio data at all). The real audio files
-   were loose romfs files that were
-   **present in the NCA's own RomFS table** (`hactool --listromfs` listed
-   them) but silently absent from the already-extracted dump on disk —
-   a prior extraction pass had dropped them without error. Re-running the
-   extraction tool's own directory-listing mode (no re-extraction needed)
-   caught this in seconds; angles 1-4 above, applied only to the
-   already-extracted tree, could never have found it, because the content
-   genuinely wasn't there yet.
+In the write-up, state which axis each angle covers and why the others can't defeat it. A second magic scan at a different offset is not a second angle. Name any remaining gap explicitly (boot executable, encrypted DLC).
 
-   **This recurred on a second game in the same project** — Fire Emblem
-   Warriors (2017), same `chimera` project, same `extract-romfs.ts`
-   pipeline. A full four-angle negative (extension census, corpus-wide
-   magic scan including the container's own `KTSR` tag, `ffprobe` on every
-   cutscene movie, and an NCA content-type audit) had been accepted as
-   "confirmed absent" and shipped in the project's docs — every one of
-   those four checks really was correct *for the 2,227-file tree it
-   scanned*, but that tree was missing 4,213 of the 6,440 files the
-   Program NCA's own RomFS table declared, including the entire
-   `nx/sound`/`nx/voice` audio directories (plus, unrelated to audio,
-   `nx/ui`, `nx/stage`, `nx/shader`, and part of `nx/movie` — the drop was
-   directory-wholesale, not audio-specific). A single `hactool
-   --listromfs` file-count comparison against the extracted tree's own
-   file count (6,440 vs. 2,227) would have caught this in seconds, before
-   spending any effort on the four content-level angles at all. **Two
-   occurrences in one project elevates this from "worth checking" to "run
-   this comparison first, unconditionally, before trusting any
-   'confirmed absent' verdict built on a Switch (or any pre-extracted-
-   dump-based) romfs corpus"** — it's now the cheapest angle of the five
-   and should be angle 0, not angle 5.
+**Canonical example:** NieR (PS3, `flower`). A user-disputed "where's the FMV" question was closed by angles 1–4 across the whole decrypted base-game set. The candidate region, a cutscene-staging directory holding 56% of the corpus, was built entirely from small per-scene meshes, keyframe tracks, effects, captions, and scripts, which is real-time shape rather than video.
 
-**Fix:** before writing a load-bearing "content type X does not exist"
-negative, run enough of these four angles that each plausible hiding place
-is covered by at least one, and make sure the angles are genuinely
-orthogonal (a second magic-byte scan at a different offset doesn't count as
-a second angle). State explicitly, in the write-up, which axis each angle
-covers and why it can't be defeated by the others' blind spots — that's
-what makes the negative resistant to "well, did you check X" follow-up,
-rather than a single empty search dressed up as a conclusion. If a genuine
-gap remains after all angles agree (e.g., a boot executable or an encrypted
-DLC pack outside the searched data set), name it explicitly as the one
-place the negative doesn't reach, rather than letting the overall
-conclusion imply a completeness it doesn't have.
+**Variants:**
+- FE Warriors (Switch, `chimera`): a four-angle "audio confirmed absent" verdict shipped in the docs, but the tree held 2,227 of the 6,440 files the RomFS declared, and whole directories (`nx/sound`, `nx/voice`, `nx/ui`…) had been dropped. This is why angle 0 runs first, unconditionally.
+- FE: Three Houses (Switch, `chimera`): the audio files were listed by `--listromfs` but missing on disk. Also, 2 of 12 DLC NSPs, never fed to `hactool`, held real undocumented 3D content (`DATA0/1.bin`).
+
+**History:** 4 recorded instances (`flower`, `chimera` ×3). Full log in `_archive/content-type-absence-needs-multiple-independent-angles.md`.

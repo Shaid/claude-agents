@@ -1,6 +1,6 @@
 # Palette storage quirks
 
-**When it bites:** a palette decode looks incomplete, you can't find a palette in the same file as the pixels, you're about to blind-search a large binary for one, or a confirmed palette resource has trailing bytes past the RGB array you've been calling "unexplained"/"padding"/"truncated."
+**When it bites:** a palette decode looks incomplete, you can't find a palette in the same file as the pixels, you're about to blind-search a large binary for one, a confirmed palette resource has trailing bytes past the RGB array you've been calling "unexplained"/"padding"/"truncated," or only ONE same-corpus candidate file exists for a "byte-identical across siblings" cross-check (so that technique alone can't discriminate it).
 
 - Palettes often store only the base half (32 stored + 32 computed
   half-bright).
@@ -38,6 +38,32 @@
   same invariant trick as the PAL_HDR case below. On such hardware only
   `$D02x`-class registers (background/border) are set by code; everything
   else is data.
+- **When a tile/sprite format has NO embedded palette at all (confirmed by
+  its own header shape — no reserved region for one), search the same
+  corpus for a DIFFERENT file that shares the tile's likely on-screen
+  neighborhood (border/frame chrome around the same viewport, UI overlay
+  drawn alongside it) and DOES carry an embedded palette in the family's
+  standard header shape — then corroborate the candidate via a sibling
+  title in the same engine family that already has this exact resource
+  CONFIRMED by an independent mechanism.** This is the single-candidate
+  cousin of the "byte-identical across many siblings" technique above: it
+  applies when only one plausible same-corpus donor file exists, so
+  cross-title agreement substitutes for cross-file agreement. Confirmed on
+  Champions of Krynn (Amiga, `crawl`): the `8X8D0/1/2.DAA` wall-tile bank
+  format's own 9-byte header has no room for an embedded palette (plane
+  data starts immediately after it — unlike Death Knights of Krynn's
+  sibling tile format, which reserves a 64-byte palette per entry).
+  `DUNGCOM.DAA` (byte-identical to `BORDER.DAA`, the on-screen border
+  chrome drawn around the same first-person wall-art viewport) DOES carry
+  an embedded 32-entry palette in the standard format — and Death Knights
+  of Krynn's OWN `DUNGCOM.daa` file (same filename, sibling title, same
+  engine family) embeds a near-identical palette whose entries 16-31 match
+  DKK's independently-confirmed real wall palette exactly. That agreement,
+  even with no code-level trace confirming the mechanism (an exhaustive
+  disassembly found no `LoadRGB4`/hardware-register-write/Copper-list
+  anywhere in Champions' executable — a genuine, LVO-provenance-checked
+  negative, not a missed search), was strong enough to ship as a RENDERED
+  (not CONFIRMED) default palette, replacing a synthetic grey ramp.
 - May start at an unexpected offset — Dune's palette starts at byte 2, since
   the "header" bytes are actually the first palette command.
 - Sprites may carry a `pixelBase` offset into a shared palette region.

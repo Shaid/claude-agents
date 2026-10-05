@@ -234,3 +234,24 @@ analog: check for a `HUNK_SYMBOL` block before counting bytes through a
 disassembly — see amiga.md; on DOS, the shipped symbol table is a plain
 data file, found by `strings`, not by parsing the executable format.)
 
+
+## Anchor a derived DS base on 2-3 known-shape tables before trusting it
+
+The `DS = loadseg + paragraphs` derivation above is easy to get off by
+the MZ header size: on Dune (`DUNEPRG.EXE`, `wyrm`) `DS:0` was first
+placed at file `0xF0F0` (the `0x200` header added twice, once via the
+load-segment convention and once by hand) instead of `0xEEF0`, and every
+"table" read at the wrong base landed on legible-looking catalog text —
+which does not fail loudly. Before reading any data structure through a
+candidate base, confirm it with two or three tables whose *shape* is
+already known from code: a divisor/reciprocal table (`0x100,0x120,0x140,
+...`), a clip rectangle (`0,0,320,152` or `0,0,320,200`), a `[u16][name\0]`
+resource slot table, a far-pointer table whose segment words match the
+init loop that writes them. Two of those landing exactly is decisive; text
+where a numeric table should be means the base is wrong, not that the
+table moved. Related: a driver overlay's far-pointer/jump-table base (the
+`call dword ptr [DS:xxxx]` family) must be taken from the init loop that
+*writes* the table (it fixes both the base and the entry stride), not
+guessed from the first call site's operand; and `objdump -b binary -m
+i8086` must be run per routine with `--start-address` — a linear sweep
+desyncs through inline data (`linear-disasm-desyncs-through-inline-data.md`).

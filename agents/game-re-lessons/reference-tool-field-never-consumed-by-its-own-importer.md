@@ -9,6 +9,15 @@ formula, check whether the *same tool's own downstream consumer* (its
 Blender importer, its renderer, its exporter) actually uses that decoded
 field for anything visible.
 
+**Also read "never consumed" as a triage signal, not only as a warning.**
+The strongest form of this is a field the reference tool parses and then
+never reads *anywhere*, not even in its own reader. Those are pure
+unchecked assumptions, so census them against real bytes **first**, ahead
+of the fields the tool demonstrably exercises. And it is not only formulas
+that go wrong this way — a field's **unit or width** can be wrong too,
+which is easier to miss because the value still looks like a plausible
+number.
+
 ## What went wrong
 
 Porting PlatinumGames' `WMB3` mesh format (NieR:Automata PC,
@@ -25,6 +34,18 @@ used instead, with the imported model's normals only ever *flipped*
 was never exercised against a real "does this look right" check by the
 people who wrote it, because their own tool doesn't actually need it to
 work.
+
+**A second instance, in the unit/width form.** Porting `fmt_g1m`'s
+`processG1A` (Koei Tecmo G1A animation, Fire Emblem Warriors: Three Hopes,
+`~/Development/chimera`): the reference reads the header's `fileSize` field
+as a plain byte count (`filesize = bs.readInt()`) and then **never uses the
+variable again**. It is in fact in **16-byte units**. Read as units it
+matches the real payload length for **583/583** resources with 0
+deviations; read as bytes, **0/583**. Nothing in the reference could ever
+have caught it, because nothing in the reference ever compared it to
+anything — and the value it produces is a perfectly ordinary-looking
+integer, so it does not announce itself either. Its unused-ness was the
+only clue available in advance, and checking it took one line.
 
 Caught only by reading real corpus vertex data directly and computing
 vector magnitude for both the literal reference formula and a standard

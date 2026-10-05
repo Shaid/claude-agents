@@ -58,3 +58,17 @@ that the original session's own version lacked.
    `tsc --noEmit` after every re-read — the shared file's field names,
    struct shapes, and even function signatures may shift more than once
    across a session as the sibling iterates.
+5. **When you must legitimately add your own, non-overlapping content to
+   the same file** (not a duplicate/competing decoder for the same format —
+   a genuinely different finding that happens to belong in the same module,
+   e.g. two sessions each adding their own game's variant of a shared
+   renderer), prefer surgical, string-anchored edits (`Edit`'s targeted
+   replace) over a full-file `Write`/rewrite, even when your own change
+   spans a large new section. Confirmed on Final Fantasy VII/VIII/IX
+   (`siren` project): one session added new FF7-specific rendering
+   functions to `tools/shared/akao-render.ts` while a concurrent session
+   added unrelated FF8/FF9 instrument-table logic to the same file's
+   existing section — both landed with zero data loss because neither
+   session ever rewrote the whole file, only inserted/edited their own
+   targeted regions. A full-file overwrite from either side would have
+   silently destroyed the other's concurrent work.

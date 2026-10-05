@@ -28,6 +28,13 @@ half with no `ori` required. Grepping for `lui $reg, 0x8` / `lui $reg,
 was a real write to the target address — an instant, tractable answer to
 a question the by-address approach could never have finished.
 
+The same inversion also rescues the *opposite* symptom — a field-centric
+forward chase returning too FEW hits (zero) because of its own structural
+blind spots; see
+`field-centric-bit-census-blind-to-sibling-reuse-and-split-mask.md`, where
+a constant-first census over the same project's 60 `lui $r,0x2` sites found
+in one pass a consumer five rounds of load-chasing had missed.
+
 **Fix:** before giving up on (or brute-force-reading) a flooded address
 census, ask whether the specific value you need is itself hard to build —
 a multi-instruction immediate, a shifted single bit, a magic constant, a

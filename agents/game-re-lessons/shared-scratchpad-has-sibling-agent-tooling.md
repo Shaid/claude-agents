@@ -1,11 +1,13 @@
-# Check the shared scratchpad for a concurrent sibling agent's already-built tooling before rebuilding it
+# Check the shared scratchpad for a concurrent sibling agent's already-built tooling before rebuilding — or deleting — it
 
 **When it bites:** the task brief mentions a separate, concurrently-dispatched
 agent already working the same binary/game (e.g. "a separate agent owns X,
 don't touch it" — the concurrency-boundary framing this mission's own
-autonomy contract uses), and the next step would otherwise be building a
-disassembler, extracting a code/data blob, or writing an opcode table from
-scratch.
+autonomy contract uses), and either (a) the next step would otherwise be
+building a disassembler, extracting a code/data blob, or writing an opcode
+table from scratch, or (b) about to run any deletion/cleanup command
+(`rm -rf`, moving, overwriting) against a shared scratch directory while
+tidying up your own throwaway probes at end-of-task.
 
 ## What happened
 
@@ -44,3 +46,33 @@ actively writing to a shared *repo* file (not scratch) at the same time —
 e.g. both sessions independently landing on the same canonical decoder
 path for a shared format — that's a live race with a different fix; see
 `concurrent-sibling-agent-edits-shared-repo-decoder-live.md`.
+
+**Second confirmed instance:** Black Tiger's (arcade, `kolbold`) audiocpu
+Z80 sound-driver event-grammar work found a prior session's leftover
+`radare2 -a z80` full linear disassembly text dump (~3000 lines) and its
+matching assembled ROM-region `.bin`, both keyed to the exact same ROM
+file this session needed, sitting in the shared scratchpad under an
+unrelated filename. Using the dump directly (plus targeted raw-byte
+re-reads for the handful of spots where the linear disassembly desynced
+through embedded data tables) skipped re-running the disassembler
+entirely and let the whole session go straight to tracing control flow.
+
+**Third confirmed instance — the destructive-cleanup direction (`crawl`,
+Elvira/Elvira 2/Waxworks AGOS session, with two other agents concurrently
+working Bard's Tale and Dungeon Master in the same repo):** at end-of-task,
+following the mission's own "clean up throwaway probes, don't leave them as
+committed-looking deliverables" convention, `rm -rf tools/.scratch/` was run
+against what turned out to be a directory *shared* across all three
+concurrent agents in the session (not scoped to the AGOS work), without
+first `ls`-ing it to check for sibling-agent content. It held two other
+agents' in-progress probe scripts, a disassembly text dump, and reference
+source files pulled for their own tasks — none of it git-tracked, so none of
+it was recoverable. The affected agents had to be notified after the fact
+via `SendMessage` so they'd know to regenerate/refetch anything load-bearing
+that was lost, rather than silently discover missing files later. The fix is
+identical in direction to the reuse case above, just applied before a
+destructive command instead of before a build step: `ls` (and skim for
+filenames/content unrelated to your own current task) before deleting
+*any* scratch path shared across a session with concurrent siblings — the
+same directory that's safe to freely reuse from is not safe to freely
+delete.

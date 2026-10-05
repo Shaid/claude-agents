@@ -1,0 +1,19 @@
+# A length-preservation (FK distance) invariant cannot detect a uniform rotation-track index misalignment — only a validator-blind visual re-check can
+
+**When it bites:** a skeletal-animation / rotation-track decoder is called SOLVED on byte-exact whole-corpus consumption plus a parent-child FK distance check against each bone's static length, with a validator reporting zero errors. Also: an "N+1 records, one is a placeholder" convention was inherited from a sibling format without confirming *which end* the placeholder sits at.
+
+A uniform ±1 shift in which track a bone reads consumes exactly the same bytes in the same order, so byte-exact consumption can't see it. Every rotation matrix the decoder emits is orthonormal, and an orthonormal matrix preserves length whatever bone's angles went into it, so FK distance preservation (`|origin[child] − origin[parent]| === |translationZ|`) passes too. glTF validators check structure, not direction. Length, norm, and checksum-over-unordered-contributions invariants all watch magnitude, never "is this value in the right slot".
+
+**Check / fix:**
+- **Look at actual pixels.** A prior session's "Playwright visual check confirmed physical plausibility" was false. A claimed visual check is not evidence until you can point to the image.
+- **Plot the rest-pose skeleton as a bare wireframe** (bone origins from your own world-transform composition, with no glTF, skin or renderer in between). Compare **structurally mirrored siblings**: chains with an identical `boneLength` sequence under a common parent should point in mirror-symmetric directions.
+- **Rule out composition order first** (transpose, reversed multiply). If neither fixes an *asymmetry*, the bug is in which angle data is read, because a composition bug affects both mirror chains the same way.
+- **Decisive test:** shift the track index by ±1 uniformly and recompute.
+- **Before chasing a tempting hypothesis** (e.g. a `JOINTS_0`/`skin.joints[]` shift, `bind-pose-render-blind-to-joints-index-space-bug.md`), refute or confirm it with numbers. Here that meant proving `skin.joints[i] === 1+i` and replicating three.js's `jointWorld × IBM × position` on the emitted bytes (diff 0.0000 across 8 bones, at rest and mid-clip). It took under an hour.
+- **Regression test:** auto-detect every mirror pair structurally (no hardcoded indices), mirror one chain's rest-pose tip vector across the left/right axis, and require high cosine similarity. Build this whenever a format has repeated or mirrored substructures (limbs, turrets).
+
+**Canonical example:** Parasite Eve (PSX, `parasite`). Animation clips store `boneCountByte + 1` rotation tracks, mirroring the model format's "`boneCount+1` rows, last one inert" convention. The decoder mapped bone `i` to `rotations[i]` and dropped the last track, but the placeholder is track **0**, so it should be `rotations[i+1]`. Every bone got its next sibling's rotation. 9,042/9,042 clips were consumed with 0 remainder, FK distance held across 106,444 (bone, frame) samples, and `@gltf-transform/cli validate` was clean. Renders showed collapsed clumps with one rigid limb jutting out, even in one-frame rest poses. The wireframe showed one leg hanging normally and its mirror twin pointing sideways, across three unrelated models. With `i+1` the figure became a correctly proportioned standing human (mirror-leg cosine 0.99+). The corpus-wide mirror-pair test over 645 pairs scored median 0.73 / mean 0.66 / min −0.35 on the buggy code and 0.996 / 0.92 / 0.46 after the fix.
+
+Related: `header-field-role-not-transitive-across-sibling-format.md` (role assumptions carried across sibling formats), `genuine-off-by-one-loop-matches-placeholder-record-convention.md` (the mirror image, where the placeholder convention was real), `verify-escalation-artifacts-not-just-claims.md`.
+
+**History:** 1 recorded instance (parasite): full narrative in `_archive/length-invariant-blind-to-track-index-misalignment.md`.

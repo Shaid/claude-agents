@@ -1,11 +1,16 @@
-# A byte-by-byte terminator scan over variable-length records finds false positives inside well-formed data
+# A boundary/terminator scan must step at the real element's own granularity, not one byte at a time
 
 **When it bites:** locating where a variable-stride record table ends by
 scanning raw bytes for a sentinel/terminator value or pair (e.g. `0x0D 0x0D`,
 `0xFF`, a repeated marker byte) — especially once the scan reports a
 plausible-looking terminator position but the bytes just past it don't read
 as the expected "leftover/unused" filler (they still look like structured
-data, or the reported table size seems too small).
+data, or the reported table size seems too small). Also bites the sibling
+case: auto-detecting a *fixed-stride* directory/table's own length by
+scanning forward for the first recognized tag/magic pattern one byte at a
+time, when the table's real element width is 2 or 4 bytes — the scan can
+match a multi-byte tag pattern that straddles two adjacent aligned slots,
+finding a "hit" that isn't a real element at all.
 
 A blind linear scan (checking every byte offset, one at a time, for the
 sentinel pattern) will happily match the sentinel bytes when they occur
@@ -44,6 +49,26 @@ disagree, the aligned walk is authoritative — a byte-scan false positive
 looks identical to a real terminator until you check whether the bytes
 immediately after it are actually well-formed leftover/filler or still look
 like live records.
+
+**Second confirmed instance (fixed-stride table, not variable-stride
+records):** Parasite Eve II's (PSX, `parasite`) `hONE` SndScript program
+format has a leading directory whose own length isn't given by any header
+field — it has to be auto-detected by scanning forward from a fixed base
+for the first offset that looks like a recognized 4-byte ASCII tag
+(`'oneV'`, `'Wait'`, `'Loop'`, …). The directory's own entries are 2 bytes
+wide, so the real element granularity is word-aligned. A first version of
+this scan advanced the candidate offset by 1 byte per step instead of 2;
+on one real file (`stage1/folder501/file(id0)@0x945800/chunk0`) this let a
+4-byte tag pattern straddle two adjacent word-slots and match at a
+byte-misaligned position, producing a directory-length value wildly out of
+bounds for the actual 740-byte program (harmlessly caught by a downstream
+bounds check in this case, but a real, silent generalizable bug — a luckier
+byte pattern would have produced an in-bounds-but-wrong length with no
+crash at all). Fix: step the scan by the table's own real element width (2
+bytes here), matching the variable-stride case's underlying principle —
+*scan granularity must equal real element granularity, or a boundary
+pattern can be found straddling two legitimate elements instead of at a
+real element start.*
 
 This is a different failure mode from `fixed-stride-record-count-unverified.md`
 (which is about a *uniform*-stride table's slot count being wrong because a

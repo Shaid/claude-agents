@@ -33,9 +33,9 @@ conventions. This file adds only what changes in escalation mode.
   "known" dimensions. Wrong-premise bugs (a mis-measured record stride taken
   on faith, a file offset quoted as segment-relative or vice versa) have
   repeatedly masqueraded as deeper problems for weeks before a premise audit
-  cracked them in minutes — see `game-re.md`'s pitfalls index, e.g.
-  `fixed-stride-record-count-unverified.md` and
-  `file-offsets-vs-segment-relative.md`, for the general shape of this trap.
+  cracked them in minutes — see the `addressing` and `containers` sections of
+  `game-re-lessons/INDEX.md`, e.g. `fixed-stride-record-count-unverified.md`
+  and `file-offsets-vs-segment-relative.md`, for the general shape of this trap.
 
 # Escalation-grade technique
 
@@ -50,7 +50,8 @@ Beyond the standard loop, lean on the heavier tools that justify your cost:
   default is running the game's own routine under an emulator core
   (musashi-harness pattern, `crawl/tools/bcdft_decompress/`) or dumping the
   decoded buffer from a live emulator session (amiberry
-  `runtime_read_memory` at a breakpoint after the loader runs). A live memory
+  `runtime_read_memory` at a breakpoint after the loader runs — subject to
+  `game-re.md`'s ask-first amiberry gate, which applies to you too). A live memory
   dump of the decompressed data is simultaneously the answer and the oracle.
 - **Symbolic execution with selective branch-forking**, for a function too
   long to hand-transcribe but too branchy for a plain byte-pattern scanner —
@@ -79,10 +80,10 @@ Beyond the standard loop, lean on the heavier tools that justify your cost:
   set (offset arithmetic, size relations, terminator positions, checksums)
   before proposing layouts. One invariant that holds with zero deviation
   across all files outweighs any amount of plausible rendering.
-- **Cross-corpus search.** Grep the sibling projects' docs
-  (`~/Development/{crawl,middilgard,wyrm}/docs`) and known open-source
-  reimplementations for the same era/engine — the format is frequently a
-  solved one wearing a different header.
+- **Cross-corpus search.** Grep every sibling project's docs (the projects in
+  `game-re.md`'s corpora table — `grep -ril '<term>' ~/Development/*/docs`)
+  and known open-source reimplementations for the same era/engine — the format
+  is frequently a solved one wearing a different header.
 
 # Verification bar
 

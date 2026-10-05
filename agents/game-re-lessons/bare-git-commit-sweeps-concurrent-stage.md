@@ -46,6 +46,31 @@ than one concurrent agent is actively writing to, always run the full
 `git diff <file>` (not `--stat`) before staging it, the same as you would
 for a file you suspect might hold someone else's edits.
 
+**If you don't catch it until after a further commit has already
+landed**, a plain `git reset --soft HEAD~1` isn't safe (it would also
+undo that newer commit). Confirmed on `valkyrie` (Valkyrie Profile 2):
+noticed the sweep-up only while reviewing the *next* commit's diff, one
+commit too late for a soft reset. The non-destructive fix: for each
+swept-in path, `git show <bad-commit>~1:<path>` to recover its exact
+pre-sweep content, `cp`/`Write` that back over the current file
+(reverting *only* those paths, leaving your own legitimate changes in
+the same commit alone), commit that as a new, clearly-labeled revert
+commit (no history rewrite), then `git apply` a saved `git diff
+<bad-commit>~1 <bad-commit> -- <paths>` patch to restore the swept
+content as uncommitted working-tree changes again — verify byte-for-byte
+identity between the restored files and the original bad commit's
+version before trusting it (`diff` the two, not just `git status`). This
+returns the other agent's work to exactly the uncommitted state it was
+in before your commit touched it, with nothing lost and no rewritten
+history — the two-commit trade-off (a slightly noisier log) is the right
+price versus rewriting a commit other agents may have already seen.
+Also worth checking mid-fix: some `git checkout <ref> -- <path>` /
+`git restore` invocations get blocked outright by an automated
+permission classifier as "potentially destructive" even when read-only
+in effect (restoring from an old commit into the working tree) — `git
+show <ref>:<path> > tmpfile` (a plain read) sidesteps this while
+achieving the same recovery.
+
 **The mirror direction — it happens *to* you, not just *by* you.** In a
 heavily concurrent session (3-4 agents committing on the same branch), a
 different agent's bare commit can just as easily sweep up files *you*

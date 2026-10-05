@@ -27,7 +27,7 @@ series, Conan, Warriors of Legend, Dune, and KGB.
 | `game-re` agent | `agents/game-re.md` | Sonnet | The workhorse: full RE loop, orchestrates everything below |
 | `re-codebreaker` skill | `skills/re-codebreaker/SKILL.md` | Opus | Escalation for hard *bounded* sub-problems (forked specialist) |
 | `re-oracle` skill | `skills/re-oracle/SKILL.md` | Fable | Last-resort escalation: whole-corpus synthesis, contradictions (forked specialist) |
-| `re-learn` skill | `skills/re-learn/SKILL.md` | Opus | The learning loop: distills durable lessons back into `agents/game-re.md` |
+| `re-learn` skill | `skills/re-learn/SKILL.md` | Opus | The learning loop: distills durable lessons into the knowledge base below |
 
 ### Escalation ladder
 
@@ -41,16 +41,34 @@ conventions, same verification bar), just a bigger engine. Specialist
 findings are re-verified by the orchestrator before anything is marked
 confirmed.
 
+### Knowledge base
+
+`agents/game-re.md` is loaded on every invocation, so it is kept to a contract
+plus one-line indexes (≤ 30 KB, enforced). Everything else is read on demand:
+
+| Path | Read when | Budget |
+|------|-----------|--------|
+| `agents/game-re-corpora/<project>.md` | first thing in every task in that project | ≤ 8 KB summary |
+| `agents/game-re-corpora/details/<project>.md` | evidence behind a specific item | — |
+| `agents/game-re-lessons/INDEX.md` → `<lesson>.md` | before trusting a decode (by category or grep) | ≤ 8 KB per lesson |
+| `agents/game-re-lessons/_archive/` | rarely — verbatim instance logs of condensed lessons | — |
+| `agents/game-re-method/`, `agents/game-re-tooling/` | the technique / platform at hand | — |
+
+`python3 ~/.claude/skills/re-learn/check.py` validates budgets, index ↔ file
+sync, and cross-references.
+
 ### Learning loop
 
 After any task that produced a generalizable lesson, the agent invokes
-`re-learn` (harvest mode) to fold it into its own definition: the prior-art
-corpora table, the hard-won-pitfalls list, tooling caveats. Pointed at an
-unfamiliar project (`re-learn: learn from ~/Development/<project>`), it
-absorbs that project's solved formats as prior art first. The skill curates
-rather than logs — lessons must generalize, have been expensive, and be
-verified; per-game details stay in each project's `docs/`. Self-edits show up
-here as git diffs: `git -C ~/.claude diff agents/game-re.md`.
+`re-learn` (harvest mode). Because many sessions run in parallel, a harvest
+never edits the shared files: it writes candidates to the git-ignored
+`agents/game-re-inbox/`, then tries to take a lock
+(`agents/.re-learn.lock/`). Whoever holds the lock curates the whole inbox —
+merging into lessons/corpora/method/tooling under the bar (generalizes, was
+expensive, verified), running `check.py` until clean, and committing **only the
+paths it touched**. Pointed at an unfamiliar project
+(`re-learn: learn from ~/Development/<project>`), it absorbs that project's
+solved formats as prior art. `re-learn curate` drains a backlog by hand.
 
 ## Method (what the agent actually does)
 
@@ -103,9 +121,9 @@ Direct skill invocations also work:
 ## Versioning the agent's brain
 
 ```sh
-git -C ~/.claude log --oneline agents/game-re.md   # how the brain evolved
-git -C ~/.claude diff agents/game-re.md            # pending self-edits
-git -C ~/.claude checkout -- agents/game-re.md     # reject a bad lesson
+git -C ~/.claude log --oneline -- agents skills   # how the brain evolved (re-learn: commits)
+git -C ~/.claude show <hash>                      # audit one curation pass
+git -C ~/.claude revert <hash>                    # reject a bad curation
+ls ~/.claude/agents/game-re-inbox/                # candidates still waiting for curation
+python3 ~/.claude/skills/re-learn/check.py        # budgets + integrity
 ```
-
-Commit after reviewing a harvest you agree with; revert the ones you don't.
