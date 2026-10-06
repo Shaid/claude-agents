@@ -2,7 +2,7 @@
 
 **Project root:** `~/Development/chimera` · **Full history/evidence:** `game-re-corpora/details/chimera.md` (read on demand) · **Open work:** one `docs/TODO.md`
 
-Docs are flat `docs/<game>.md` (+ `fe3h-modding.md`, `few-modding.md`, `model-import-pipeline.md`, `kt-warriors-engine-survey.md`). Ids: `src/game-id.ts`. Decoders: `src/data/formats/`.
+Docs are flat `docs/<game>.md` (+ `fe3h-modding.md`, `few-modding.md`, `model-import-pipeline.md`, `docs/kt-warriors-engine-survey.md`). Ids: `src/game-id.ts`. Decoders: `src/data/formats/`.
 
 ## Games
 - FE: Three Houses — `fe-threehouses` — tex/mesh+cloth/anim/audio/gamedata/save/DLC outfits solved

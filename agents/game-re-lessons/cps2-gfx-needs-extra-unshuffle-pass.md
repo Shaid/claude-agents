@@ -1,52 +1,54 @@
-# A byte-exact planar tile formula can still render as noise if a hardware-generation-specific deinterleave pass is missing
+# A byte-exact `gfx_layout` can still render as noise if the driver transforms the gfx region first
 
-**When it bites:** you've confirmed a tile/sprite pixel-decode formula
-against a trusted source (a reference emulator's own `gfx_layout`/planar
-decode function, transcribed field-for-field) and correctly assembled the
-container per its own documented ROM-load/interleave scheme, yet rendering
-real data produces uniform, structureless static — not obviously-wrong
-garbage with visible misalignment artifacts, just even, tile-grid-aligned
-noise with no recognizable shapes at all.
+**When it bites:** you transcribed a tile/sprite decode field-for-field
+from a reference emulator's `gfx_layout` and assembled the ROMs per the
+driver's `ROM_LOAD*` macros, yet real data renders as uniform,
+tile-grid-aligned noise (correct tile boundaries, no shapes) or
+nibble-packed garbage, with no misalignment artifacts to chase.
 
-## What went wrong
+## The trap
 
-CPS1 and CPS2 share the exact same 4bpp planar tile pixel format
-(`cps1_layout16x16` in `src/mame/capcom/cps1.cpp`, reused verbatim by
-CPS2's own `GFXDECODE` table) and a superficially-similar mask-ROM
-interleave (`ROM_LOAD64_WORD`, a 4-way 16-bit-word interleave across 4
-chips forming 64-bit-wide reads). Porting *only* those two pieces —
-interleave the 8 CPS2 gfx mask ROMs, then apply the CPS1 planar formula —
-looked complete and produced tile-grid-aligned output (correct dimensions,
-correct-density "blockiness"), but every tile decoded to unstructured
-noise, not art.
+The `gfx_layout` describes the region **as the decoder sees it**, which
+is after any `init_*()` / `DRIVER_INIT` / `*_gfx_decode()` /
+`video_start` code has rewritten it. MAME drivers routinely permute the
+raw region first: a bit shuffle, a recursive block unshuffle, a
+PROM-driven address unscramble. Porting only the shared layout table and
+the load macro misses that whole stage. The tell is
+**structureless-but-grid-aligned** output. That means a missing stage, not
+a wrong bit position inside the formula you already have.
 
-The missing piece: CPS2 (unlike CPS1) applies an **additional, per-2MB-bank
-recursive de-interleave** to the assembled "gfx" region before the planar
-decode ever runs — `cps2_state::unshuffle()` / `cps2_gfx_decode()`
-(`src/mame/capcom/cps2.cpp`), a self-inverse permutation of 8-byte units
-(recursively halve, unshuffle each half, swap the 2nd/3rd quarters),
-applied once per 0x200000-byte bank. It has no analogue in the CPS1 driver
-at all and is easy to miss if you only look at the shared `gfx_layout`
-struct and the (also-shared-looking) `ROM_LOAD64_WORD` macro.
+## Check / fix
 
-Confirmed on D&D: Shadows over Mystara (ddsom): decoding without the
-unshuffle gave uniformly-noisy 16x16 blocks (correct tile boundaries,
-wrong content) across the whole 196,608-tile gfx region; applying the
-unshuffle first, with the *identical* downstream planar-decode code,
-immediately produced clearly recognizable sprite/creature silhouettes.
+Before decoding, read the game's own `ROM_START` → machine config →
+`init_*` chain in the driver and list every function that touches the gfx
+regions before `GFXDECODE` uses them. Apply them in order, then the
+layout. Siblings in the same driver family can differ: one may have an
+init pass and another none. Check each game's init separately, and test
+the transform on/off for each one.
 
-## The fix / the generalizable lesson
+Cheap oracle when you have no reference image: score neighbour-pixel
+equality (smoothness) of the decoded tiles with the candidate transform
+**on vs off**. The "off" score is your null control, and real art scores
+clearly higher.
 
-When two platforms/hardware generations in the same engine family
-(CPS1→CPS2, or any "v2 of a chipset") share a pixel-plane *format* and a
-superficially-matching ROM-load *macro*, don't assume the full pipeline —
-container assembly → pixel decode — transfers unchanged. Check the
-*generation-specific* driver/init code (not just the shared decode table)
-for an extra pass the newer hardware's larger/differently-wired ROMs need
-that the older one didn't — search the driver source near wherever gfx
-decode is invoked (`init_*_video()`, `*_gfx_decode()`, or equivalent) for a
-transform applied to the raw region *before* the shared decode table is
-used. "Structureless, tile-grid-aligned noise" (not obviously-scrambled
-garbage) from an otherwise byte-exact-verified formula is the tell that a
-whole deinterleave *stage* is missing, not that a single offset/bit
-position within the existing formula is wrong.
+## Canonical example
+
+D&D: Shadows over Mystara (CPS2, `kolbold`). CPS2 reuses CPS1's
+`cps1_layout16x16` and a similar `ROM_LOAD64_WORD` interleave, but
+`cps2_state::unshuffle()` (`src/mame/capcom/cps2.cpp`) first applies a
+per-0x200000-bank recursive 8-byte-unit de-interleave that has no CPS1
+analogue. Without it, all 196,608 tiles decoded as grid-aligned noise.
+With it, the identical downstream code gave recognizable sprites.
+
+## Variants
+
+- **Konami `ROM_LOAD32_WORD` (tmnt):** `init_tmnt` applies
+  `chunky_to_planar` (a `bitswap<32>` per little-endian word) to both gfx
+  regions, plus a PROM-driven sprite word-address unscramble. Without
+  them the data reads as nibble-packed garbage. Smoothness was 0.52 with
+  the transform and 0.32 without it (null control). tmnt2 has no such
+  init, so its ROMs decode as loaded. Never carry a sibling's init over,
+  or its absence, without checking.
+
+**History:** 2 instances (ddsom CPS2 unshuffle; tmnt Konami
+chunky_to_planar, 2026-10). Raw logs: `_archive/cps2-gfx-needs-extra-unshuffle-pass.md`.

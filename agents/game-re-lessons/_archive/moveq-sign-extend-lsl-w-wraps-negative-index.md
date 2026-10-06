@@ -56,18 +56,11 @@ label, not just increasingly-large ones after it, when a "boundary" index
 value (`0xff`, `0xfe`, `0xfc`, ...) doesn't resolve to anything sensible
 under unsigned arithmetic.
 
-## Variants
+---
 
-- **No `moveq` at all, and the index is just large:** `d8(An,Dn.w)` /
-  `(d16,PC,Dn.w)` sign-extend the word index whenever its value is
-  `0x8000` or more. A table or map stream read through a `.w` index that
-  passes 32 KB wraps to `base + idx - 0x10000`. A reimplementation that
-  computes `base + idx` unsigned is then correct for the first half of
-  the table and silently wrong for the rest. When an output is "right up
-  to some point", split reads at the `0x8000` index boundary. (2026-10,
-  68k stage-map streamer, caught by diffing against the real routine
-  running in a Musashi harness.)
+## Instance 2026-10-06 (inbox candidate, verbatim; the d8(An,Dn.w) note is the part merged here)
 
-**History:** 2 instances (ddtod CPS2 negative-offset call site; 68k
-stage-map `.w` index past 0x8000, 2026-10). Raw logs:
-`_archive/moveq-sign-extend-lsl-w-wraps-negative-index.md`.
+# A bounded 68k call harness settles tilemap/metatile ordering where alignment search plateaus at ~50%
+
+When it bites: reconstructed stage maps align only about half the cells.
+Lesson: run the game's own init/stream routine in a flat-memory Musashi harness and diff VRAM cells. A 50% plateau meant wrong premises, not wrong offsets: maps stored bottom-up (flip per metatile, not per tile), one attr byte per metatile, two record sizes (17/33 B with collision bytes), row counts from map-to-table gaps. Also 68k `d8(An,Dn.w)` sign-extends the index, which splits reads past 0x8000.
