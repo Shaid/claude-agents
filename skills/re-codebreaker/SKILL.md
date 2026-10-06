@@ -118,6 +118,8 @@ Your final message is consumed by the calling agent. Return:
    `docs/<game>/TODO.md` for the briefed item (status + Evidence pointer, per
    `game-re.md`'s Documentation conventions), pasted verbatim. If the brief's
    ID has no existing row, add one.
+8. **Lessons applied** — per `game-re.md` Report format item 6 (and the
+   credits file written), or "none".
 
 If the problem still won't crack, say what you'd try next with a bigger
 budget — that recommendation feeds the caller's decision to escalate to

@@ -53,6 +53,7 @@ plus one-line indexes (≤ 30 KB, enforced). Everything else is read on demand:
 | `agents/game-re-corpora/details/<project>.md` | evidence behind a specific item | — |
 | `agents/game-re-lessons/INDEX.md` → `<lesson>.md` | before trusting a decode (by category or grep) | ≤ 8 KB per lesson |
 | `agents/game-re-lessons/_archive/` | rarely — verbatim instance logs of condensed lessons | — |
+| `agents/game-re-lessons/USAGE.tsv` | usage reviews — which lessons actually changed what an agent did | append-only |
 | `agents/game-re-method/`, `agents/game-re-tooling/` | the technique / platform at hand | — |
 
 `python3 ~/.claude/skills/re-learn/check.py` validates budgets, index ↔ file
@@ -69,6 +70,11 @@ stale after 90 idle minutes, broken by atomic rename), merges the whole inbox
 into lessons/corpora/method/tooling under the bar (generalizes, was expensive,
 verified), runs `check.py` until clean, commits **only the paths it touched**,
 and moves rejected candidates to `game-re-inbox/rejected/` with the reason.
+Every game-re report ends with **Lessons applied** — lessons that changed what
+the agent did — written as `credits-*.tsv` rows to the inbox; the curator merges
+them into `USAGE.tsv`, and `usage.py` turns credits vs. transcript reads into a
+review list (high-value lessons, triggers that fire without paying off, lessons
+nobody ever opens).
 Pointed at an unfamiliar project (`re-learn: learn from ~/Development/<project>`),
 `re-learn` proposes that project's corpus summary first. `/re-learn-curate`
 drains a backlog by hand.
@@ -131,4 +137,5 @@ git -C ~/.claude revert <hash>                    # reject a bad curation
 ls ~/.claude/agents/game-re-inbox/                # candidates still waiting for curation
 ~/.claude/skills/re-learn-curate/lock.sh status   # who holds the curation lock
 python3 ~/.claude/skills/re-learn/check.py        # budgets + integrity
+python3 ~/.claude/skills/re-learn/usage.py        # credited / read-but-uncredited / never-read lessons
 ```

@@ -451,6 +451,12 @@ End every task with:
    before ending the run.
 5. **Lesson candidates** — the inbox files you wrote (see Learning loop), or
    "none".
+6. **Lessons applied** — each lesson that *changed what you did* this run:
+   `lesson.md` — what it made you do differently (a read that changed nothing
+   doesn't count). Append the same as rows to
+   `~/.claude/agents/game-re-inbox/credits-<YYYYMMDD-HHMMSS>-<project>.tsv`
+   (`mkdir -p` first), one per lesson: `<YYYY-MM-DD><TAB><lesson.md><TAB><project><TAB><note>`.
+   This is how the knowledge base learns which lessons pay off. Or "none".
 
 Cite disassembly as `LABEL` at `file:line`; binary offsets as `file+0xOFFSET`;
 say explicitly whether each offset is file-relative or segment-relative.
@@ -470,6 +476,8 @@ working under a lock.
   Routine tasks that only applied existing knowledge need no harvest.
 - Starting in a project missing from the corpora table: invoke
   `Skill: re-learn` in scan mode ("learn from `<project dir>`") first.
+- Credits (Report format item 6) are the one inbox write you make yourself;
+  they need no harvest and ride along with the next curate.
 - At the end of any run, if `ls ~/.claude/agents/game-re-inbox/*.md` shows
   pending candidates and you didn't just harvest, invoke
   **`Skill: re-learn-curate`** so the backlog doesn't strand.

@@ -33,6 +33,9 @@ A candidate is worth writing only if **all** hold:
    think to check it until it bites.
 3. **It is verified** — grounded in a confirmed finding, not a hypothesis.
 
+Credits ("lesson X changed what I did") are not your job — game-re writes them
+itself from its report (`game-re.md` Report format item 6). Don't duplicate them.
+
 Not candidates: per-game format details, offsets or file tables (they belong
 in the project's `docs/`); unverified hypotheses; another instance of an
 existing lesson that doesn't change what an agent should *do*; `TODO.md`

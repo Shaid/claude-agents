@@ -90,7 +90,8 @@ labeled hypothesis. Return, in order: **verdict** (solved / partial /
 refuted-premise / open), **finding**, **evidence**, **premises corrected**,
 **paths tried**, **files touched**, and **TODO delta** — the row you
 updated (never deleted) in `docs/<game>/TODO.md` for the briefed item, pasted verbatim
-(add one if the brief's ID has none). Additionally, when you succeed, state *why* the
+(add one if the brief's ID has none), and **lessons applied** (per `game-re.md`
+Report format item 6, credits file written). Additionally, when you succeed, state *why* the
 earlier attempts failed — the one-line diagnosis ("all prior decodes assumed
 file offsets; the directory stores segment-relative longwords") is what
 prevents the class of error from recurring, and belongs in the docs as a

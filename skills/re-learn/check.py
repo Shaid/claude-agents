@@ -189,10 +189,32 @@ for path in live:
         if name not in all_known:
             warn(f'{rel(path)}: `{name}` does not match any lesson/corpus/method/tooling file')
 
+# --- usage ledger ------------------------------------------------------------
+USAGE = os.path.join(LESSONS, 'USAGE.tsv')
+if os.path.exists(USAGE):
+    archived_lessons = {os.path.basename(p) for p in glob.glob(os.path.join(LESSONS, '_archive', '*.md'))}
+    usage_lines = read(USAGE).split('\n')
+    if usage_lines[0] != 'date\tlesson\tproject\tnote':
+        err('game-re-lessons/USAGE.tsv: first line must be the header "date<TAB>lesson<TAB>project<TAB>note"')
+    for lineno, line in enumerate(usage_lines[1:], 2):
+        if not line.strip():
+            continue
+        parts = line.split('\t')
+        if len(parts) != 4 or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', parts[0]):
+            err(f'USAGE.tsv:{lineno}: malformed row (need date<TAB>lesson<TAB>project<TAB>note)')
+        elif parts[1] not in lesson_files and parts[1] not in archived_lessons:
+            err(f'USAGE.tsv:{lineno}: credit for unknown lesson {parts[1]} — rewrite it to the '
+                'lesson\'s new name when renaming or merging')
+else:
+    err('game-re-lessons/USAGE.tsv is missing')
+
 # --- inbox and lock ----------------------------------------------------------
 pending = [p for p in glob.glob(os.path.join(INBOX, '*.md'))]
 if pending:
     warn(f'{len(pending)} candidate lesson(s) pending in game-re-inbox/ — run re-learn-curate')
+credit_files = glob.glob(os.path.join(INBOX, 'credits-*.tsv'))
+if credit_files:
+    warn(f'{len(credit_files)} credit file(s) pending in game-re-inbox/ (ingested by the next curate)')
 if os.path.isdir(LOCK):
     import time
     age_min = (time.time() - os.path.getmtime(LOCK)) / 60
