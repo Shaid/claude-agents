@@ -37,5 +37,16 @@ Format specs: `docs/powermonger/amiga/data-structure.md`; 68k findings: `docs/po
 - `BITMAP.PAK`'s `LoadResource(7)` is real but unreachable (MAPDATA #195 is outside the 15×13 level-select grid).
 - FX audio is staged verbatim + JSON sidecar (`public/assets/powermonger/amiga/data/fx.json`), decoded at runtime.
 
-## Lessons sourced from this corpus
-`single-image-in-uniform-corpus-uses-different-planar-layout.md`, `runtime-built-lookup-table-defeats-static-scan.md`, `narrow-width-masks-a-planar-layout-correction.md`, `shared-decoder-behavior-is-a-cross-platform-contract.md`, `cumulative-delta-frames-not-independent-overlays.md`, `self-modifying-code-parameter-passing.md`, `reverify-raw-opcode-before-porting-bitexact-algorithm.md`, `classifier-case-index-direction-unverified-against-handler-semantics.md`, `cpu-overflow-instruction-leaves-destination-unchanged-not-undefined.md`, `guarded-call-confirmed-called-but-precondition-unreachable.md`, `literal-address-census-misses-buffer-family-aliasing.md`, `ui-state-global-census-beats-keyword-search.md`
+## Key lessons
+- `shared-decoder-behavior-is-a-cross-platform-contract.md` — `decodeSpriteBank` is shared with the DOS pipeline
+- `literal-address-census-misses-buffer-family-aliasing.md` — buffer-family accessors need a displacement census
+- `ui-state-global-census-beats-keyword-search.md` — found the mouse/order UI via one UI-state global
+- `guarded-call-confirmed-called-but-precondition-unreachable.md` — `LoadResource(7)` is real but unreachable
+- `runtime-built-lookup-table-defeats-static-scan.md` — palettes/copper list are built at runtime in RUN_PROG
+- `single-image-in-uniform-corpus-uses-different-planar-layout.md` — CAPGRAPH is word-interleaved; other screens plane-major
+- `cumulative-delta-frames-not-independent-overlays.md` — `END.PAK` frames are cumulative delta patches
+- `self-modifying-code-parameter-passing.md` — MAPDATA record index is passed via self-modifying code
+- `reverify-raw-opcode-before-porting-bitexact-algorithm.md` — master RNG LCG prose was wrong; re-read raw opcodes
+- `cpu-overflow-instruction-leaves-destination-unchanged-not-undefined.md` — road height ramp relies on `DIVS.W` overflow leaving destination unchanged
+
+Full list: `details/powermonger.md` § "Lessons sourced from this corpus (full list)".

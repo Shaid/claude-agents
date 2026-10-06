@@ -36,5 +36,16 @@
 - IRA's `;NNNNNN` column is not a file offset once a `.cnf` spans multiple hunks (`file-offsets-vs-segment-relative.md`). Reunion is not primarily SAS/C A4-relative
 - LoadRGB4/LVO hits need A6-provenance tracing (`lvo-byte-pattern-false-positive.md`). An untraced disk region is not proof of filler
 
-## Lessons sourced from this corpus
-`amiga-bb-entry-offset-is-12-not-4.md`, `self-relocating-boot-stub-invalid-past-jmp.md`, `illegal-vector-hijack-anti-debug-desyncs-disasm.md`, `m68k-trace-vector-decrypt-needs-emulate-trace-on.md`, `mistyped-base-constant-underflows-capture-buffer-bounds-check.md`, `lvo-byte-pattern-false-positive.md`, `unrecoverable-base-register-solved-from-single-content-anchor.md`, `relocation-invariant-content-across-copies-proves-placeholder.md`, `engine-family-shared-decoder-not-shared-container.md`, `disc-io-census-blind-to-already-loaded-data-consumer.md`, `cli-script-main-fires-on-import.md`, `no-traced-reader-region-is-not-proof-of-filler.md`, `naive-byte-window-address-scan-crosses-instruction-boundary.md`, `single-disassembler-src-dst-order-trusted-unverified.md`, `file-offsets-vs-segment-relative.md`, `duplicate-asset-trailing-bytes-may-be-executed-code-overlay.md`, `block-chain-walk-stops-at-unknown-sibling-block-magic.md`, `magic-search-must-not-be-wider-than-codes-real-comparison-width.md`, `carry-chain-opcode-census-locates-hand-written-bit-readers.md`, `relocated-base-plus-displacement-hides-call-target.md`
+## Key lessons
+- `cli-script-main-fires-on-import.md` — raw-boot pipeline scripts double-run when imported
+- `file-offsets-vs-segment-relative.md` — IRA `;NNNNNN` column isn't a file offset across hunks
+- `lvo-byte-pattern-false-positive.md` — LoadRGB4/LVO hits need A6-provenance tracing
+- `no-traced-reader-region-is-not-proof-of-filler.md` — untraced disk regions aren't filler — strings-scan first
+- `m68k-trace-vector-decrypt-needs-emulate-trace-on.md` — "Disc Company" protection self-decrypts via the Trace vector
+- `engine-family-shared-decoder-not-shared-container.md` — M2.2 isn't a Mercenary-style vector engine despite Novagen
+- `amiga-bb-entry-offset-is-12-not-4.md` — M2.2 boot block code starts at `0xC`
+- `self-relocating-boot-stub-invalid-past-jmp.md` — boot stubs relocate themselves; disassemble at the copy target
+- `illegal-vector-hijack-anti-debug-desyncs-disasm.md` — protection hijacks the illegal vector, desyncing linear disasm
+- `disc-io-census-blind-to-already-loaded-data-consumer.md` — no load path ≠ no content (`TDIC` track, raw-boot data)
+
+Full list: `details/methanoid.md` § "Lessons sourced from this corpus (full list)".

@@ -38,5 +38,16 @@
 - 3rd Birthday: `pixelFormat` is a bit-depth tag (4/8), not a `GU_PSM_*` enum. Gate both geometry and texture-table reads on `hasConfirmedGeometryLayout`. `eboot.bin` is KIRK-encrypted, so the bone-matrix search is blocked
 - PE2: on Python→JS ports watch `//` (`python-floor-division-port-to-js-silent-fraction.md`). Movie segmentation is heuristic
 
-## Lessons sourced from this corpus
-`validation-sentinel-scoped-to-sub-region-not-whole-array.md`, `quad-uv-array-winding-differs-from-index-array-winding.md`, `one-based-first-index-sum-is-total-minus-one.md`, `canonical-local-rest-frame-tests-rotation-necessity.md`, `golden-angle-sibling-fan-avoids-axis-collision.md`, `genuine-off-by-one-loop-matches-placeholder-record-convention.md`, `fk-distance-preservation-verifies-rotation-decode.md`, `verify-escalation-artifacts-not-just-claims.md`, `length-invariant-blind-to-track-index-misalignment.md`, `statistical-proxy-blind-to-whole-body-visual-defect.md`, `disc-io-census-blind-to-already-loaded-data-consumer.md`, `data-table-stores-prepacked-value-code-census-misses-it.md`, `domain-refuted-by-shape-not-values.md`, `corpus-wide-zero-minimum-plus-contiguous-row-confirms-unsigned-field.md`, `active-flag-plus-runtime-discriminator-means-mutually-exclusive-not-combined.md`, `always-full-run-manifest-merge-accumulates-stale-entries.md`, `opaque-fill-for-unpainted-region-is-a-false-visual-claim.md`, `declared-record-count-is-allocated-capacity-trailing-zero-run-is-padding.md`, `model-signature-field-mistaken-for-magic-constant.md`, `format-doc-prose-may-describe-converted-value-not-raw-field.md`, `tracker-prose-is-not-evidence.md`, `python-floor-division-port-to-js-silent-fraction.md`, `confirmed-generic-mechanism-may-not-apply-to-this-instance.md`, `reference-project-doc-claims-stale-vs-own-current-source.md`, `terminator-scan-must-be-record-aligned.md`, `file-named-dummy-may-hold-real-leftover-content.md`, `stock-sdk-routine-official-docs-outrank-disassembly.md`, `bind-pose-render-blind-to-joints-index-space-bug.md`, `small-sample-probe-undercounts-dominant-subformat.md`, `pixel-format-value-guessed-from-enum-not-confirmed.md`, `discriminant-gated-field-convention-applied-unconditionally.md`, `hardware-register-persistence-explains-sparse-delta-metadata.md`
+## Key lessons
+- `length-invariant-blind-to-track-index-misalignment.md` — numeric skinning oracles missed track-index defects
+- `statistical-proxy-blind-to-whole-body-visual-defect.md` — mirror-pair stats missed whole-body defects; render it
+- `verify-escalation-artifacts-not-just-claims.md` — never trust a claimed visual check — re-render
+- `disc-io-census-blind-to-already-loaded-data-consumer.md` — chunk1/backgrounds had no disc-I/O path; data was resident
+- `data-table-stores-prepacked-value-code-census-misses-it.md` — code-construction censuses missed pre-packed table values
+- `python-floor-division-port-to-js-silent-fraction.md` — PE2 Python→JS ports: watch `//`
+- `genuine-off-by-one-loop-matches-placeholder-record-convention.md` — PE1 `+1` placeholder track is LEADING; bone i uses i+1
+- `pixel-format-value-guessed-from-enum-not-confirmed.md` — 3rd Birthday `pixelFormat` is bit depth, not `GU_PSM_*`
+- `reference-project-doc-claims-stale-vs-own-current-source.md` — PE2 decomp docs lag its own source — re-clone
+- `corpus-wide-zero-minimum-plus-contiguous-row-confirms-unsigned-field.md` — PE1 background tile-scatter deltas are unsigned
+
+Full list: `details/parasiteeve.md` § "Lessons sourced from this corpus (full list)".

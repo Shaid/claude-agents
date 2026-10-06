@@ -14,7 +14,7 @@ Another build of the same design is ground truth you didn't have to derive. It w
 - **Remap worry:** before tracing a remap table, `find()` the source asset's raw bytes in the target and check that a second item sits at the same relative offset. A verbatim copy needs no remap.
 - **Identity:** compare byte-value histogram *percentages* against the sibling's solved resource before guessing dimensions (`tile-grid-dimension-needs-render-not-just-bytecount.md`).
 - **Catalog identity:** when a port regroups N files into M, diff the resource-ID sets instead of filenames.
-- **Sibling game / sibling repo:** run a same-studio decoder unchanged on any tag with overlapping magic naming. Verify each tag family separately, since a shared prefix doesn't guarantee a shared codec. Clone the sibling's RE repo and run its tooling on your bytes. Coverage may be partial, and its docs may be wrong where it says the ASM is truth.
+- **Sibling game / sibling repo:** run a same-studio decoder unchanged on any tag with overlapping magic naming. Verify each tag family separately, since a shared prefix doesn't guarantee a shared codec. Clone the sibling's RE repo and run its tooling on your bytes. Coverage may be partial, and the sibling's own caveat ("docs can be wrong — the ASM is the source of truth") applies to whatever you take from it.
 - **Different container ≠ different internal layout.** Codec and post-decompression layout are separate questions. Try transferring the layout anyway and test it with byte-count and ID-arithmetic predictions.
 - **Offset directory + string pool:** check that the directory values land exactly on regex-found string starts. Then diff the pool *content* across platforms at the same offsets. A mismatch in the directory region alone is expected.
 
@@ -22,7 +22,7 @@ Another build of the same design is ground truth you didn't have to derive. It w
 
 **Variants:**
 - Vengeance of Excalibur (DOS `vex.exe`, LZEXE 0.91): the search found nothing until decompression, then all 3 Amiga tables matched byte-identically.
-- Valkyrie Profile VP1→VP2 (`valkyrie`): VP1's unmodified `SLZ` decoder worked byte-exactly on 4/4 VP2 `SL Z` samples after ~480 parametric LZSS attempts had failed. `SL E` turned out to be a different codec.
+- Valkyrie Profile VP1→VP2 (`valkyrie`): VP1's unmodified `SLZ` decoder worked byte-exactly on 4/4 VP2 `SL Z` samples, while an earlier VP2 session had burned ~480 parametric LZSS attempts (plus zlib/LZMA/`ancient`) on an `SL E` sample — which turned out to be a different codec.
 - Valkyrie Profile PSX vs PSP `Field_master.prx`: a flags-bit-2 census gave the same "5 masks, nothing else" result under both compilers (PSP uses `beql`/`bnel`), and the bit was 100% determined by record position.
 - WIME (`PAMM` IIGS): 40.3% `0x21`/22.0% `0x00` matched Amiga's `MMAP`, predicting the same terrain grid, later confirmed at 99.7%. EGA (3 files) vs VGA (7 files): 110/110 `GAMI` and 19/19 `LMRF` IDs matched.
 - Pool of Radiance (Amiga, `crawl`): Gold Box Explorer's DOS wall-view geometry and `baseBlockId = 10*blockId` transferred exactly despite unrelated containers. Dune (`wyrm`) `command1.hsq`: the directory hit the string starts (638, 647, 655…) and the pool matched DOS from byte 638 on.

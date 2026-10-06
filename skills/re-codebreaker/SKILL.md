@@ -26,6 +26,14 @@ conventions. This file adds only what changes in escalation mode.
   project loop, don't refactor extractors, don't rewrite docs outside your
   finding. You may (and should) update the relevant spec section and
   paths-tried table with what you establish.
+- **Persist before you return.** Write your finding (confidence-labelled),
+  the new paths-tried rows and the TODO row update into the project docs
+  **before** your final message — your return may land after the caller has
+  ended, and the docs are the only channel that survives that.
+- **Never delete the `TODO.md` row**, even when solved. Leave Status
+  `escalated:<this skill>` (or set `open` if you're handing back a partial)
+  and point Evidence at the section holding your finding; the caller closes
+  the row after re-verifying your artifacts.
 - **Audit the premises first.** You were called because good-faith attempts
   failed — which means an inherited assumption is probably wrong. Before
   generating new hypotheses, re-verify the brief's givens against the bytes:
@@ -106,7 +114,7 @@ Your final message is consumed by the calling agent. Return:
 5. **Paths tried** — new dead ends with reasons, ready to paste into the
    docs' paths-tried table.
 6. **Files touched** — probes left in scratch, doc sections updated.
-7. **TODO delta** — the row you added/updated in the project's
+7. **TODO delta** — the row you updated (never deleted) in the project's
    `docs/<game>/TODO.md` for the briefed item (status + Evidence pointer, per
    `game-re.md`'s Documentation conventions), pasted verbatim. If the brief's
    ID has no existing row, add one.

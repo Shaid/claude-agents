@@ -39,5 +39,16 @@ Per-game decoders live in `tools/<game>/`; format docs in `docs/<game>/snes/data
 - Hand-typed test expectations can encode the same wrong model as the code — re-derive from source order (FFVI damage pipeline, FFV VM).
 - Multiple `.sfc`/`.smc` in one `data/` dir: always select by CRC.
 
-## Lessons sourced from this corpus
-adjacent-cache-slot-elimination-identifies-register.md, boot-injection-entry-still-calls-bypassed-blocking-transfer.md, boot-upload-blob-delta-not-driver-wide.md, ca65-label-suffix-address-arithmetic-mx-flag-blind.md, decoder-address-reuse-across-rom-release.md, disassembly-comment-may-invert-its-own-correct-branch.md, escape-code-parameter-bytes-silently-misdecoded.md, fixed-offset-diff-across-builds-hides-pointer-shift.md, known-differences-list-not-exhaustive-without-full-diff.md, localized-signage-baked-into-tile-graphics.md, multi-region-dir-ambiguous-rom-pick.md, parallel-lfo-vcmds-may-clamp-asymmetrically.md, plausible-render-not-semantic-label.md, published-walkthrough-numeric-oracle.md, reader-side-may-still-be-export-target-math.md, reference-tool-parses-runtime-image-not-rom-blob.md, rle-decode-succeeds-on-garbage.md, romhacking-community-tools-first.md, session-persistent-channel-state-has-no-cold-boot-default.md, shared-scratchpad-has-sibling-agent-tooling.md, test-fixture-encodes-same-wrong-model-as-implementation.md, tile-formation-table-not-raster-order.md, variable-width-cpu-operand-width-is-the-instruction-site-mode.md, vm-frame-push-falls-through-not-a-call.md
+## Key lessons
+- `decoder-address-reuse-across-rom-release.md` — US/JP builds: constants pointing into code (bank C0) differ
+- `fixed-offset-diff-across-builds-hides-pointer-shift.md` — resolve US/JP records via their own pointers, not offsets
+- `multi-region-dir-ambiguous-rom-pick.md` — several `.sfc`/`.smc` per `data/` dir — always pick by CRC
+- `session-persistent-channel-state-has-no-cold-boot-default.md` — SPC harness vol/pan stayed zero: no cold-boot default
+- `reference-tool-parses-runtime-image-not-rom-blob.md` — ROM song blobs carry a 2-byte prefix SPC-rip parsers omit
+- `test-fixture-encodes-same-wrong-model-as-implementation.md` — hand-typed FFVI damage/FFV VM expectations encoded the bug
+- `escape-code-parameter-bytes-silently-misdecoded.md` — FFVI `:b`/`:w` control codes consume parameter bytes
+- `variable-width-cpu-operand-width-is-the-instruction-site-mode.md` — 65816 battle math: width comes from REP/SEP at use site
+- `tile-formation-table-not-raster-order.md` — FFVI portraits/monsters need the tile-formation reorder
+- `romhacking-community-tools-first.md` — everything8215 rebuilds are byte-exact oracles — check them first
+
+Full list: `details/ceres.md` § "Lessons sourced from this corpus (full list)".

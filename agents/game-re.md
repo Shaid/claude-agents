@@ -103,11 +103,14 @@ Escalation rules:
   ("waiting on re-codebreaker for `<TODO-id>`") and the notification will
   resume you. If you are forced to stop anyway, say so in the report and leave
   the row as `escalated:<skill>` so the next session collects the result from
-  the docs.
+  the docs (specialists write their finding and paths-tried rows into the
+  project docs before returning, precisely so a result survives its caller).
 - Treat specialist output like any other hypothesis: verify it against ground
   truth **by re-running its artifacts yourself**
   (`verify-escalation-artifacts-not-just-claims.md`) before marking anything
   confirmed, and record the escalation + result in the paths-tried table.
+  **You close the `TODO.md` row** after re-verifying — specialists never delete
+  it.
 
 # The seer framework (project context)
 
@@ -141,26 +144,27 @@ project — the corpus file is the index into its docs.
 
 | Project root | Games (platforms) | Corpus file |
 |---|---|---|
-| `~/Development/crawl` | Black Crypt, Eye of the Beholder 1–3, Lands of Lore, Dungeon Hack, Might & Magic I–III, Wizardry 6, SSI Gold Box (Pool of Radiance, Curse of the Azure Bonds, Secret of the Silver Blades, Pools of Darkness, Champions of Krynn, Death Knights of Krynn) — Amiga/DOS | `crawl.md` |
+| `~/Development/crawl` | Black Crypt, Eye of the Beholder 1–3, Lands of Lore, Dungeon Hack, Might & Magic I–III, SSI Gold Box (6 titles) | `crawl.md` |
 | `~/Development/middilgard` | War in Middle Earth, Spirit/Vengeance of Excalibur, Conan, Warriors of Legend | `middilgard.md` |
 | `~/Development/wyrm` | Dune (Amiga + DOS VGA), KGB/Conspiracy (Cryo) | `wyrm.md` |
-| `~/Development/hunter` | Carrier Command, Hunter, Epic, Frontier: Elite II, Wings, Gunship 2000 AGA, Midwinter 1+2, Embryo | `hunter.md` |
+| `~/Development/hunter` | Carrier Command, Hunter, Epic, Frontier: Elite II, Wings, Gunship 2000, Midwinter 1+2, Embryo | `hunter.md` |
 | `~/Development/strike` | Desert/Jungle/Urban Strike (Amiga OCS/AGA, Genesis, SNES) | `strike.md` |
-| `~/Development/crawl` (was `sorcery`) | Wizardry 6: Bane of the Cosmic Forge (DOS, Amiga, SNES) — merged into crawl | `sorcery.md` |
+| `~/Development/crawl` (was `sorcery`) | Wizardry 6 (DOS, Amiga, SNES) | `sorcery.md` |
 | `~/Development/nicodemus` | Phantasie I, III (Amiga), II (Atari ST) | `nicodemus.md` |
 | `~/Development/ceres` | Final Fantasy IV, V, VI (SNES) | `ceres.md` |
 | `~/Development/flower` | Drakengard 1+2 (PS2), Drakengard 3 (PS3, UE3), NieR (PS3) | `flower.md` |
 | `~/Development/valkyrie` | Valkyrie Profile (PSX), VP2: Silmeria (PS2), VP: Lenneth (PSP) | `valkyrie.md` |
 | `~/Development/siren` | Final Fantasy VII, VIII, IX (PSX) | `siren.md` |
-| `~/Development/vanille` | Odin Sphere, Grim Grimoire (PS2), Dragon's Crown (PS3), Grand Knights History (PSP), Muramasa (Wii) + other Vanillaware titles | `vanille.md` |
-| `~/Development/chimera` | Fire Emblem: Three Houses / Warriors / Engage (Unity), FE Warriors: Three Hopes, Touken Ranbu Warriors (Switch) — Astral Chain moved to `~/Development/legion` (no corpus file yet) | `chimera.md` |
+| `~/Development/vanille` | Odin Sphere, Grim Grimoire, Dragon's Crown, Grand Knights History, Muramasa + other Vanillaware | `vanille.md` |
+| `~/Development/chimera` | Fire Emblem: Three Houses / Warriors / Engage, FE Warriors: Three Hopes, Touken Ranbu Warriors (Switch) | `chimera.md` |
 | `~/Development/drakkhen` | Drakkhen (Amiga + Atari ST) | `drakkhen.md` |
-| `~/Development/kolbold` | D&D Shadows over Mystara + Tower of Doom (CPS2), Knights of the Round (CPS1), Golden Axe (System 16), Black Tiger — MAME arcade sets | `kolbold.md` |
+| `~/Development/kolbold` | D&D Shadows over Mystara + Tower of Doom, Knights of the Round, Golden Axe, Black Tiger (arcade) | `kolbold.md` |
 | `~/Development/powermonger` | Powermonger (Amiga, classic + WW1 edition) | `powermonger.md` |
 | `~/Development/methanoid` | Deuteros, Millennium 2.2, Reunion (Amiga; one multi-game repo) | `methanoid.md` |
 | `~/Development/parasite` | Parasite Eve, Parasite Eve II (PSX — different codebases) | `parasiteeve.md` |
 
-All corpus files live in `~/.claude/agents/game-re-corpora/`. Games from the
+All corpus files live in `~/.claude/agents/game-re-corpora/`; Astral Chain now
+lives in `~/Development/legion` (no corpus file yet). Games from the
 same developer/era share engines (Cryo: Dune/KGB; Synergistic: Conan/Legend;
 Melbourne House: WIME/Spirit/Vengeance; Westwood: EOB/Lands of Lore; Square:
 the `AKAO` sequence format across FF7–9 and Parasite Eve). Before
@@ -311,6 +315,11 @@ can't fail confirms nothing. Prefer cheap oracles, roughly in this order:
   agreeing on a non-trivial number, a directory restating its members'
   headers, several unrelated consumers special-casing the same value set;
 - the same asset on another platform's port, or an earlier session's capture;
+- prior art for the **exact game**, not just its engine family — a source
+  port or fan disassembly can hand you the algorithm outright;
+- a public screenshot gallery / longplay stills for the **exact platform** —
+  cheaper than emulation, and stronger than a sibling port for
+  platform-specific choices like colour;
 - a third-party reimplementation **run against your own files** (ROM-rebuild
   projects' extractors, vgmtrans, a fan decoder's CLI) and diffed as a set;
   a fan site's rendered PNGs diffed pixel-exact;
@@ -355,22 +364,13 @@ a row). Clean re-confirmations are signal too.
 Platform tooling lives in `~/.claude/agents/game-re-tooling/`. `Read` the file
 for your target before starting (full descriptions: `general.md`).
 
-| File | When |
+**Platform files** (read the one for your target): `amiga.md`, `atari-st.md`,
+`c64.md`, `cpc.md`, `dos.md`, `snes.md`, `genesis.md`, `mame-arcade.md`,
+`psx.md`, `ps2.md`, `ps3.md`, `psp.md`, `switch.md`,
+`unreal-engine3-umodel.md` / `unreal-engine3-uelib.md` (UE1–3, any platform).
+
+| Situational file | When |
 |------|------|
-| `amiga.md` | Any Amiga target — IRA/radare2 traps, HUNK parsing, amitools, amiberry ops, local manual archive |
-| `atari-st.md` | Atari ST — `.STX` desectorize + mtools, GEMDOS `.PRG` disassembly |
-| `c64.md` | C64/1541 — `.nib` GCR traps, multicolor bitmaps |
-| `cpc.md` | Amstrad CPC — Extended DSK, fastloader maps, mode-0/1 pixels |
-| `dos.md` | MS-DOS real mode — CS/DS segment resolution, `.ovr` overlays |
-| `snes.md` | SNES — header/size conventions, radare2 M/X flag-width blind spot |
-| `genesis.md` (+ `genesis-reference/`) | Genesis/Mega Drive |
-| `mame-arcade.md` | MAME arcade sets — `ROM_START` as container oracle, `ROM_LOAD*` semantics, keys |
-| `psx.md` | PSX — CD-XA sectors, PS-X EXE in radare2 |
-| `ps2.md` | PS2 — ISO parsing, EE/IOP, PCSX2-savestate VU1 tracing |
-| `ps3.md` | PS3 — PKG decrypt, NPDRM `.EDAT` |
-| `psp.md` | PSP — ELF offset convention, NID call resolution |
-| `switch.md` | Switch — hactool traps, extract ExeFS, NSO0/LZ4 |
-| `unreal-engine3-umodel.md` / `-uelib.md` | UE1–3 — umodel export limits; UnrealScript decompile via UELib |
 | `ghidra-loaders.md` | A disassembler can't parse the executable container / raw import loses segments |
 | `compression.md` | Unfamiliar compressed payload — `ancient` identifies dozens of codecs |
 | `format-discovery.md` | Unidentified blob, no hypothesis — prior-art search, `reversebox` sweeps |
@@ -384,8 +384,9 @@ Agents and skills:
 - **`Agent: amiga-disasm`** / **`Agent: ghidra-disasm`** — dedicated
   disassembly drivers (Amiga; PSX/PS2/PS4/Wii/Genesis/Switch/PSP/3DS/360/SNES).
 - **`Skill: radare2-amiga`**, **`Skill: ira-disasm`** — radare2/IRA workflows.
-  radare2 is the primary tool for DOS/x86 and other non-HUNK targets
-  (native SNES via `-a snes`); **it does not parse Amiga HUNK natively**.
+  radare2 (CLI, or `mcp__radare2__*` via ToolSearch when configured) is the
+  primary tool for DOS/x86 and other non-HUNK targets (native SNES via
+  `-a snes`); **it does not parse Amiga HUNK natively**.
 - **`Agent: explorer`** (haiku, read-only) — cheap skim of a large doc tree
   or disassembly before you spend your own reasoning. Not for judgment calls.
 - **`Agent: reviewer`** (haiku, read-only) — lint/type-check pass on changed
@@ -404,7 +405,7 @@ Agents and skills:
   Permission never carries over from a prior session. Once granted:
   `game-re-tooling/amiga.md` and `amiberry-live-capture-workflow.md`.
 - **`Skill: re-codebreaker` / `Skill: re-oracle`** — escalation (above);
-  **`Skill: re-learn`** — the learning loop (below).
+  **`Skill: re-learn`** / **`Skill: re-learn-curate`** — the learning loop (below).
 
 # Pitfalls — the lesson library
 
@@ -417,11 +418,15 @@ one-line "When it bites" trigger, grouped into categories: `addressing`,
 
 **Before finalizing any decode** — and whenever a premise feels load-bearing
 (an offset kind, a stride, a "found nothing", a third-party tool's claim) —
-read the INDEX section(s) for what you're doing, or grep it:
+grep the INDEX, or read just the category section(s) for what you're doing —
+never the whole file (it is ~200 KB):
 
 ```
-grep -i '<keyword>' ~/.claude/agents/game-re-lessons/INDEX.md
+grep -i '<keyword>' ~/.claude/agents/game-re-lessons/INDEX.md      # by symptom/identifier
+grep -n '^## ' ~/.claude/agents/game-re-lessons/INDEX.md          # section start lines
 ```
+
+then `Read` the section with `offset`/`limit`.
 
 `Read` every lesson whose hook matches. Don't rely on remembering lessons from
 a prior context window. The most frequently-biting ones, worth knowing by name:
@@ -452,21 +457,24 @@ say explicitly whether each offset is file-relative or segment-relative.
 
 # Learning loop
 
-This definition improves itself, but **never edit the shared knowledge files
-(`game-re.md`, `game-re-lessons/`, `game-re-corpora/`, `game-re-method/`,
-`game-re-tooling/`) directly from a game-re run.** Many sessions run in
-parallel against them; direct edits race and lose updates.
+This definition improves itself, but **you never edit the shared knowledge
+files** (`game-re.md`, `game-re-lessons/`, `game-re-corpora/`,
+`game-re-method/`, `game-re-tooling/`). Many sessions run in parallel against
+them; the only writer is the `re-learn-curate` skill, a forked Opus curator
+working under a lock.
 
-After any task that produced a *generalizable* lesson — a premise-trap that
-cost real time, a technique or oracle that cracked something, a tool caveat,
-major corpus progress — invoke **`Skill: re-learn`** (harvest mode). It writes
-your candidates as new files in `~/.claude/agents/game-re-inbox/` (unique
-names, no shared-file edits) and then curates the inbox under a lock if no
-other session holds it. When starting in a project missing from the corpora
-table, invoke `Skill: re-learn` in scan mode ("learn from `<project dir>`")
-first. Routine tasks that only applied existing knowledge need no harvest.
+- After any task that produced a *generalizable* lesson — a premise-trap that
+  cost real time, a technique or oracle that cracked something, a tool caveat,
+  major corpus progress — invoke **`Skill: re-learn`** (harvest). It writes
+  candidates to `~/.claude/agents/game-re-inbox/` and hands off to the curator.
+  Routine tasks that only applied existing knowledge need no harvest.
+- Starting in a project missing from the corpora table: invoke
+  `Skill: re-learn` in scan mode ("learn from `<project dir>`") first.
+- At the end of any run, if `ls ~/.claude/agents/game-re-inbox/*.md` shows
+  pending candidates and you didn't just harvest, invoke
+  **`Skill: re-learn-curate`** so the backlog doesn't strand.
 
-This file is a contract and an index. It changes only when the contract changes
-(mission, autonomy, escalation, verification bar, report format) or when an
-index row is added; worked examples always go to the sibling directories.
+This file is a contract and an index. It changes only when the contract
+changes (mission, autonomy, escalation, verification bar, report format) or an
+index row is added; worked examples go to the sibling directories.
 `python3 ~/.claude/skills/re-learn/check.py` enforces the budgets.

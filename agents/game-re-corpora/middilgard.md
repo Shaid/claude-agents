@@ -41,5 +41,16 @@
 - Format docs hold confirmed info only; every eliminated theory goes in `docs/reference/eliminated/` — check there before retrying.
 - `www/` Astro site is a third rendering surface (`www/scripts/build.mjs`); multiple concurrent agent sessions commit to the same tree.
 
-## Lessons sourced from this corpus
-`partial-resolution-rate-is-noise.md`, `corpus-wide-render-reveals-trigger-scope-not-decode-bug.md`, `adjacent-ramp-table-masks-off-by-one-record-start.md`, `emulator-harness-input-boundary-not-algorithm.md`, `next-record-preview-defeats-stride-detection.md`, `optional-per-record-compression.md`, `tile-grid-dimension-needs-render-not-just-bytecount.md`, `canned-save-state-mirrors-exe-struct.md`, `text-field-periodic-interleave-byte.md`, `undecoded-format-may-be-compressed-with-known-codec.md`, `published-walkthrough-numeric-oracle.md`, `sprite-frame-geometry-reveals-animation-segments.md`, `port-reverses-whole-header-word-not-per-field.md`, `byte-value-collision-defeats-marker-only-guard.md`, `cross-platform-string-delta-reveals-stride-vs-offset.md`, `pre-decompression-guard-uses-decompressed-threshold.md`, `vm-bytecode-embeds-platform-addresses.md`, `traced-calling-convention-unverified-against-corpus.md`, `adjacent-subfield-roles-swapped-despite-correct-bit-boundaries.md`, `addresses-landing-in-reserved-region-means-wrong-boundary-model.md`, `boring-resolved-call-can-be-a-real-noop.md`, `packed-exe-mimics-variable-length-records.md`, `cross-platform-decode-oracles.md`, `bytecode-trace-in-range-result-can-still-be-noise.md`, `constant-valued-field-poisons-shared-wellformedness-gate.md`, `extracted-file-sizes-all-multiples-of-block-payload.md`, `palette-storage-quirks.md`, `serpentine-row-order-mimics-mirrored-rows.md`, `shared-prefixes-at-guessed-stride-fake-animation-frames.md`, `header-shape-ambiguous-pixel-encoding.md`, `byte-scan-tag-byte-vs-wrong-stride.md`, `bitfield-spans-multiple-addressable-bytes.md`, `negative-from-addressing-root-not-shapes.md`, `seeded-prng-stable-not-random.md`, `runtime-only-value-often-static.md`, `audio-byte-order-measurable.md`, `bitfield-residue-unread-past-cited-trace-window.md`, `rle-decode-succeeds-on-garbage.md`, `emulator-harness-pc-range-completion-defeated.md`, `hand-computed-test-fixture-vs-real-run.md`, `producer-fix-inert-without-consumer-audit.md`, `multiple-rendering-surfaces-same-data.md`, `bare-git-commit-sweeps-concurrent-stage.md`
+## Key lessons
+- `port-reverses-whole-header-word-not-per-field.md` — SCEN longwords are byte-reversed whole, per platform
+- `header-shape-ambiguous-pixel-encoding.md` — FRML PackBits-vs-LZSS needs a structural tie-break
+- `packed-exe-mimics-variable-length-records.md` — DOS exes are LZEXE/EXEPACK-packed; unpack before censusing
+- `multiple-rendering-surfaces-same-data.md` — `www/` site is a third rendering surface for the data
+- `bare-git-commit-sweeps-concurrent-stage.md` — concurrent sessions commit here — always use pathspecs
+- `cross-platform-decode-oracles.md` — DOS ports are field-for-field; Amiga tables are search oracles
+- `vm-bytecode-embeds-platform-addresses.md` — cross-platform bytecode search needs 16-bit word swaps
+- `emulator-harness-input-boundary-not-algorithm.md` — Conan DATA-hunk musashi harness: check input bounds first
+- `sprite-frame-geometry-reveals-animation-segments.md` — FRML pose naming via geometry classifier
+- `partial-resolution-rate-is-noise.md` — Vengeance `refId` sat at 51.7% until the byte-reversal fixup
+
+Full list: `details/middilgard.md` § "Lessons sourced from this corpus (full list)".

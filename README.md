@@ -15,10 +15,10 @@ series, Conan, Warriors of Legend, Dune, and KGB.
 
 > This repo lives at `~/.claude` on purpose, with a strict whitelist
 > `.gitignore`: only the files below are tracked — never credentials,
-> sessions, memory, or settings. The reason: the `re-learn` skill lets the
-> agent **edit its own definition in place**, and rooting the repo where the
-> live files live means every self-modification lands in the working tree as
-> a reviewable, revertable diff.
+> sessions, memory, or settings. The reason: the agent **improves its own
+> knowledge base** (via `re-learn` → `re-learn-curate`), and rooting the repo
+> where the live files live means every self-modification lands as a
+> reviewable, revertable `re-learn:` commit.
 
 ## The pieces
 
@@ -27,7 +27,8 @@ series, Conan, Warriors of Legend, Dune, and KGB.
 | `game-re` agent | `agents/game-re.md` | Sonnet | The workhorse: full RE loop, orchestrates everything below |
 | `re-codebreaker` skill | `skills/re-codebreaker/SKILL.md` | Opus | Escalation for hard *bounded* sub-problems (forked specialist) |
 | `re-oracle` skill | `skills/re-oracle/SKILL.md` | Fable | Last-resort escalation: whole-corpus synthesis, contradictions (forked specialist) |
-| `re-learn` skill | `skills/re-learn/SKILL.md` | Opus | The learning loop: distills durable lessons into the knowledge base below |
+| `re-learn` skill | `skills/re-learn/SKILL.md` | Opus | Harvest/scan: writes lesson candidates to the inbox (never edits shared files) |
+| `re-learn-curate` skill | `skills/re-learn-curate/SKILL.md` | Opus (forked) | The only writer: merges the inbox under a lock, runs `check.py`, commits explicit paths |
 
 ### Escalation ladder
 
@@ -62,13 +63,15 @@ sync, and cross-references.
 After any task that produced a generalizable lesson, the agent invokes
 `re-learn` (harvest mode). Because many sessions run in parallel, a harvest
 never edits the shared files: it writes candidates to the git-ignored
-`agents/game-re-inbox/`, then tries to take a lock
-(`agents/.re-learn.lock/`). Whoever holds the lock curates the whole inbox —
-merging into lessons/corpora/method/tooling under the bar (generalizes, was
-expensive, verified), running `check.py` until clean, and committing **only the
-paths it touched**. Pointed at an unfamiliar project
-(`re-learn: learn from ~/Development/<project>`), it absorbs that project's
-solved formats as prior art. `re-learn curate` drains a backlog by hand.
+`agents/game-re-inbox/` and launches `re-learn-curate`, a forked Opus curator.
+The curator takes a lock (`skills/re-learn-curate/lock.sh`: atomic `mkdir`,
+stale after 90 idle minutes, broken by atomic rename), merges the whole inbox
+into lessons/corpora/method/tooling under the bar (generalizes, was expensive,
+verified), runs `check.py` until clean, commits **only the paths it touched**,
+and moves rejected candidates to `game-re-inbox/rejected/` with the reason.
+Pointed at an unfamiliar project (`re-learn: learn from ~/Development/<project>`),
+`re-learn` proposes that project's corpus summary first. `/re-learn-curate`
+drains a backlog by hand.
 
 ## Method (what the agent actually does)
 
@@ -103,6 +106,7 @@ Direct skill invocations also work:
 /re-codebreaker <self-contained brief for one hard sub-problem>
 /re-oracle      <brief including the failed codebreaker attempt>
 /re-learn       learn from ~/Development/wyrm
+/re-learn-curate
 ```
 
 ## Requirements
@@ -125,5 +129,6 @@ git -C ~/.claude log --oneline -- agents skills   # how the brain evolved (re-le
 git -C ~/.claude show <hash>                      # audit one curation pass
 git -C ~/.claude revert <hash>                    # reject a bad curation
 ls ~/.claude/agents/game-re-inbox/                # candidates still waiting for curation
+~/.claude/skills/re-learn-curate/lock.sh status   # who holds the curation lock
 python3 ~/.claude/skills/re-learn/check.py        # budgets + integrity
 ```

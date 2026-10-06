@@ -34,5 +34,16 @@
 - Cached Musashi boot RAM dumps go stale past their checkpoint — take a live capture for later routines.
 - Re-verify an escalation's "leads" (bank `$A8` sprite leads were wrong).
 
-## Lessons sourced from this corpus
-`round-looking-longwords-are-centred-bitmap-rows.md`, `jump-table-noop-means-handled-elsewhere.md`, `shared-scratch-copper-list-palette-patch.md`, `crunched-size-mistaken-for-decrunched-size-invariant-mismatch.md`, `canonical-field-offsets-before-custom-header.md`, `autocorrelation-period-is-the-scanline-stride.md`, `header-shape-ambiguous-pixel-encoding.md`, `self-referential-recipe-ghost-match-nested-in-real-match.md`, `cached-runtime-image-stale-past-boot-checkpoint.md`, `hunk-wraps-non-code-data.md`, `shared-header-template-cross-resource-false-positive.md`, `shared-tool-session-clobbered-by-fork.md`, `r2-snes-flag-width-blind.md`, `narrow-opcode-form-census-false-negative.md`, `legible-text-render-weak-palette-oracle.md`, `verify-escalation-artifacts-not-just-claims.md`
+## Key lessons
+- `r2-snes-flag-width-blind.md` — wrong M/X state in bank `$A8` faked "no resource table"
+- `narrow-opcode-form-census-false-negative.md` — census both direct-page and absolute hardware-register forms
+- `crunched-size-mistaken-for-decrunched-size-invariant-mismatch.md` — byte-consumption invariants must use the decrunched size
+- `hunk-wraps-non-code-data.md` — Jungle Strike data is HUNK-wrapped; RELOC32 marks pointer tables
+- `cached-runtime-image-stale-past-boot-checkpoint.md` — cached Musashi RAM dumps go stale past their checkpoint
+- `verify-escalation-artifacts-not-just-claims.md` — escalation's bank `$A8` sprite leads were wrong
+- `header-shape-ambiguous-pixel-encoding.md` — Urban Strike SNES stores chunky 4bpp; planar looks coherent
+- `shared-scratch-copper-list-palette-patch.md` — Jungle Strike AGA screens patch a shared scratch copper list
+- `legible-text-render-weak-palette-oracle.md` — legible text screens don't prove the palette chain
+- `shared-tool-session-clobbered-by-fork.md` — forks/sibling sessions can clobber the shared r2 session
+
+Full list: `details/strike.md` § "Lessons sourced from this corpus (full list)".

@@ -18,12 +18,15 @@ METHOD = os.path.join(ROOT, 'game-re-method')
 TOOLING = os.path.join(ROOT, 'game-re-tooling')
 INBOX = os.path.join(ROOT, 'game-re-inbox')
 SKILLS = [os.path.expanduser(f'~/.claude/skills/{s}/SKILL.md')
-          for s in ('re-learn', 're-codebreaker', 're-oracle')]
+          for s in ('re-learn', 're-learn-curate', 're-codebreaker', 're-oracle')]
+LOCK = os.path.join(ROOT, '.re-learn.lock')
 
 AGENT_MAX = 30_000          # always-loaded system prompt (target ~25 KB)
 LESSON_MAX = 8_000          # one lesson file
 HOOK_MAX = 450              # one INDEX.md row's trigger text
 CORPUS_MAX = 8_000          # mandatory first read per project
+KEY_LESSONS_MAX = 10        # lesson filenames listed in a corpus summary
+LOCK_STALE_MIN = 90         # matches skills/re-learn-curate/lock.sh
 REFERENCE_WARN = 40_000     # on-demand method/tooling files
 CATEGORIES = ['addressing', 'disassembly', 'containers', 'compression-crypto',
               'graphics', '3d-animation', 'audio', 'text', 'logic-scripts',
@@ -108,8 +111,12 @@ else:
 
 # --- corpora -----------------------------------------------------------------
 agent_text = read(AGENT)
-table_corpora = set(re.findall(r'^\| `~/Development/[^|]*\|.*\| `([a-z0-9-]+\.md)` \|\s*$',
-                               agent_text, re.M))
+corpus_rows = re.findall(r'^\| `(~?/[^`]+)`[^|]*\|.*\| `([a-z0-9-]+\.md)` \|\s*$', agent_text, re.M)
+table_corpora = {name for _, name in corpus_rows}
+for root, name in corpus_rows:
+    if not os.path.isdir(os.path.expanduser(root)):
+        warn(f'corpora row for {name}: project root {root} does not exist on this machine '
+             '(moved, merged, or on an unmounted drive?)')
 corpus_files = {os.path.basename(p) for p in glob.glob(os.path.join(CORPORA, '*.md'))}
 for name in sorted(table_corpora - corpus_files):
     err(f'game-re.md corpora table names {name}, which does not exist in game-re-corpora/')
@@ -120,9 +127,29 @@ for name in sorted(corpus_files):
     if size(path) > CORPUS_MAX:
         err(f'corpus {name}: {size(path):,} B > {CORPUS_MAX:,} B — it is a mandatory first '
             'read; narrative goes to game-re-corpora/details/')
+    lessons_cited = re.findall(r'(?<![\w/.-])([a-z0-9][a-z0-9-]*\.md)\b', read(path))
+    lessons_cited = [n for n in dict.fromkeys(lessons_cited) if n in lesson_files]
+    if len(lessons_cited) > KEY_LESSONS_MAX:
+        err(f'corpus {name}: cites {len(lessons_cited)} lessons > {KEY_LESSONS_MAX} — keep the key '
+            'ones; the full sourced list belongs in details/')
 for path in glob.glob(os.path.join(CORPORA, 'details', '*.md')):
     if os.path.basename(path) not in corpus_files:
         warn(f'{rel(path)} has no matching summary in game-re-corpora/')
+
+# --- tooling map: bare filenames in game-re.md's Tooling map must exist -----
+m = re.search(r'^# Tooling map\n(.*?)^# ', agent_text, re.M | re.S)
+if m:
+    tooling_files = {os.path.basename(p) for p in glob.glob(os.path.join(TOOLING, '*'))}
+    for name in set(re.findall(r'`([a-z0-9][a-z0-9-]*\.md)`', m.group(1))):
+        if name not in tooling_files and name not in lesson_files:
+            err(f'game-re.md Tooling map: {name} is not a file in game-re-tooling/')
+else:
+    err('game-re.md has no "# Tooling map" section')
+
+# --- archive orphans ---------------------------------------------------------
+for path in glob.glob(os.path.join(LESSONS, '_archive', '*.md')):
+    if os.path.basename(path) not in lesson_files:
+        warn(f'{rel(path)} has no live lesson of the same name (renamed or merged?)')
 
 # --- reference files ---------------------------------------------------------
 for path in sorted(glob.glob(os.path.join(METHOD, '*.md')) + glob.glob(os.path.join(TOOLING, '*.md'))):
@@ -154,15 +181,23 @@ for path in live:
     for name in set(re.findall(r'_archive/([a-z0-9-]+\.md)', text)):
         if name not in archived:
             err(f'{rel(path)}: reference to missing _archive/{name}')
-    # Bare backticked lesson-shaped slugs (4+ hyphens) that resolve nowhere.
-    for name in set(re.findall(r'`([a-z0-9]+(?:-[a-z0-9]+){4,}\.md)`', text)):
+    for name in set(re.findall(r'(?<![\w/.-])details/([a-z0-9-]+\.md)', text)):
+        if not os.path.exists(os.path.join(CORPORA, 'details', name)):
+            err(f'{rel(path)}: reference to missing game-re-corpora/details/{name}')
+    # Bare backticked lesson-shaped slugs (3+ hyphens) that resolve nowhere.
+    for name in set(re.findall(r'`([a-z0-9]+(?:-[a-z0-9]+){3,}\.md)`', text)):
         if name not in all_known:
             warn(f'{rel(path)}: `{name}` does not match any lesson/corpus/method/tooling file')
 
-# --- inbox -------------------------------------------------------------------
+# --- inbox and lock ----------------------------------------------------------
 pending = [p for p in glob.glob(os.path.join(INBOX, '*.md'))]
 if pending:
-    warn(f'{len(pending)} candidate lesson(s) pending in game-re-inbox/ — run re-learn curate')
+    warn(f'{len(pending)} candidate lesson(s) pending in game-re-inbox/ — run re-learn-curate')
+if os.path.isdir(LOCK):
+    import time
+    age_min = (time.time() - os.path.getmtime(LOCK)) / 60
+    if age_min > LOCK_STALE_MIN:
+        warn(f'curation lock is {age_min:.0f} min old (stale; lock.sh acquire will break it)')
 
 # --- report ------------------------------------------------------------------
 quiet = '--quiet' in sys.argv

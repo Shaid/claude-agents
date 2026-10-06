@@ -290,3 +290,6 @@ an escalation's own "still open, try these leads" pointers aren't
 guaranteed correct and need re-verifying, same spirit as
 `verify-escalation-artifacts-not-just-claims.md`. Sprite tile-graphics
 data and the shadow-OAM populate logic remain open.
+
+## Lessons sourced from this corpus (full list)
+`round-looking-longwords-are-centred-bitmap-rows.md`, `jump-table-noop-means-handled-elsewhere.md`, `shared-scratch-copper-list-palette-patch.md`, `crunched-size-mistaken-for-decrunched-size-invariant-mismatch.md`, `canonical-field-offsets-before-custom-header.md`, `autocorrelation-period-is-the-scanline-stride.md`, `header-shape-ambiguous-pixel-encoding.md`, `self-referential-recipe-ghost-match-nested-in-real-match.md`, `cached-runtime-image-stale-past-boot-checkpoint.md`, `hunk-wraps-non-code-data.md`, `shared-header-template-cross-resource-false-positive.md`, `shared-tool-session-clobbered-by-fork.md`, `r2-snes-flag-width-blind.md`, `narrow-opcode-form-census-false-negative.md`, `legible-text-render-weak-palette-oracle.md`, `verify-escalation-artifacts-not-just-claims.md`

@@ -31,5 +31,16 @@
 - SNES: file offset ≥ `0x8000` is not bank `$00` (bank-rollover, `game-re-tooling/snes.md`); the `[tag][id]` "maze" region was really spell-animation tilemap words.
 - A dead-ended dispatcher trace → census the parent function's full sibling calls (`sibling-functions-outside-callgraph-scope.md`).
 
-## Lessons sourced from this corpus
-`endian-swap-needs-matching-field-width.md`, `implicit-cumulative-directory-offsets.md`, `byte-scan-tag-byte-vs-wrong-stride.md`, `string-scan-crosses-structural-boundary.md`, `header-shape-ambiguous-pixel-encoding.md`, `planar-plane-padding-vs-tight-stride.md`, `verify-escalation-artifacts-not-just-claims.md`, `compressed-stream-start-offset.md`, `sibling-functions-outside-callgraph-scope.md`, `domain-refuted-by-shape-not-values.md`, `committed-ira-asm-silent-coverage-gap.md`, `published-walkthrough-numeric-oracle.md`, `reserved-slot-zero-shifts-extractor-index.md`, `indexed-table-base-below-valid-rom-window.md`, `nearest-preceding-immediate-is-not-dataflow.md`, `autocorrelation-period-is-the-scanline-stride.md`, `tilemap-word-assets-carry-own-palette-field.md`, `addressing-mode-operand-hides-implicit-index-offset.md`
+## Key lessons
+- `committed-ira-asm-silent-coverage-gap.md` — grep `Bane.asm` first, but `.cnf` gaps hid code before
+- `sibling-functions-outside-callgraph-scope.md` — dead-ended dispatcher traces: census parent's sibling calls
+- `published-walkthrough-numeric-oracle.md` — Zimlab bestiary is the monster-stat numeric oracle
+- `endian-swap-needs-matching-field-width.md` — DOS = Amiga layout with every multi-byte field swapped
+- `implicit-cumulative-directory-offsets.md` — DOS `mazedata.ega` directory drops offsets; use cumulative sum
+- `planar-plane-padding-vs-tight-stride.md` — Amiga `.EGA` planes each padded to 8192 B
+- `byte-scan-tag-byte-vs-wrong-stride.md` — SNES `[tag][id]` "maze" region was spell-animation tilemap words
+- `tilemap-word-assets-carry-own-palette-field.md` — SNES tilemap-word banks carry their own palette field
+- `indexed-table-base-below-valid-rom-window.md` — SNES long-address censuses: table bases can sit below ROM window
+- `verify-escalation-artifacts-not-just-claims.md` — escalation verdicts here needed artifact re-checks
+
+Full list: `details/sorcery.md` § "Lessons sourced from this corpus (full list)".

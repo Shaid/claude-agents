@@ -6,7 +6,7 @@
 - Black Crypt (Amiga; DOS demo) — formats solved; DOS full-game restoration Phases 1B-4 open
 - Might & Magic I (DOS EGA) — maze/gfx/tables/misc solved; `.OVR` code semantics open
 - Might & Magic II/III (Amiga+DOS) — not summarized in details; see `docs/mm2/`, `docs/mm3/`
-- Wizardry 6 (Amiga/DOS EGA/SNES) — merged from old `sorcery` repo; see `docs/wizardry6/`
+- Wizardry 6 (Amiga/DOS EGA/SNES) — merged from old `sorcery` repo; see `docs/wizardry6/`; corpus summary is `game-re-corpora/sorcery.md`
 - EOB1/EOB2/Lands of Lore (DOS VGA; EOB1+EOB2 Amiga) — formats confirmed; mostly pipeline wiring left
 - Eye of the Beholder III (DOS) — AESOP/16; 265/312 bitmaps coloured, rest open
 - Dungeon Hack (DOS) — AESOP/16, source-verified; per-sprite palette choice open
@@ -52,5 +52,16 @@
 - ALIS: find each script's own `cswitch` value set, then scan the grid. Never reuse another script's test position
 - MM page-0 wall codes are 2=door, 3=torch (earlier prose had them swapped). Overland code 3 is border
 
-## Lessons sourced from this corpus
-`narrow-opcode-form-census-false-negative.md`, `unbounded-appended-data-boundary.md`, `fixed-stride-record-count-unverified.md`, `generic-bucket-hides-real-content.md`, `hypothesis-space-flip-before-per-value-table.md`, `cross-platform-decode-oracles.md`, `script-files-may-be-native-code-bound-to-fixed-memory-map.md`, `romhacking-community-tools-first.md`, `nested-header-same-named-size-field.md`, `format-field-width-unexercised-by-first-corpus.md`, `classifier-clean-corpus-not-proof-for-sibling-game.md`, `palette-storage-quirks.md`, `oversized-flat-file-may-be-disc-image.md`, `record-stride-guess-vs-recount-fields.md`, `platform-port-swaps-adjacent-header-fields.md`, `plausible-filename-hypothesis-unchecked-against-source.md`, `endian-swap-needs-matching-field-width.md`, `port-wide-byte-order-convention-not-uniform-across-formats.md`, `familiar-extension-not-proof-of-standard-format.md`, `flags-field-correlation-false-lead-vs-declared-size-check.md`, `identical-nested-header-across-varying-allocations-is-inert-boilerplate.md`, `false-positive-bytecode-hit-without-cfg-reachability.md`, `uniform-degenerate-hit-value-signals-wrong-decode-config.md`, `individually-failed-fixes-may-combine-cleanly.md`, `tile-bank-index-zero-not-universally-a-placeholder.md`, `header-field-role-not-transitive-across-sibling-format.md`, `locally-indexed-substructures.md`, `lvo-byte-pattern-false-positive.md`, `script-operands-overridden-by-exe-hardcoded-table.md`, `amiga-overlay-segment-defeats-resident-only-trace.md`, `hypothesis-tested-with-mismatched-input-looks-refuted.md`, `undefined-nan-defeats-decrement-loop-termination.md`, `erasable-syntax-only-rejects-parameter-properties.md`, `sequel-shares-codec-family-name-not-byte-grammar.md`, `decompressor-port-loop-condition-iteration-shift.md`
+## Key lessons
+- `familiar-extension-not-proof-of-standard-format.md` — same extension, different format across titles here
+- `sequel-shares-codec-family-name-not-byte-grammar.md` — DM2 `IMGx`, EOB1/EOB2 `.EGA`: same name, different grammar
+- `port-wide-byte-order-convention-not-uniform-across-formats.md` — EOB2 Amiga `.VMP` is LE while EOB1 Amiga is BE
+- `false-positive-bytecode-hit-without-cfg-reachability.md` — Gold Box ECL: use the CFG walker, not linear scans
+- `uniform-degenerate-hit-value-signals-wrong-decode-config.md` — uniform `{127,127,127}` ECL results meant the wrong config
+- `script-operands-overridden-by-exe-hardcoded-table.md` — Treasures wallsets come from an exe-hardcoded table
+- `amiga-overlay-segment-defeats-resident-only-trace.md` — Gold Box Amiga exes need `HUNK_OVERLAY` scanning
+- `hypothesis-tested-with-mismatched-input-looks-refuted.md` — ALIS: never reuse another script's test position
+- `cross-platform-decode-oracles.md` — ScummVM/AESOP/Gold Box sources are byte-exact oracles here
+- `format-field-width-unexercised-by-first-corpus.md` — many sibling titles reuse decoders; larger files break widths
+
+Full list: `details/crawl.md` § "Lessons sourced from this corpus (full list)".

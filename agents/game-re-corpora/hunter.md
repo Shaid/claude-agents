@@ -43,5 +43,16 @@ Registered viewer ids (`src/game-id.ts`): `hunter`, `carrier-command`, `epic`, `
 - Byte-count invariants don't prove copy semantics (Wings codec had 2 bugs behind 352/352 length matches).
 - New games must be registered in `src/game-id.ts` + `tools/shared/game-config.ts` (Frontier sat unregistered).
 
-## Lessons sourced from this corpus
-amiberry-live-capture-workflow.md, bootstrap-catalog-boundary-not-content-boundary.md, byte-shape-classifier-needs-entropy-gate.md, committed-ira-asm-silent-coverage-gap.md, confirmed-call-target-off-instruction-boundary.md, crack-redirects-io-to-resident-loader-stub.md, cross-platform-decode-oracles.md, decompressor-port-loop-condition-iteration-shift.md, familiar-extension-not-proof-of-standard-format.md, forced-code-range-address-comments-unreliable-past-boundary.md, high-entropy-trivial-cipher.md, ira-label-name-is-not-a-literal-address.md, jump-table-longword-entries-misdisassembled-as-branches.md, leading-header-equal-to-field-offset-masks-record-start.md, length-invariant-blind-to-copy-semantics.md, loop-reentry-label-decides-reuse-vs-refetch-subcase.md, narrow-opcode-form-census-false-negative.md, palette-storage-quirks.md, patterned-fill-defeats-naive-entropy-scan.md, resume-entry-citation-drops-setup-arithmetic.md, reversed-text-fragment-anti-strings-trick.md, second-record-type-shifts-primary-counts.md, self-consistent-chain-wrong-unit.md, sibling-field-values-alias-in-dominant-case.md, static-xref-misleads.md, trailer-offset-locates-real-header.md, trampoline-role-guessed-not-resolved.md, websearch-cited-repo-may-not-exist.md, whdload-slave-no-format-info.md
+## Key lessons
+- `amiberry-live-capture-workflow.md` — live capture needs approval; breakpoints kill the IPC socket
+- `cross-platform-decode-oracles.md` — Hunter Amiga↔ST share load base; anchor-match one from other
+- `forced-code-range-address-comments-unreliable-past-boundary.md` — IRA `.cnf` CODE ranges: `ORG+offset` invalid past hunk0
+- `ira-label-name-is-not-a-literal-address.md` — IRA label suffixes are not literal addresses
+- `committed-ira-asm-silent-coverage-gap.md` — committed `.asm` grep may miss unclassified code
+- `length-invariant-blind-to-copy-semantics.md` — Wings codec had 2 bugs behind 352/352 length matches
+- `crack-redirects-io-to-resident-loader-stub.md` — Hunter ST cracked compilation: trust the file-descriptor table, not sniffing
+- `high-entropy-trivial-cipher.md` — Embryo XOR header and FE2 save cipher looked like compression
+- `trailer-offset-locates-real-header.md` — Wings `.BOLT` directory is located via a trailer pointer
+- `static-xref-misleads.md` — no symbols on these exes; xrefs and jump tables mislead
+
+Full list: `details/hunter.md` § "Lessons sourced from this corpus (full list)".

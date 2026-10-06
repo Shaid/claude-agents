@@ -37,5 +37,16 @@ Bare doc names below are in `docs/phantasie/`.
 - Padding filler byte = `contentLength mod 128` (58/58 files) — gives true read lengths.
 - `www/` pages drift from raw docs; update both when a finding changes.
 
-## Lessons sourced from this corpus
-`romhacking-community-tools-first.md`, `header-shape-ambiguous-pixel-encoding.md`, `save-file-not-asset.md`, `reference-tool-incompleteness-mistaken-for-game-ambiguity.md`, `helper-name-guess-vs-instruction-shape.md`, `hunk-data-shorter-than-declared-is-merged-bss.md`, `cross-stat-correlation-refutes-index-hypothesis.md`, `sparse-table-creates-spurious-multibyte-field.md`, `scanned-manual-paraphrase-needs-reverify-and-diff.md`, `buffer-offset-arithmetic-confirms-partial-image-placement.md`, `tile-grid-dimension-needs-render-not-just-bytecount.md`, `oversized-file-may-be-concatenated-sibling-prefixes.md`, `decomposable-data-byte-may-have-no-lookup-table.md`, `padded-file-tail-describes-padding-not-content.md`, `value-space-disjoint-refutes-same-kind-table.md`, `new-size-constant-is-a-cross-item-join-key.md`, `filename-template-string-may-have-a-second-live-copy.md`, `embedded-palette-not-the-installed-palette.md`, `negative-from-addressing-root-not-shapes.md`, `doc-blocker-cites-wrong-buffer.md`, `curated-site-page-drifts-from-corrected-raw-docs.md`
+## Key lessons
+- `romhacking-community-tools-first.md` — P2 offsets transfer verbatim; P3 Amiga is a different binary
+- `hunk-data-shorter-than-declared-is-merged-bss.md` — P3 hunk tracing: DATA hunk shorter than declared
+- `save-file-not-asset.md` — `out*.dat` is live save state; `maps.int` is the master
+- `padded-file-tail-describes-padding-not-content.md` — filler byte = `contentLength mod 128`; tails describe padding
+- `curated-site-page-drifts-from-corrected-raw-docs.md` — `www/` pages drift from raw docs — update both
+- `embedded-palette-not-the-installed-palette.md` — P3: only `heros.cmp` palette is installed for all banks
+- `reference-tool-incompleteness-mistaken-for-game-ambiguity.md` — fan C# viewer is the main oracle; its gaps aren't the game's
+- `scanned-manual-paraphrase-needs-reverify-and-diff.md` — P3 manual has no text layer — diff, don't paraphrase
+- `tile-grid-dimension-needs-render-not-just-bytecount.md` — map/plane grids: byte counts admit several dimensions
+- `negative-from-addressing-root-not-shapes.md` — zero-hit "no consumer" claims need addressing-root search
+
+Full list: `details/nicodemus.md` § "Lessons sourced from this corpus (full list)".

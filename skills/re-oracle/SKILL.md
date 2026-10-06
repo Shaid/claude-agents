@@ -24,6 +24,14 @@ pitfalls, conventions. This file adds only what changes at this tier.
   project loop, refactor extractors, or rewrite docs outside your finding. Do
   update the relevant spec section and paths-tried table with what you
   establish.
+- **Persist before you return.** Write your finding (confidence-labelled),
+  the new paths-tried rows and the TODO row update into the project docs
+  **before** your final message — your return may land after the caller has
+  ended, and the docs are the only channel that survives that.
+- **Never delete the `TODO.md` row**, even when solved. Leave Status
+  `escalated:<this skill>` (or set `open` if you're handing back a partial)
+  and point Evidence at the section holding your finding; the caller closes
+  the row after re-verifying your artifacts.
 - **Audit the premises first.** Re-verify the brief's givens against the bytes
   (stream start, record size, offsets and their kind, palette, "known"
   dimensions) before generating new hypotheses — see the `addressing` and
@@ -81,7 +89,7 @@ Identical to `re-codebreaker`: ground truth, quantified, or an honestly
 labeled hypothesis. Return, in order: **verdict** (solved / partial /
 refuted-premise / open), **finding**, **evidence**, **premises corrected**,
 **paths tried**, **files touched**, and **TODO delta** — the row you
-added/updated in `docs/<game>/TODO.md` for the briefed item, pasted verbatim
+updated (never deleted) in `docs/<game>/TODO.md` for the briefed item, pasted verbatim
 (add one if the brief's ID has none). Additionally, when you succeed, state *why* the
 earlier attempts failed — the one-line diagnosis ("all prior decodes assumed
 file offsets; the directory stores segment-relative longwords") is what

@@ -614,3 +614,6 @@ open/unresolved, when the raw `docs/phantasie/data-tables.md` had already
 resolved both in a prior session (§4.2, §6.4) — the public site simply
 hadn't been updated to match. See the new
 `curated-site-page-drifts-from-corrected-raw-docs.md` lesson.
+
+## Lessons sourced from this corpus (full list)
+`romhacking-community-tools-first.md`, `header-shape-ambiguous-pixel-encoding.md`, `save-file-not-asset.md`, `reference-tool-incompleteness-mistaken-for-game-ambiguity.md`, `helper-name-guess-vs-instruction-shape.md`, `hunk-data-shorter-than-declared-is-merged-bss.md`, `cross-stat-correlation-refutes-index-hypothesis.md`, `sparse-table-creates-spurious-multibyte-field.md`, `scanned-manual-paraphrase-needs-reverify-and-diff.md`, `buffer-offset-arithmetic-confirms-partial-image-placement.md`, `tile-grid-dimension-needs-render-not-just-bytecount.md`, `oversized-file-may-be-concatenated-sibling-prefixes.md`, `decomposable-data-byte-may-have-no-lookup-table.md`, `padded-file-tail-describes-padding-not-content.md`, `value-space-disjoint-refutes-same-kind-table.md`, `new-size-constant-is-a-cross-item-join-key.md`, `filename-template-string-may-have-a-second-live-copy.md`, `embedded-palette-not-the-installed-palette.md`, `negative-from-addressing-root-not-shapes.md`, `doc-blocker-cites-wrong-buffer.md`, `curated-site-page-drifts-from-corrected-raw-docs.md`

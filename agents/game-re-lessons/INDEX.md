@@ -8,7 +8,7 @@ Categories: [`addressing`](#addressing) · [`disassembly`](#disassembly) · [`co
 
 ## addressing
 
-_Addresses, offsets, pointers, relocation_ — 42 lessons
+_Addresses, offsets, pointers, relocation_
 
 | File | When it bites |
 |------|---------------|
@@ -47,7 +47,7 @@ _Addresses, offsets, pointers, relocation_ — 42 lessons
 | `self-relative-offset-ambiguity-resolved-by-corpus-vote.md` | A "self-relative offset" field's exact base is ambiguous between two plausible readings and no disassembly/reference source is available to settle it directly |
 | `self-relative-offset-needs-cpp-arithmetic-not-prose.md` | Applying a "self-relative offset" struct convention from a reference tool's header/prose notes alone, especially when output looks plausible but strings come out truncated from the front |
 | `shared-load-base-plus-scrollback-transcription-misattributes-address.md` | Writing verify-script instruction-address checks from memory of an earlier scrollback dump, on a target where many separately-compiled units (per-room/per-level overlays, bank-switched code) all load at the SAME fixed base address — especially after probing several different units in a row; a verify-script `[FAIL]` here is a real, expected transcription-error signal, not a sign the underlying finding is wrong |
-| `spawner-install-literal-outranks-backscan-prologue.md` | A handler/vtable function start pinned by back-scanning from a call site to a prologue-looking instruction or nearest preceding jr $ra, or a census for that address returned ZERO hits — find the spawner's literal address-load-then-store into the handler slot; forward-verify candidates; buckets may span into the next function. |
+| `spawner-install-literal-outranks-backscan-prologue.md` | A handler/vtable function start pinned by back-scanning from a call site to a prologue-looking instruction or nearest preceding `jr $ra`, bucketing many addresses by nearest preceding prologue, or a census for that address returned ZERO hits — find the spawner's literal address-load-then-store into the handler slot instead. |
 | `sub-overlay-base-is-parent-base-plus-size.md` | Whole-corpus writer/caller census is empty across every cached top-level overlay and the hypothesis is 'an overlay not yet extracted' — try knownOverlayBase + knownOverlaySize for each confirmed overlay as a base; also a sub-module given a base inherited from a loader convention it never used, so its jal/j targets misread. |
 | `table-reference-address-is-a-small-fixed-offset-alias.md` | An absolute/PC-relative reference scan for a documented table's own start address returns zero hits despite a known/suspected consumer, especially when the table's record format has an always-zero leading or trailing sub-field |
 | `two-linked-images-one-hunk-module-relative-addresses.md` | A string pool or table looks unreferenced after several different reference scans (LEA/PEA, all modes, branch targets, reloc table, raw longwords) AND the binary has many absolute-long JSR/JMP operands outside the reloc table holding implausibly small values (JSR $0000008C) — module-relative addresses from two linked images in one hunk. |
@@ -57,7 +57,7 @@ _Addresses, offsets, pointers, relocation_ — 42 lessons
 
 ## disassembly
 
-_Tracing code: call graphs, xrefs, dispatch, CPU state, ISA quirks_ — 103 lessons
+_Tracing code: call graphs, xrefs, dispatch, CPU state, ISA quirks_
 
 | File | When it bites |
 |------|---------------|
@@ -167,7 +167,7 @@ _Tracing code: call graphs, xrefs, dispatch, CPU state, ISA quirks_ — 103 less
 
 ## containers
 
-_Archives, directories, filesystems, records, strides, headers, field widths_ — 132 lessons
+_Archives, directories, filesystems, records, strides, headers, field widths_
 
 | File | When it bites |
 |------|---------------|
@@ -306,7 +306,7 @@ _Archives, directories, filesystems, records, strides, headers, field widths_ �
 
 ## compression-crypto
 
-_Codecs, decompressors, ciphers, checksums_ — 31 lessons
+_Codecs, decompressors, ciphers, checksums_
 
 | File | When it bites |
 |------|---------------|
@@ -344,7 +344,7 @@ _Codecs, decompressors, ciphers, checksums_ — 31 lessons
 
 ## graphics
 
-_Pixels, bitplanes, palettes, tiles, sprites, textures_ — 61 lessons
+_Pixels, bitplanes, palettes, tiles, sprites, textures_
 
 | File | When it bites |
 |------|---------------|
@@ -412,7 +412,7 @@ _Pixels, bitplanes, palettes, tiles, sprites, textures_ — 61 lessons
 
 ## 3d-animation
 
-_Meshes, skeletons, animation, transforms, glTF_ — 31 lessons
+_Meshes, skeletons, animation, transforms, glTF_
 
 | File | When it bites |
 |------|---------------|
@@ -450,7 +450,7 @@ _Meshes, skeletons, animation, transforms, glTF_ — 31 lessons
 
 ## audio
 
-_Sound, music sequences, samples_ — 11 lessons
+_Sound, music sequences, samples_
 
 | File | When it bites |
 |------|---------------|
@@ -468,7 +468,7 @@ _Sound, music sequences, samples_ — 11 lessons
 
 ## text
 
-_Strings, encodings, localization, names_ — 17 lessons
+_Strings, encodings, localization, names_
 
 | File | When it bites |
 |------|---------------|
@@ -492,7 +492,7 @@ _Strings, encodings, localization, names_ — 17 lessons
 
 ## logic-scripts
 
-_Game logic, script VMs, runtime state, entities, saves_ — 41 lessons
+_Game logic, script VMs, runtime state, entities, saves_
 
 | File | When it bites |
 |------|---------------|
@@ -540,7 +540,7 @@ _Game logic, script VMs, runtime state, entities, saves_ — 41 lessons
 
 ## verification
 
-_Oracles, statistics, censuses, null controls, negatives_ — 69 lessons
+_Oracles, statistics, censuses, null controls, negatives_
 
 | File | When it bites |
 |------|---------------|
@@ -616,7 +616,7 @@ _Oracles, statistics, censuses, null controls, negatives_ — 69 lessons
 
 ## tools
 
-_Tool/emulator/shell caveats_ — 62 lessons
+_Tool/emulator/shell caveats_
 
 | File | When it bites |
 |------|---------------|
@@ -685,7 +685,7 @@ _Tool/emulator/shell caveats_ — 62 lessons
 
 ## process
 
-_Docs/TODO hygiene, agent concurrency, pipeline plumbing, escalation_ — 50 lessons
+_Docs/TODO hygiene, agent concurrency, pipeline plumbing, escalation_
 
 | File | When it bites |
 |------|---------------|
@@ -703,7 +703,7 @@ _Docs/TODO hygiene, agent concurrency, pipeline plumbing, escalation_ — 50 les
 | `derived-manifest-view-stale-after-standalone-stage-run.md` | A stage run on its own logs success and writes correct assets plus a correct `manifest.json`, but the viewer still shows the previous run — or you're reviewing a pipeline whose finalize/derive/index step has exactly one call site, inside the all-stages function |
 | `disambiguation-rule-must-precede-shared-key-fallback.md` | A first-match-wins alias/rule table needs to express two different results for two instances sharing one structural key value (e.g. two named forms of one character on the identical bone signature) |
 | `doc-blocker-cites-wrong-buffer.md` | A doc's open question is blocked on "it's loaded via a different buffer/pointer than the one already confirmed," before spending more effort resolving that buffer |
-| `doc-self-cross-reference-before-fresh-disassembly.md` | About to start fresh disassembly/census on a 'still open' doc item naming an address/table/field, trust a `> Correction` or status block, or TODO.md rows ran dry — first grep the whole doc tree (plus source doc comments, committed `verify-*.ts` asserts, confidence enums) for the name, forward sections, 'unnamed'/'role open' markers. |
+| `doc-self-cross-reference-before-fresh-disassembly.md` | About to start fresh disassembly/census/escalation on a 'still open' doc item, write up a finding as novel, or trust a `> Correction`/status block — first grep the doc tree, source comments, `verify-*.ts` asserts and confidence enums; `git log` any plausibly-named `tools/` script; diff every `<project>-<slug>` id in docs against `TODO.md`. |
 | `formula-fix-nets-identical-or-scaled-result-for-default-parameter-case.md` | Porting a multi-part disassembly correction (several bundled fixes to one formula) into a maintained implementation, then sanity-checking it against existing test fixtures built mostly/only around one default value of a varying input parameter — the aggregate old-vs-new delta on those fixtures can be a pure artifact of the bundled fixes cancelling for that default case (identical, or a clean 2x/0.5x), not evidence the port succeeded or failed |
 | `game-unregistered-in-shared-viewer-selector.md` | Wiring a newly-decoded game's assets into a shared multi-game viewer for the first time — extraction/build scripts write correct `public/assets/<game>/` output, but the game never appears in the viewer's game/platform selector at all, no error anywhere |
 | `hand-computed-test-fixture-vs-real-run.md` | Writing regression tests; about to hand-compute expected `toEqual(...)` values instead of running something |

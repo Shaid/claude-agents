@@ -178,3 +178,6 @@ deferred queue's `.PIC` cel-token draws, pcfile field spans, a handful of
 monster/maze residual bytes, and the two DOS/EGA rows.
 See `docs/wizardry6/snes/data-structure.md`,
 `docs/wizardry6/amiga/data-structure.md` and `docs/wizardry6/TODO.md`.
+
+## Lessons sourced from this corpus (full list)
+`endian-swap-needs-matching-field-width.md`, `implicit-cumulative-directory-offsets.md`, `byte-scan-tag-byte-vs-wrong-stride.md`, `string-scan-crosses-structural-boundary.md`, `header-shape-ambiguous-pixel-encoding.md`, `planar-plane-padding-vs-tight-stride.md`, `verify-escalation-artifacts-not-just-claims.md`, `compressed-stream-start-offset.md`, `sibling-functions-outside-callgraph-scope.md`, `domain-refuted-by-shape-not-values.md`, `committed-ira-asm-silent-coverage-gap.md`, `published-walkthrough-numeric-oracle.md`, `reserved-slot-zero-shifts-extractor-index.md`, `indexed-table-base-below-valid-rom-window.md`, `nearest-preceding-immediate-is-not-dataflow.md`, `autocorrelation-period-is-the-scanline-stride.md`, `tilemap-word-assets-carry-own-palette-field.md`, `addressing-mode-operand-hides-implicit-index-offset.md`
