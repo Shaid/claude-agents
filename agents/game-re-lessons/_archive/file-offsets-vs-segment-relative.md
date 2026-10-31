@@ -121,3 +121,30 @@ it in a document — convert through the binary's real vaddr delta first;
 relative branches (`beq`/`bne`-family) don't need this (both ends shift by
 the same constant), but absolute `j`/`jal` targets are computed purely in
 vaddr space and this conversion is not optional for them.
+
+---
+
+**6th manifestation — a flat-binary disassembler's two base arguments
+(Deuteros, Amiga, `methanoid`, 2026-10-31).** The project's hand-rolled
+Musashi-backed `dasm` tool (`tools/deuteros/emu/dasm.c`) takes a *file*
+load base and a *memory* base separately:
+`dasm <file> <fileLoadBase> <memBase> <addr> <count>`. Deuteros' track-80
+payload is read from offset 0 of its own extracted blob and executed at
+`$13000`, so the correct invocation is
+`dasm payload.bin 0 0x13000 <addr> <n>`. A live-probe session instead
+passed `dasm payload.bin 0x13000 0x13000 …`, i.e. asserted "file offset
+equals memory address", which made the tool seek `addr - 0x13000` bytes
+too far into the file and begin decoding from a shifted, odd position.
+Because every 68k opcode word in `$0000`-`$003C` is a valid `ORI`, the
+resulting listings for the tick routine (`$2385C`) and the Advance-Time
+handler (`$23F6E`) came out as long runs of `ori.b`/`or.l`/`btst` —
+odd-looking but not obviously broken code, which is exactly why it was
+believed for a while and recorded in the session's own harness-gaps table
+as "code reads at `$2385C`, `$23F6E` were garbage". The same pass also
+mislabelled `$1A354` as the tick counter off the back of the bad listing
+(the real counter is `$1BF30`). **Fix:** file base 0, memory base
+`$13000`; and before trusting any listing out of a new tool or a new base
+pair, disassemble one already-documented routine (the click dispatcher
+here) and check it comes out as the instructions already in the docs. The
+tool-level argv contract is written up in `game-re-tooling/amiga.md`
+§ "Flat-binary disassemblers take TWO bases".

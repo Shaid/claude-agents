@@ -4,7 +4,7 @@
 
 ## Games
 - Millennium 2.2 (Novagen, Amiga) — game-id `millenium22`/`amiga` (one "n") — boot chain solved; palettes, audio, 135-image art bank shipped; dump truncated
-- Deuteros (Novagen, Amiga) — game-id `deuteros`/`amiga` — boot chain + protection solved; title screen, palettes, audio shipped
+- Deuteros (Novagen, Amiga) — game-id `deuteros`/`amiga` — boot chain + protection solved; title screen, palettes, audio shipped; engine state now reachable live through the real UI (vessel/site record fields pinned)
 - Reunion (Amnesty Design, Amiga AGA) — game-id `reunion`/`amigaaga` — solved end to end
 - Reunion OCS/ECS (6 raw ADFs) — game-id `reunion`/`amiga` — nearly fully solved; small `.tbl` residual open
 
@@ -12,6 +12,7 @@
 - M2.2 boot chain: `BB_ENTRY` at `0xC`, then a self-relocating stub, then hand-built trackdisk I/O using standard `ETD_*` commands. `Disk.2` is a blank disk stamped by the in-game formatter (magic `0x16C65710`). `TDIC` track has no consumer (static + 3G-instruction Musashi trace) — `docs/millenium22/amiga/data-structure.md`
 - M2.2 content: 2 `amiga12` palettes (LoadRGB4), Paula driver + 2 PCM banks, command grammar + 16 envelope curves (confirmed; arpeggio content only rendered), compressed art bank at `Disk.1+0x21000` (Deuteros' RLE codec, 135/136)
 - Deuteros: raw flat-blob boot chain (no HUNK exe). "DISC COMPANY 010991" protection = CPU probe, then trace-vector self-decrypt, then a CIA timing check vs `$DA8DBFDB` (Musashi harness). Track-8 title picture + LoadRGB4 palette; 4 UI palettes; 13 audio-shaped regions (approx. rate 8287 Hz) — `docs/deuteros/amiga/data-structure.md`
+- Deuteros runtime engine state: the UI hit-table/dispatch model (`[hdr.w][12-byte rec]*`, masked tables, area + chain records, `jsr ([$212BE + slot*4])`) and per-class vessel/site record field roles, pinned by UI-driven before/after memory diffs in `tools/deuteros/emu/live_probe.c` — `docs/deuteros/amiga/data-structure.md` § "Second live pass"
 - Reunion AGA: RNC1/IMP! via `ancient`; IFF ILBM/PBM/8SVX; ProTracker MOD; `EFT!ANIM` key+delta animation; `AMN0` wireframe models; `pmain/*.DAT` grids (role rendered, not confirmed); 1bpp `STMAP`/`GRKIEG` `.CHR` rasters; ALIEN portrait + FAJ palettes (rendered) — `docs/reunion/amigaaga/data-structure.md`
 - Reunion OCS: `Install` 390-entry catalog (`(disk<<12)|block`). `1AM`/`2AM` LZ77 found in `Main.exe` (48/49 byte-identical vs AGA). Manual-code check (table `Main.exe+0x67B0`) and its gating are solved. Multi-FORM 8SVX; 242/242 planar `.CHR` screens; spwar EFT palette; `MUSIC/*.pin/.tbl/.hin` grammar — `docs/reunion/amiga/data-structure.md`
 
@@ -35,17 +36,18 @@
 - Reunion: extensions mislead (`.BAT` = 8SVX, `.RDA` = chunky PBM, `.001`-`.079` are frame numbers). Dispatch on decompressed magic and keep full basenames
 - IRA's `;NNNNNN` column is not a file offset once a `.cnf` spans multiple hunks (`file-offsets-vs-segment-relative.md`). Reunion is not primarily SAS/C A4-relative
 - LoadRGB4/LVO hits need A6-provenance tracing (`lvo-byte-pattern-false-positive.md`). An untraced disk region is not proof of filler
+- Deuteros live work goes through `tools/deuteros/emu/live_probe.c`, not Amiberry. Model the vsync waits first (`harness-blank-output-is-unmodelled-hardware-wait.md`) or screens draw blank and the clock never moves; scripted clicks need hover-then-press, generous post-page-change waits and held presses (`silent-no-op-clicks-in-driven-ui.md`). `dasm` takes file base AND memory base — `dasm <blob> 0 0x13000 <addr> <n>`
+- Deuteros record-field labels derived from writers alone have been wrong twice; prefer a before/after diff around one real UI action (`game-re-method/verification-techniques.md` § snapshot/diff)
 
 ## Key lessons
 - `cli-script-main-fires-on-import.md` — raw-boot pipeline scripts double-run when imported
 - `file-offsets-vs-segment-relative.md` — IRA `;NNNNNN` column isn't a file offset across hunks
 - `lvo-byte-pattern-false-positive.md` — LoadRGB4/LVO hits need A6-provenance tracing
-- `no-traced-reader-region-is-not-proof-of-filler.md` — untraced disk regions aren't filler — strings-scan first
 - `m68k-trace-vector-decrypt-needs-emulate-trace-on.md` — "Disc Company" protection self-decrypts via the Trace vector
-- `engine-family-shared-decoder-not-shared-container.md` — M2.2 isn't a Mercenary-style vector engine despite Novagen
 - `amiga-bb-entry-offset-is-12-not-4.md` — M2.2 boot block code starts at `0xC`
 - `self-relocating-boot-stub-invalid-past-jmp.md` — boot stubs relocate themselves; disassemble at the copy target
 - `illegal-vector-hijack-anti-debug-desyncs-disasm.md` — protection hijacks the illegal vector, desyncing linear disasm
-- `disc-io-census-blind-to-already-loaded-data-consumer.md` — no load path ≠ no content (`TDIC` track, raw-boot data)
+- `harness-blank-output-is-unmodelled-hardware-wait.md` — blank screens/dead clock in the live harness are vsync waits, not game state
+- `silent-no-op-clicks-in-driven-ui.md` — masked hit tables, hover gating, page-arm timing and held presses
 
 Full list: `details/methanoid.md` § "Lessons sourced from this corpus (full list)".

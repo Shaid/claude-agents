@@ -1,1 +1,9 @@
 date	lesson	project	note
+2026-10-07	fixed-stride-record-count-unverified.md	kolbold	premise audit: the 14/15-byte "no stride" records were three arrays; the 0000 field filter hid all 40 KADPCM records
+2026-10-07	two-branch-clamp-idiom-tests-sign-not-range.md	kolbold	DD2 Z80 patch-transpose clamp 0x0A02 modelled per branch (positive -> min 0x5F, negative underflow -> 0) instead of a plain clamp; unit-tested
+2026-10-28	file-offsets-vs-segment-relative.md	kolbold	banked A>=0x8000 -> region A+0x8000
+2026-10-28	negative-from-addressing-root-not-shapes.md	kolbold	followed 0x16 jumps out of track instead of stopping
+2026-10-28	doc-self-cross-reference-before-fresh-disassembly.md	kolbold	reused prior ddsom disasm notes
+2026-10-28	tracker-prose-is-not-evidence.md	kolbold	docs 921/923 flags-0 claim was wrong (53 ddsom, 38 ddtod)
+2026-10-31	file-offsets-vs-segment-relative.md	methanoid	dasm base args 0x13000 0x13000 treated file offset as memory address; redid all code reads with file base 0 / mem base 0x13000
+2026-10-31	tracker-prose-is-not-evidence.md	methanoid	prior doc rows (+6 blink countdown, +7 blink-pending, status name list) contradicted live diffs; corrected in place with Correction block

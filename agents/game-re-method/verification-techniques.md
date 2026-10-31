@@ -1684,3 +1684,49 @@ from the same understanding as the decoder" trap: an oracle that is only
 "what a human once said the picture showed" is exactly as stale as a
 hand-typed test fixture, and costs nothing to refresh once the decoder
 itself is already committed and the container format already solved.
+
+## Snapshot/diff memory around ONE real UI action to pin a runtime record's field roles
+
+Record tables that are entirely zero in the static image have no static
+oracle: every field is written by the game at runtime, so disassembling
+the writers yields plausible labels with nothing to falsify them. A
+writer's arithmetic constrains a field far less than one observed
+transition does — "decremented each tick by this routine" fits a
+countdown, a fuel gauge, a cooldown and a wear counter equally well.
+
+The cheap dynamic oracle is a before/after memory diff around a
+**single** real user action, driven through the game's own UI inside a
+harness: `snap` the candidate region, perform one action (install a part,
+load fuel, launch), `diff`. Every line of that diff is then a named
+field with its before and after values, plus the action's side effects
+(a stock nibble decremented, an availability mask bit set, a serial
+counter advanced) — all attributable to that one action, because nothing
+else happened between the two snapshots. Cross-check each diffed value
+against whatever the UI itself prints for the same object; a decoded `$12`
+beside an on-screen "18 T" is a second, independent reading.
+
+Two discipline rules make the evidence hold:
+
+- **Vary the action's argument as the built-in null control.** Repeating
+  the action with a different parameter (pod type 1/2/3 writing
+  `$40`/`$80`/`$C0` into the same word) shows the field encodes the
+  parameter, not merely that "something changed here" — and every other
+  candidate field staying put is the negative control, for free.
+- **Seed only the prerequisites the real check needs, never the field
+  under test**, and leave the game's own validation enabled (stock, a
+  parent record, a selected context). If the game's own handler writes
+  the target field, the evidence is not an artifact of the seeding.
+  State the seeded set explicitly as the result's standing limit, along
+  with whatever could not be reached because it has no seedable source.
+
+Confirmed on Deuteros (Amiga, `methanoid`): one UI-driven pass of
+build → fit → fuel → launch → flight, with each step diffed, pinned pod-mount
+words, nibble-packed stock item ids, bay records, per-event timers and a
+serial counter — and **overturned two labels the docs already carried as
+confirmed from disassembly alone**: a "blink countdown" byte was fuel in
+tons (the diffed `$12` printed as "Fuel: 18 T" while the site's fuel stock
+fell by exactly 18 in the same diff) and a "blink-pending" bit was
+engine-engaged. Reaching that state at all first required modelling the
+harness's hardware waits and the UI's click gating — see
+`harness-blank-output-is-unmodelled-hardware-wait.md` and
+`silent-no-op-clicks-in-driven-ui.md`.

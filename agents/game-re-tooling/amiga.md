@@ -290,6 +290,30 @@ Ghidra-12 headless traps hit on the way (each cost real time):
   the small-data model in favour of `A4` being used as an ordinary
   general-purpose scratch/loop pointer register, same as `A0`-`A3`/`A5`.
 
+## Flat-binary disassemblers take TWO bases — file load base AND memory base
+
+A hand-rolled Musashi/capstone `dasm`-style tool over a raw loaded blob
+(this repo's `tools/<game>/emu/dasm.c`, the usual companion to a boot
+harness for a game with no HUNK executable) needs both the offset the
+payload starts at **in the file** and the address it runs at **in
+memory**: `dasm <file> <fileLoadBase> <memBase> <addr> <count>`. For a
+payload read from offset 0 of its own file and executed at `$13000`, that
+is `dasm payload.bin 0 0x13000 <addr> <n>`. Passing the memory base for
+both (`0x13000 0x13000`) asserts "file offset equals memory address", so
+the tool seeks `addr - 0x13000` bytes too far in and disassembles from a
+shifted — and usually odd — position.
+
+The failure is silent and plausible rather than obvious: a misaligned 68k
+stream decodes into long runs of `ori.b`/`or.l`/`btst` (every opcode word
+in `$0000`-`$003C` is a valid `ORI`), so the listing reads as real, if
+strange, code and every address cited from it is wrong by the base delta.
+Sanity-check any new tool, or any new base pair, by disassembling one
+routine you have already documented (a click/UI dispatcher, a `LoadRGB4`
+call site) and confirming it comes out as the instructions you expect.
+Same family as `file-offsets-vs-segment-relative.md`; confirmed on
+Deuteros (`methanoid`), where two routines' listings were garbage until
+the file base was corrected to 0.
+
 ## Parsing HUNK yourself
 
 If you write or reuse a hunk parser (to pull a DATA hunk out, or to read the
