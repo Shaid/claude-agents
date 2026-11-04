@@ -3,9 +3,9 @@
 **Project root:** `~/Development/valkyrie` · **Full history/evidence:** `game-re-corpora/details/valkyrie.md` (read on demand) · **Open work:** `docs/valkyrieprofile/TODO.md`, `docs/valkyrieprofile2/TODO.md`
 
 ## Games
-- VP1 (PSX, `SLUS_011.56`/`.79`, 2 discs) — `valkyrieprofile`/`psx` — formats solved; 225+-round gameplay-logic campaign
+- VP1 (PSX, `SLUS_011.56`/`.79`, 2 discs) — `valkyrieprofile`/`psx` — formats solved; 229+-round gameplay-logic campaign
 - VP1 Lenneth (PSP `ULUS10107`, TOSE port) — `valkyrieprofile`/`psp` — PSX formats reused; audio/3D open
-- VP2 Silmeria (PS2, `SLES-54644`) — `valkyrieprofile2`/`ps2` — formats solved; damage formula unlocated
+- VP2 Silmeria (PS2, `SLES-54644`) — `valkyrieprofile2`/`ps2` — formats solved; combat engine image located and decrypted (`battle-logic.md` § 16), damage formula not yet derived from it
 
 ## Solved formats → where documented
 - VP1 PSX, `docs/valkyrieprofile/psx/data-structure.md`: SLZ LZSS (§4), XOR-encrypted TOC (§8), group directory (§9.3), STR video (§9.4), 3D/rooms/sprites (§9.6), subset-font text (§10), audio/BGM (§11), battle sprites (§13) — confirmed
@@ -29,18 +29,20 @@
 - "CLOSED" rows get reopened; static backlog is exhausted — without a new lead, run a rigor audit of an unverified early closure
 - Triad baseline is non-zero; concurrent sessions edit the tree — targeted `git add`
 - User-confirmed: VP1 has no random encounters, and does use 3D (world map, arenas, effects)
+- The interpreter sweep's "% clean" is a first-fault rate, not coverage: judge rounds on depth (events reaching `resolveHit`, gameplay-stub-free modules) and classify new faults content-gap vs logic-bug — `no-fault-rate-flat-while-execution-depth-grows.md`; and its tick must replay the main loop's per-actor/per-pool calls, not just the module handler — `sweep-harness-must-replay-main-loop-per-entity-calls.md`
 - VP2's gameplay code is not in the ELF — it is overlay-loaded, and the ELF's 366 zero-`filesz` `PT_LOAD` reservations are the module census (slot, size, which are mutually exclusive): `docs/valkyrieprofile2/ps2/battle-logic.md` § 13.5
+- VP2's battle image is header-masked in two layers (LCG over the bootstrap header; key-table magic unlock + chained word cipher over the pack) — no byte-shape scan can find it; it was located from the field engine's own mode-EXIT branch, § 16. Decoder: `tools/shared/ps2-battle-pack.ts`
 
 ## Key lessons
-- `local-decode-cache-may-be-stale-reverify-fresh.md` — `build/cache/` held stale artifacts; verify from live disc bytes
+- `sweep-harness-must-replay-main-loop-per-entity-calls.md` — the interpreter sweep's tick must replay the main loop's per-actor/per-pool calls, not just the module handler
+- `no-fault-rate-flat-while-execution-depth-grows.md` — the sweep's "% clean" is a first-fault rate; judge rounds on depth metrics instead
 - `call-site-address-misread-as-load-base.md` — "slot N (0x…)" cites are call sites, not load bases
 - `shared-load-base-plus-scrollback-transcription-misattributes-address.md` — 7/8 PSX overlays share base `0x8002f824`
 - `doc-self-cross-reference-before-fresh-disassembly.md` — the answer was repeatedly already in-repo — grep first
 - `negative-from-addressing-root-not-shapes.md` — censuses need base-register provenance, corpus-wide, both discs
 - `resource-id-in-strided-record-field-carried-by-callback-object.md` — "needs live capture" verdicts were often wrong
 - `tracker-prose-is-not-evidence.md` — "CLOSED" rows get reopened; re-run, don't trust prose
-- `genre-mechanic-asserted-by-tracker-needs-primitive-existence-check.md` — VP1 has no random encounters despite tracker claims
 - `zero-filesz-ptload-reservations-are-a-module-census.md` — VP2's missing battle module was bounded and sized from the ELF segment table
-- `lui-addiu-negative-low-half-borrows-from-high-half.md` — lui+addiu address reconstruction must sign-extend low half
+- `header-masked-code-image-found-via-mode-exit-read.md` — VP2's battle image is header-masked; it was found from the outgoing module's exit path, not any scan
 
 Full list: `details/valkyrie.md` § "Lessons sourced from this corpus (full list)".

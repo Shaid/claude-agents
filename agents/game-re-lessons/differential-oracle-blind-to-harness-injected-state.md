@@ -51,6 +51,30 @@ explicitly enumerate two sets before calling the model confirmed —
   caller you did not trace): this is the oracle's structural blind spot,
   and its size is exactly how much of the model is still unverified.
 
+**And when you keep the differential oracle anyway** (you usually should —
+it is still the strongest check on the read-from-image set), make the
+injected set explicit *inside the harness* rather than ambient:
+
+- **seed the inherited state identically and deliberately on both sides**,
+  as named setup (`setup()` installing a default GTE rotation/translation,
+  OFX/OFY/H, a base pointer, a palette) rather than whatever the previous
+  call happened to leave behind. A diff that only agrees once you do this
+  was previously comparing two different functions of unstated state;
+- **record every seeded value as a documented content gap** in the port,
+  not as a constant the port owns. It is an input you have not verified,
+  and it must read as one;
+- **exclude incidental registers explicitly.** Return-register residue
+  (`$v0` holding the last op's leftover, a scratch register the ABI lets
+  the callee trash) is not output; an explicit `ignoreReturn`-style
+  exclusion is correct, whereas making the port reproduce the garbage bakes
+  an accident of the original codegen into your model and hides real
+  mismatches behind a fake one.
+
+Confirmed on the same Valkyrie Profile projector: the round-229 diff
+harness against `0x80060044` only reached agreement after the GTE control
+registers were seeded explicitly and identically on both sides, with the
+assumed geometry written up as a gap rather than a result.
+
 The injected set needs a *differently shaped* oracle — most cheaply an
 end-to-end run or a render, which fails loudly and immediately when an
 inherited parameter is wrong. A scan of plausible values for the injected

@@ -76,3 +76,27 @@ filenames/content unrelated to your own current task) before deleting
 *any* scratch path shared across a session with concurrent siblings — the
 same directory that's safe to freely reuse from is not safe to freely
 delete.
+
+**Fourth confirmed instance — a *previous* session, not a concurrent
+sibling (`valkyrie`, VP2 PS2).** The scratchpad path is nominally
+session-keyed, but a relaunched escalation inherited the same directory and
+a plain `ls` showed ~90 files from the day before — among them a 38 KB
+Ghidra decompile of the field engine's main loop (`decomp-modeswitch.txt`)
+whose exit branch contained the exact header-unmask loop the new brief was
+about, plus decompiles of the slot-table consumers and the task-submit API.
+`grep -l` for the loader primitives (the loader function addresses, the slot
+address) across those dumps located the answer in minutes, on a brief that
+had framed the problem as a cipher attack. So the trigger is wider than the
+brief mentioning a concurrent sibling: **before any fresh decompiler run or
+cryptanalysis, `ls` the scratchpad and `grep -l` the prior dumps for the
+function, address or constant you are about to investigate.** A decompile
+already on disk costs nothing to re-read and may be the whole result.
+
+**Hazard in that same directory:** a leftover scratch file named like a
+Python stdlib module (`dis.py`, `types.py`, `lib.py`, `copy.py`, …) is
+imported ahead of the stdlib by any script *run from* that directory, so an
+unrelated `import numpy` dies deep inside `inspect` → `dis` with a
+`FileNotFoundError` raised by the stale scratch script. Rename the offender
+(`_prev_dis.py`) rather than deleting it — per the third instance above, it
+may be a sibling's — or run probes with `python3 -I`, or from a
+subdirectory.

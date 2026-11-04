@@ -31,6 +31,27 @@ it once against ground truth. This class of bug is invisible precisely
 the bytes or an independent side-by-side oracle (a second implementation,
 a live capture) can.
 
+**The decompiler's inferred operand type is a fourth way to get this
+wrong** — and the quietest, because nothing was transcribed by hand at all.
+A decompiler types a variable from its *uses*, not from the arithmetic that
+produces it, so a cipher/RNG state whose only consumer is narrow comes out
+printed narrow. Valkyrie Profile 2 (PS2, `valkyrie`): Ghidra rendered a
+32-bit LCG as
+
+```
+ushort uVar = uVar * 0x12635 + 0xACAAD;  *p ^= (ushort)(uVar >> 0xc);
+```
+
+because the sole consumer was a 16-bit XOR. The raw instructions are
+`mult v1,a3,a1 ; addu a3,v1,a0 ; srl v1,a3,12 ; andi v1,v1,0xffff` — a full
+**32-bit** state with 16 bits extracted per step. A port honouring the
+printed `ushort` truncates the state every iteration and diverges from the
+*second* keystream word on, which looks like a wrong constant rather than a
+wrong width. **Rule:** for any cipher, RNG, checksum or hash loop, take
+every register width and signedness from the raw instruction stream
+(`mult`/`multu`/`daddu` vs. explicit `andi` / `sll;srl` masking; store width
+`sw`/`sh`/`sb`), never from the decompiler's variable types.
+
 **When a doc's own hedge says "the textbook shift/constant doesn't quite
 match, exact value not fully re-derived" — don't trust the textbook table,
 re-execute the compiled arithmetic instead.** Confirmed on Valkyrie Profile

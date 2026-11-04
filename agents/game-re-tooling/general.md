@@ -73,6 +73,14 @@ the file for your target before starting:**
 - **Python** (numpy, PIL) for probes and committed extractors; **`npx tsx`**
   for pipeline code; **C + an emulator core** (musashi pattern) for hostile
   decompressors; `xxd`/`strings`/standard Unix tools for triage.
+  **Scratch-directory stdlib shadowing:** a leftover probe named like a
+  stdlib module (`dis.py`, `types.py`, `copy.py`, `lib.py`, …) is imported
+  ahead of the stdlib by any script *run from* that directory, so an
+  unrelated `import numpy` can die inside `inspect` → `dis` with a
+  `FileNotFoundError` pointing at the stale scratch file. Run probes with
+  `python3 -I`, or from a subdirectory, and rename rather than delete the
+  offender (it may be a sibling agent's) — see
+  `game-re-lessons/shared-scratchpad-has-sibling-agent-tooling.md`.
 - **`vgmstream-cli`** — the reference decoder for Audiokinetic Wwise audio
   (`.wem`/`.bnk`, any studio/platform) and dozens of other game-audio
   container/codec families. Build from source

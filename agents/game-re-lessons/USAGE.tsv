@@ -22,3 +22,9 @@ date	lesson	project	note
 2026-11-04	negative-from-addressing-root-not-shapes.md	valkyrie	Searched writers of the HP mask across every payload instead of function shapes; found the real mutators and the HP field correction
 2026-11-04	verify-escalation-artifacts-not-just-claims.md	valkyrie	Re-ran the re-codebreaker LCG decryption (p@Ck) myself before using it; confirmed FAS packs
 2026-11-04	tracker-prose-is-not-evidence.md	valkyrie	Overturned section 6.6b current/max HP prose with raw-byte verify scripts
+2026-11-04	doc-self-cross-reference-before-fresh-disassembly.md	valkyrie	the prior session scratchpad decompile of the field main loop already held the unmask loop; reading it first replaced a blind cipher attack
+2026-11-04	negative-from-addressing-root-not-shapes.md	valkyrie	five magic/shape scans were blind by construction; following the one battle-entry TOC read from the code side found both modules
+2026-11-04	verify-escalation-artifacts-not-just-claims.md	valkyrie	re-derived the 16-bit LCG from raw 22-0.bin instructions instead of trusting the decompile types (ushort vs 32-bit state)
+2026-11-04	differential-oracle-blind-to-harness-injected-state.md	valkyrie	projector differential only agreed after seeding inherited GTE control regs on both sides; added ignoreReturn for incidental $v0
+2026-11-04	test-fixture-encodes-same-wrong-model-as-implementation.md	valkyrie	halo test assumed projector stub; rewrote with on-screen world position after promoting the projector to native
+2026-11-04	doc-self-cross-reference-before-fresh-disassembly.md	valkyrie	superseded the 11.13 startAnimation claim in place with a Correction block after the disassembly
