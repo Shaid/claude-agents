@@ -7,3 +7,18 @@ date	lesson	project	note
 2026-10-28	tracker-prose-is-not-evidence.md	kolbold	docs 921/923 flags-0 claim was wrong (53 ddsom, 38 ddtod)
 2026-10-31	file-offsets-vs-segment-relative.md	methanoid	dasm base args 0x13000 0x13000 treated file offset as memory address; redid all code reads with file base 0 / mem base 0x13000
 2026-10-31	tracker-prose-is-not-evidence.md	methanoid	prior doc rows (+6 blink countdown, +7 blink-pending, status name list) contradicted live diffs; corrected in place with Correction block
+2026-11-02	file-offsets-vs-segment-relative.md	kolbold	banked virtual pc (bank in bits 16+) in the recompiler return addresses
+2026-11-02	verify-escalation-artifacts-not-just-claims.md	kolbold	re-ran all oracle tests myself
+2026-11-02	doc-self-cross-reference-before-fresh-disassembly.md	methanoid	checked existing slot tables before naming
+2026-11-02	verify-escalation-artifacts-not-just-claims.md	methanoid	re-ran null-control dispatch comparison myself
+2026-11-03	doc-self-cross-reference-before-fresh-disassembly.md	valkyrie	Grepped the repo for the decrypted magic "SEQW" before writing any parser; found tools/shared/ps2-seqw-audio.ts (already whole-disc verified) and used it as the independent oracle instead of hand-rolling one, and found master-data.ts documenting the same tri-Ace LCG-XOR obfuscation shape, which corroborated the cipher family.
+2026-11-03	concurrent-sibling-live-edit-collision-on-shared-source.md	valkyrie	Found a real u16-vs-u32 defect in shared tools/shared/ps2-seqw-audio.ts but a concurrent VP2 session owns that file this run; recorded the quantified evidence + a TODO row and carried the corrected reading in my own verify script instead of editing the shared source.
+2026-11-03	file-offsets-vs-segment-relative.md	valkyrie	mapped 3-1.bin/22-0.bin vaddrs before reading call targets
+2026-11-03	doc-self-cross-reference-before-fresh-disassembly.md	valkyrie	grepped docs for 0x48EEC0 and singleton before fresh Ghidra work
+2026-11-03	negative-from-addressing-root-not-shapes.md	valkyrie	re-aimed the TOC-table search at the table class (descriptor table) instead of more shapes
+2026-11-03	verify-escalation-artifacts-not-just-claims.md	valkyrie	re-ran verify-seqw-lcg-cipher.ts and the three own verifiers after the codebreaker returned
+2026-11-04	verify-escalation-artifacts-not-just-claims.md	methanoid	re-ran fork D PCM exporter/null controls and traced the AddIntServer registration myself before overturning the sound-closed verdict
+2026-11-04	doc-self-cross-reference-before-fresh-disassembly.md	methanoid	docs own SOUND-op table said jsr $22AB8 while the closure section said $22AC4 unreachable; resolved the contradiction by disassembling $22AB8
+2026-11-04	negative-from-addressing-root-not-shapes.md	valkyrie	Searched writers of the HP mask across every payload instead of function shapes; found the real mutators and the HP field correction
+2026-11-04	verify-escalation-artifacts-not-just-claims.md	valkyrie	Re-ran the re-codebreaker LCG decryption (p@Ck) myself before using it; confirmed FAS packs
+2026-11-04	tracker-prose-is-not-evidence.md	valkyrie	Overturned section 6.6b current/max HP prose with raw-byte verify scripts

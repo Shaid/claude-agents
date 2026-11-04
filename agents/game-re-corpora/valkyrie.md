@@ -29,6 +29,7 @@
 - "CLOSED" rows get reopened; static backlog is exhausted — without a new lead, run a rigor audit of an unverified early closure
 - Triad baseline is non-zero; concurrent sessions edit the tree — targeted `git add`
 - User-confirmed: VP1 has no random encounters, and does use 3D (world map, arenas, effects)
+- VP2's gameplay code is not in the ELF — it is overlay-loaded, and the ELF's 366 zero-`filesz` `PT_LOAD` reservations are the module census (slot, size, which are mutually exclusive): `docs/valkyrieprofile2/ps2/battle-logic.md` § 13.5
 
 ## Key lessons
 - `local-decode-cache-may-be-stale-reverify-fresh.md` — `build/cache/` held stale artifacts; verify from live disc bytes
@@ -39,7 +40,7 @@
 - `resource-id-in-strided-record-field-carried-by-callback-object.md` — "needs live capture" verdicts were often wrong
 - `tracker-prose-is-not-evidence.md` — "CLOSED" rows get reopened; re-run, don't trust prose
 - `genre-mechanic-asserted-by-tracker-needs-primitive-existence-check.md` — VP1 has no random encounters despite tracker claims
-- `mips-delay-slot-instruction-always-executes.md` — PSP `BOOT.BIN` trailer-size trace tripped on a delay slot
+- `zero-filesz-ptload-reservations-are-a-module-census.md` — VP2's missing battle module was bounded and sized from the ELF segment table
 - `lui-addiu-negative-low-half-borrows-from-high-half.md` — lui+addiu address reconstruction must sign-extend low half
 
 Full list: `details/valkyrie.md` § "Lessons sourced from this corpus (full list)".

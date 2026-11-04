@@ -36,7 +36,8 @@
 - Reunion: extensions mislead (`.BAT` = 8SVX, `.RDA` = chunky PBM, `.001`-`.079` are frame numbers). Dispatch on decompressed magic and keep full basenames
 - IRA's `;NNNNNN` column is not a file offset once a `.cnf` spans multiple hunks (`file-offsets-vs-segment-relative.md`). Reunion is not primarily SAS/C A4-relative
 - LoadRGB4/LVO hits need A6-provenance tracing (`lvo-byte-pattern-false-positive.md`). An untraced disk region is not proof of filler
-- Deuteros live work goes through `tools/deuteros/emu/live_probe.c`, not Amiberry. Model the vsync waits first (`harness-blank-output-is-unmodelled-hardware-wait.md`) or screens draw blank and the clock never moves; scripted clicks need hover-then-press, generous post-page-change waits and held presses (`silent-no-op-clicks-in-driven-ui.md`). `dasm` takes file base AND memory base — `dasm <blob> 0 0x13000 <addr> <n>`
+- Deuteros live work goes through `tools/deuteros/emu/live_probe.c`, not Amiberry. Model the vsync waits first (`harness-blank-output-is-unmodelled-hardware-wait.md`) or screens draw blank and the clock never moves; scripted clicks need hover-then-press, generous post-page-change waits and a long press — `click X Y [btn [press]]`, 200 slices reliable, the default 40 misses the main-loop poll by phase (`silent-no-op-clicks-in-driven-ui.md`). `dasm` takes file base AND memory base — `dasm <blob> 0 0x13000 <addr> <n>`
+- The Musashi harnesses have no exec, so no vector or register watch can see what the game registers through an OS call. Deuteros' VBL sound server goes in via `AddIntServer` at `$208B4`, reached unconditionally from `$2132E` — which is why an earlier "sound is closed in state 0" verdict was wrong (`os-registered-interrupt-server-invisible-to-vector-watch.md`)
 - Deuteros record-field labels derived from writers alone have been wrong twice; prefer a before/after diff around one real UI action (`game-re-method/verification-techniques.md` § snapshot/diff)
 
 ## Key lessons
@@ -44,10 +45,10 @@
 - `file-offsets-vs-segment-relative.md` — IRA `;NNNNNN` column isn't a file offset across hunks
 - `lvo-byte-pattern-false-positive.md` — LoadRGB4/LVO hits need A6-provenance tracing
 - `m68k-trace-vector-decrypt-needs-emulate-trace-on.md` — "Disc Company" protection self-decrypts via the Trace vector
-- `amiga-bb-entry-offset-is-12-not-4.md` — M2.2 boot block code starts at `0xC`
 - `self-relocating-boot-stub-invalid-past-jmp.md` — boot stubs relocate themselves; disassemble at the copy target
 - `illegal-vector-hijack-anti-debug-desyncs-disasm.md` — protection hijacks the illegal vector, desyncing linear disasm
 - `harness-blank-output-is-unmodelled-hardware-wait.md` — blank screens/dead clock in the live harness are vsync waits, not game state
-- `silent-no-op-clicks-in-driven-ui.md` — masked hit tables, hover gating, page-arm timing and held presses
+- `silent-no-op-clicks-in-driven-ui.md` — masked hit tables, hover gating, page-arm timing, held presses and press-length phase
+- `os-registered-interrupt-server-invisible-to-vector-watch.md` — a no-exec harness cannot see `AddIntServer`; "never installed" needs an OS-call census
 
 Full list: `details/methanoid.md` § "Lessons sourced from this corpus (full list)".

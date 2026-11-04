@@ -39,9 +39,25 @@ Why it's worth doing unprompted rather than when suspicious:
   differ; a set that differs in a handful of bytes points straight at the
   per-instance field, and the diff *positions* are the field offsets.
 
-Sibling trap: `all-zero-stub-file-inflates-failure-count.md` (whole-prefix
+- **Duplicates inflate every count you take over the population, votes
+  most dangerously of all.** When the census is a *statistical* argument —
+  a corpus-wide vote for a shared keystream pair under a known-plaintext
+  attack, a "how many files carry this header/magic/constant" tally, a
+  best-candidate score — N byte-identical members each cast a vote for the
+  same candidate, so they are one observation reported as N. De-duplicate by
+  a cheap fingerprint (size plus the first few decoded words is usually
+  enough; a full hash if you can afford it) *before* counting, then compare
+  the surviving count against the chance level. Confirmed on Valkyrie
+  Profile 2 (PS2, `valkyrie`): a raw vote of **11** for a shared keystream
+  pair across 516 residual TOC entries collapsed to **2** — chance — once
+  members were de-duplicated by `(size, c1, c3)`. Reported undeduplicated,
+  it reads as a solved cipher.
+
+Sibling traps: `all-zero-stub-file-inflates-failure-count.md` (whole-prefix
 groups of empty stubs) — same class of "look at the whole set, not one
-sample" hygiene, different symptom.
+sample" hygiene, different symptom — and
+`compositional-hash-search-free-parameter-fakes-a-hit.md` for the companion
+rule on normalising any such count against its own chance rate.
 
 **The same principle also disproves a per-instance-data *hypothesis* for a
 sub-region inside otherwise-different files, with just two samples — you
