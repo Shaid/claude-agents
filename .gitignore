@@ -29,6 +29,7 @@
 !/agents/reviewer.md
 !/agents/ghidra-disasm.md
 !/agents/amiga-disasm.md
+!/agents/seer-guide.md
 
 !/skills
 /skills/*
@@ -36,6 +37,7 @@
 !/skills/re-oracle
 !/skills/re-learn
 !/skills/re-learn-curate
+!/skills/re-recon
 !/skills/ira-disasm
 !/skills/radare2-amiga
 !/skills/seer-website
