@@ -306,6 +306,8 @@ _Archives, directories, filesystems, records, strides, headers, field widths_
 | `version-flag-conflates-independent-format-traits.md` | Decoding a format version your reference implementation never saw, where versions are gated by one boolean (`isNewVersion`, `version >= N`) — especially if a doc records that the new version "falls through the existing path with no code change, and it works" |
 | `wwise-shared-short-id-across-language-variants.md` | Extracting audio, textures, or any asset family from a game with one or more per-locale archives (Wwise `.wem`/`.bnk` per-language directories; a whole extra CPK/PAK per language reusing the base archive's own relative paths), before deduping/resuming output by numeric ID or relative path alone with no locale folded in |
 | `zero-filesz-ptload-reservations-are-a-module-census.md` | A whole subsystem's code is missing from the main executable and from every module you have extracted, on an overlay-based loader — dump the segment table (`readelf -lW`, `objdump -p`) and tabulate every zero-`filesz` reservation's `(vaddr, memsz)` before hunting further: it is a free census of every linked module, its size, and which reservations are mutually exclusive overlays sharing one slot |
+| `sibling-file-layout-hides-loader-gated-block.md` | A per-file region layout ("X then Y to EOF") of a sibling-file family was confirmed on one or a few files (oracle byte-match, clean tiling) and is being applied to all of them, with no header field announcing extra blocks — re-derive it from the loader's sequential read calls and check file length == sum of reads for every sibling |
+
 
 ## compression-crypto
 
@@ -624,6 +626,8 @@ _Oracles, statistics, censuses, null controls, negatives_
 | `verified-callee-internals-leave-caller-edge-unchecked.md` | A chain-shaped doc claim ("A calls B, which calls C") is backed by a verify script with many passing checks — before trusting the whole chain, check whether any of those checks actually pins a literal `jal`/`call` from the claimed caller to the next link, rather than only validating each link's own internal arguments/gates/formula in isolation |
 | `verified-then-stale-doc-number-from-sibling-corpus-growth.md` | A live re-run of an already-documented full-corpus decode pass, used as a regression oracle or comparison baseline, disagrees with the doc's own previously-confirmed headline number — before treating it as a bug in your change, check whether the corpus itself grew from unrelated later work |
 | `weak-single-offset-fit-signals-missing-indirection.md` | A brute-force single-constant-offset sweep of a small id field against a direct target archive/table oracle best-fits in the 80-95% range and won't improve with a wider search — before accepting it as "the mapping, just imperfect" |
+| `cross-port-asset-pairing-by-list-order-hides-aliased-slots.md` | Mapping one port's named slots (tier/facing/pose frame names) onto another port's bitmaps by walking both lists in order — it checks out where counts agree, and the leftovers are being patched as "aliased"/placeholder entries; look for a source-port index table with the same slot shape and pair through it |
+
 
 ## tools
 

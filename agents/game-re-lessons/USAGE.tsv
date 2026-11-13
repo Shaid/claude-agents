@@ -28,3 +28,9 @@ date	lesson	project	note
 2026-11-04	differential-oracle-blind-to-harness-injected-state.md	valkyrie	projector differential only agreed after seeding inherited GTE control regs on both sides; added ignoreReturn for incidental $v0
 2026-11-04	test-fixture-encodes-same-wrong-model-as-implementation.md	valkyrie	halo test assumed projector stub; rewrote with on-screen world position after promoting the projector to native
 2026-11-04	doc-self-cross-reference-before-fresh-disassembly.md	valkyrie	superseded the 11.13 startAnimation claim in place with a Correction block after the disassembly
+2026-11-13	tracker-prose-is-not-evidence.md	crawl	Re-derived "confirmed/ruled out" rows from bytes; the Sec.12 "package files byte-identical, ruled out" row turned out to be the evidence of the 52-byte orig/tempdung header bug
+2026-11-13	negative-from-addressing-root-not-shapes.md	crawl	Sec.3.4 "DOS has no runtime palette mechanism" came from a "...Palette" string-xref census; searched instead for the Amiga ramp-table bytes and found it (0x432d08) plus its writer fcn.0040aaa0
+2026-11-13	tracker-prose-is-not-evidence.md	crawl	W6 audit: traced "0/64,000 px" and "298,744-pose sweep" claims to their oracle; both are self-referential (own reference renderer / crash-only sweep)
+2026-11-13	file-offsets-vs-segment-relative.md	crawl	W6 audit: converted doc CODE+ offsets to Bane.asm file offsets (+0x28) before reading movement/evaluator code
+2026-11-13	file-offsets-vs-segment-relative.md	crawl	caught that Bane.asm line addresses the W6 audit called "file offsets" are CODE+ offsets (file = +0x28); verified by byte check before citing
+2026-11-13	negative-from-addressing-root-not-shapes.md	crawl	audit said no teleporter sits on stairs cells; re-asked from the move path and checked the cell beyond the stairs face: 203/205

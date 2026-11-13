@@ -126,3 +126,23 @@ the file for your target before starting:**
   ladder above.
 - **`Skill: re-learn`** — the learning loop: distills durable lessons into
   the knowledge base via an inbox + locked curation pass. See `game-re.md`'s Learning loop.
+
+## Assembling patch bytes without rasm2/nasm/keystone
+
+GNU binutils is almost always present even when no dedicated assembler is.
+For an x86 PE patch cave: write Intel-syntax source (`.intel_syntax noprefix`,
+`.code32`), then `as --32` -> `ld -m elf_i386 -Ttext=<cave VA>` ->
+`objcopy -O binary -j .text`. The linker resolves every rel8/rel32 against the
+real load address, so `call 0x40aaa0` / `jmp short label` need no hand math.
+Two disjoint caves in one unit: `.org <offset>, 0`, then slice the output.
+Round-trip with `objdump -D -b binary -m i386 -M intel --adjust-vma=<VA>`, and
+keep both steps in the patcher's self-check when binutils is available.
+
+Also fix the PE section header: a cave past a section's declared
+`VirtualSize` still executes (whole pages are mapped), but disassemblers and
+loaders hide it — set `VirtualSize` to the raw size.
+
+For m68k (binutils usually has no m68k target), a musashi build's
+`m68kdasm.o` links into a ~10-line C harness: implement
+`m68k_read_disassembler_8/16/32` over a file buffer and call
+`m68k_disassemble`.
