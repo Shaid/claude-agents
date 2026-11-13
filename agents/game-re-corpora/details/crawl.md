@@ -870,7 +870,7 @@ tracker packers had it. Ported faithfully, statement-by-statement, into
 `tools/shared/amiga-player4x.ts` (preserving the reference's exact
 `for`/`continue`/`break` loop shapes rather than manually flattening to
 `while`, sidestepping the classic C-port iteration-shift trap by
-construction — see `decompressor-port-loop-condition-iteration-shift.md`, `sibling-file-layout-hides-loader-gated-block.md`, `cross-port-asset-pairing-by-list-order-hides-aliased-slots.md`'s
+construction — see `decompressor-port-loop-condition-iteration-shift.md`, `vm-stop-opcode-may-be-per-frame-yield.md`, `vm-pop-operand-fetch-swaps-binary-operand-order.md`, `topdown-grid-orientation-check-via-planted-cell.md`, `sibling-file-layout-hides-loader-gated-block.md`, `cross-port-asset-pairing-by-list-order-hides-aliased-slots.md`'s
 avoidance note). Verified against all 10 real files: 0 decode exceptions,
 byte-exact re-encoded-size self-consistency against a standard `M.K.`-
 tagged ProTracker output, and a quantitative RMS + lag-1 sample-

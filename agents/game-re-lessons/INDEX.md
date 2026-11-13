@@ -547,6 +547,8 @@ _Game logic, script VMs, runtime state, entities, saves_
 | `vm-bytecode-embeds-platform-addresses.md` | A cross-platform content search returns zero matches for VM bytecode or a scripted-behavior table |
 | `vm-frame-push-falls-through-not-a-call.md` | Porting a bytecode/event-script VM whose call/repeat/block handlers push a frame and rts to the dispatcher without writing the target into the PC — don't model as push(return); pc=target; read the dispatcher's next-command routine (end-check consumes the frame, $FF-style end pops top); tests written from the port's own order. |
 | `writer-invariant-impossible-value-means-wrong-object-identity.md` | A field's own confirmed, invariant-preserving writer(s) provably cannot produce the value a crash/bug observes, and the instinct is to keep searching for a different/missed writer rather than distrusting the referring pointer's own identity |
+| `vm-pop-operand-fetch-swaps-binary-operand-order.md` | Porting a bytecode VM's expression evaluator (accumulator + eval stack, `op[operand]` steps) and a comparison/subtraction against a value popped from the stack (`opile`/`pop`) behaves "backwards" — clamps never fire, a bound runs to the region edge — and it is being explained as an engine quirk; read what the pop operand's fetch does to the registers |
+| `vm-stop-opcode-may-be-per-frame-yield.md` | A script/bytecode CFG walk (or an audit built on one) concludes "nothing ever loads/sets/calls X" while the walker ends paths at a `stop`/`halt`/`sleep`/`wait`-style opcode (e.g. ALIS `cstop`) — check whether the interpreter only suspends the script for this frame and resumes at the next pc |
 
 ## verification
 
@@ -627,7 +629,7 @@ _Oracles, statistics, censuses, null controls, negatives_
 | `verified-then-stale-doc-number-from-sibling-corpus-growth.md` | A live re-run of an already-documented full-corpus decode pass, used as a regression oracle or comparison baseline, disagrees with the doc's own previously-confirmed headline number — before treating it as a bug in your change, check whether the corpus itself grew from unrelated later work |
 | `weak-single-offset-fit-signals-missing-indirection.md` | A brute-force single-constant-offset sweep of a small id field against a direct target archive/table oracle best-fits in the 80-95% range and won't improve with a wider search — before accepting it as "the mapping, just imperfect" |
 | `cross-port-asset-pairing-by-list-order-hides-aliased-slots.md` | Mapping one port's named slots (tier/facing/pose frame names) onto another port's bitmaps by walking both lists in order — it checks out where counts agree, and the leftovers are being patched as "aliased"/placeholder entries; look for a source-port index table with the same slot shape and pair through it |
-
+| `topdown-grid-orientation-check-via-planted-cell.md` | A walker/map viewer draws a decoded world grid row-major beside a first-person view driven by the game's own code, with axis names and a facing table hand-traced or "verified" in the same frame — run an executed-dispatch wedge test per facing and a planted-cell handedness test before trusting either (transposed/mirrored grid) |
 
 ## tools
 

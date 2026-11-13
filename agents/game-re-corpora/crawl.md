@@ -11,7 +11,7 @@
 - Eye of the Beholder III (DOS) — AESOP/16; 265/312 bitmaps coloured, rest open
 - Dungeon Hack (DOS) — AESOP/16, source-verified; per-sprite palette choice open
 - Gold Box (Amiga): Pool of Radiance, Curse, Secret, Pools of Darkness, Champions/Death Knights/Dark Queen of Krynn, Gateway/Treasures of the Savage Frontier — containers, GEO, ECL, wall art solved; walkers built
-- Ishar 1-3 + Crystals of Arborea (Amiga AGA) — ALIS scripts render 6 locations; Ishar 2/3 first-person not attempted
+- Ishar 1-3 + Crystals of Arborea (Amiga AGA) — ALIS location scripts render first-person for 13 locations across all 4 titles
 - Elvira 1/2 + Waxworks (Amiga, AGOS) — 5,745 pictures rendered; sound/text open
 - Bard's Tale I-III (Amiga) — picture banks rendered; walls/maps/audio open
 - Dungeon Master / DM2 / Chaos Strikes Back (Amiga) — container/IMG/dungeon solved; palette + IMG7/8 open
@@ -50,6 +50,7 @@
 - Black Crypt Amiga overlays with "no known loader": check in-exe chunk directories first
 - Gold Box ECL: use the CFG reachability walker, not linear scans. A uniform degenerate result such as `{127,127,127}` means the decode config is wrong. Treasures' wallsets come from an exe-hardcoded table, and its overlays need `HUNK_OVERLAY` scanning
 - ALIS: find each script's own `cswitch` value set, then scan the grid. Never reuse another script's test position
+- ALIS: `cstop` is a per-frame yield, not an end — CFG walks continue past it. `acc OP[opile]` is `popped OP acc`. Stored grids are the world transposed — see `docs/ishar-container-format.md`
 - MM page-0 wall codes are 2=door, 3=torch (earlier prose had them swapped). Overland code 3 is border
 
 ## Key lessons

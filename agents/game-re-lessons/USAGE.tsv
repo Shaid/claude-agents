@@ -34,3 +34,5 @@ date	lesson	project	note
 2026-11-13	file-offsets-vs-segment-relative.md	crawl	W6 audit: converted doc CODE+ offsets to Bane.asm file offsets (+0x28) before reading movement/evaluator code
 2026-11-13	file-offsets-vs-segment-relative.md	crawl	caught that Bane.asm line addresses the W6 audit called "file offsets" are CODE+ offsets (file = +0x28); verified by byte check before citing
 2026-11-13	negative-from-addressing-root-not-shapes.md	crawl	audit said no teleporter sits on stairs cells; re-asked from the move path and checked the cell beyond the stairs face: 203/205
+2026-11-13	false-positive-bytecode-hit-without-cfg-reachability.md	crawl	same CFG family; drove executing the facing dispatch instead of grepping it
+2026-11-13	hypothesis-tested-with-mismatched-input-looks-refuted.md	crawl	re-derived each script facing table at its own pose rather than reusing the old frame
