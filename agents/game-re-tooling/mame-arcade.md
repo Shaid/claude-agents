@@ -385,6 +385,16 @@ Round's real boot-time palette table elsewhere in this project (see the
 independently confirmable (or, in principle, refutable) from the
 target's own shipped ROM bytes, no external oracle needed.
 
+## `unidasm`: MAME's standalone static disassembler, for CPUs other tools lack
+
+A MAME install ships `unidasm` (`unidasm <file> -arch <cpu> [-basepc N] [-skip N] [-count N]`). It disassembles a raw file with any MAME CPU core's disassembler and **does not emulate**, so it is allowed under a static-only rule even when running MAME is not. Use it when radare2 or stock Ghidra lacks the CPU. Confirmed working (kolbold `ga2`, System 32): `-arch v60` (stock Ghidra and r2 have no V60), `-arch nec` (V20/V30/V25 family; undo any opcode-substitution table first), `-arch z80`. `unidasm 2>&1` with no arguments lists every arch.
+
+Caveats:
+- `-skip` restarts the displayed address at `basepc`, so set `-basepc` to the real address when you skip.
+- Linear only, no xrefs or functions: write a small recursive-descent driver around it for a function map.
+- V60 is **little-endian**: absolute operands appear as LE 32-bit in byte censuses.
+- Boot code often loads a global data base register (ga2: `R25 = 0x208000`); rebase `disp[R25]`-style operands before naming RAM variables.
+
 ## See also
 
 `~/.claude/agents/game-re-lessons/cps2-decrypt-input-must-be-raw-rom-bytes.md`

@@ -158,7 +158,7 @@ project — the corpus file is the index into its docs.
 | `~/Development/vanille` | Odin Sphere, Grim Grimoire, Dragon's Crown, Grand Knights History, Muramasa + other Vanillaware | `vanille.md` |
 | `~/Development/chimera` | Fire Emblem: Three Houses / Warriors / Engage, FE Warriors: Three Hopes, Touken Ranbu Warriors (Switch) | `chimera.md` |
 | `~/Development/drakkhen` | Drakkhen (Amiga + Atari ST) | `drakkhen.md` |
-| `~/Development/kolbold` | D&D Shadows over Mystara + Tower of Doom, Knights of the Round, Golden Axe, Black Tiger (arcade) | `kolbold.md` |
+| `~/Development/kolbold` | D&D Shadows over Mystara + Tower of Doom, Knights of the Round, Golden Axe, Golden Axe: Revenge of Death Adder, Black Tiger (arcade) | `kolbold.md` |
 | `~/Development/powermonger` | Powermonger (Amiga, classic + WW1 edition) | `powermonger.md` |
 | `~/Development/methanoid` | Deuteros, Millennium 2.2, Reunion (Amiga; one multi-game repo) | `methanoid.md` |
 | `~/Development/parasite` | Parasite Eve, Parasite Eve II (PSX — different codebases) | `parasiteeve.md` |

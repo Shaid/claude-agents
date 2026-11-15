@@ -36,3 +36,6 @@ date	lesson	project	note
 2026-11-13	negative-from-addressing-root-not-shapes.md	crawl	audit said no teleporter sits on stairs cells; re-asked from the move path and checked the cell beyond the stairs face: 203/205
 2026-11-13	false-positive-bytecode-hit-without-cfg-reachability.md	crawl	same CFG family; drove executing the facing dispatch instead of grepping it
 2026-11-13	hypothesis-tested-with-mismatched-input-looks-refuted.md	crawl	re-derived each script facing table at its own pose rather than reusing the old frame
+2026-11-13	tracker-prose-is-not-evidence.md	crawl	AGOS audit: re-derived every "visually verified"/count claim from bytes; found 5,745-image count truncated and E1 0xF96 palette anecdote unreproducible
+2026-11-13	fixed-stride-record-count-unverified.md	crawl	AGOS vga2 anim table: census of all entries vs early-stop walk + VC-script draw refs showed ~9.3k real images, not 5,745
+2026-11-15	individually-failed-fixes-may-combine-cleanly.md	kolbold	table-end fix needed three combined parts (bra-table sites, speculative table pass ordered by address, exact sizes for two tables)

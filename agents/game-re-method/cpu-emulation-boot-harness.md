@@ -135,3 +135,17 @@ own right (a "the real dispatch address is never visited" finding is
 itself strong, checkable evidence of exactly where a boot sequence still
 diverges from real hardware, the same way a corpus-wide render is evidence
 for a decoder).
+
+## Differential whole-frame oracle for a static recompile
+
+Once a per-frame unit has been statically recompiled (state handler → object update → pool loops → type routines → placement walker → callbacks), verify the *frame*, not routines, against the emulator core running the original code:
+
+- Filter dispatch/pool-type tables to the types the scenario reaches; anything else throws "no label at". Grow coverage by discovery: run the port alone and let each missing label name the next dispatch target (one at a time, or automated).
+- Hook only genuinely out-of-scope services (players, camera, sprite build, HUD, `trap` calls) on **both** sides; log each hooked call with its entry registers.
+- Compare after **every** frame: full RAM, registers + CCR, the ordered service log, writes outside RAM, unmapped-read count. Carry the port's RAM into the next frame. Script the services' effects (camera/player positions) into both RAMs identically between frames.
+- Scripted inputs must be accepted by the oracle: an injected hit that sets fewer fields than the real player routine would can make the ROM itself loop. Discard those, count accepted/rejected, and label it.
+- Null controls: perturb only the **port's** copy (RNG, player count, camera, a flag) and require a mismatch at a specific first frame.
+- In walker-only sweeps, clear/refill ("consume") pools each frame so allocations keep succeeding.
+- Test runner plumbing: split files so none runs ~60 s synchronously (vitest's worker RPC times out with an "Unhandled error" though every test passed), and expose the oracle session via a getter, since it is created in `beforeAll`.
+
+Worked example: kolbold `ddsom` (CPS2, 68000 → TypeScript, Musashi oracle): 28,000 consecutive frames in ~35 s. This run found a jump-table truncation that weeks of per-routine random-state tests missed (`jump-table-end-at-lowest-target-truncates-shared-handler-tables.md`).

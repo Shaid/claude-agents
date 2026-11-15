@@ -1,4 +1,4 @@
-# kolbold — D&D SoM + ToD (CPS2), Knights of the Round (CPS1), Golden Axe (System 16), Black Tiger (1987)
+# kolbold — D&D SoM + ToD (CPS2), Knights of the Round (CPS1), Golden Axe (System 16), Golden Axe: Revenge of Death Adder (System 32), Black Tiger (1987)
 
 **Project root:** `~/Development/kolbold` · **Full history/evidence:** `game-re-corpora/details/kolbold.md` (read on demand) · **Open work:** `docs/<game>/TODO.md` per game (Golden Axe: `docs/goldenaxe/sys16/TODO.md`)
 
@@ -10,6 +10,7 @@ First MAME arcade-romset project in the account (data = `data/<game>/<platform>/
 - Knights of the Round — `knights`/`cps1` — unencrypted; tiles, boot palette, OKI audio, task kernel, roster solved
 - Golden Axe — `goldenaxe`/`sys16` — memory map, tiles, palette 0-511, uPD7759 solved; sprite palette, music open
 - Black Tiger — `blktiger`/`arcade` — gfx, palette 896/1024, i8751 MCU, BGM grammar, dialogue solved
+- Golden Axe: Revenge of Death Adder — `ga2`/`sys32` — recon only (19/19 CRC+SHA1); NEC V60 main (LE), Z80 + 2x YM3438 + RF5C68, V25 protection (address bitswap + opcode table, in MAME `segas32_m.cpp`). Open: `docs/ga2/sys32/TODO.md`
 
 ## Solved formats → where documented
 - Romset container: every set CRC32-matched to MAME `ROM_START` — confirmed (each game doc)
@@ -28,6 +29,8 @@ First MAME arcade-romset project in the account (data = `data/<game>/<platform>/
 - `~/Development/vgmtrans` CPS1/CPS2 modules + per-game romset DB: check first (its ROM address space differs from ours)
 - Oracles: MAME driver source, `historic-mame` key table (trust modern formula on `upper`), MacDonald's `s16b.txt`, published rosters
 - Golden Axe Musashi harness follows crawl's `tools/bcdft_decompress/emu.c` pattern
+- System 32 `ga2` is NOT the sys16 Golden Axe engine (different CPU, video, sound): linear 15-bit xBGR palette (sys16-order alias in the upper half of palette RAM, no resistor DAC); sprites are raw 4/8bpp bitmaps, with per-frame width/bank/offset only in V60 code
+- ddsom stage-1 frame is statically recompiled to TS and verified per frame against Musashi (`game-re-method/cpu-emulation-boot-harness.md` § differential whole-frame oracle)
 
 ## Reusable code in this repo
 - `@seer-project/arcade` (`~/Development/seer/packages/arcade/src/`): `mame-zip`, `capcom/{decrypt,gfx,palette,rom-regions,qsound,qsound-driver,oki-adpcm}`, `sega/{system16-gfx,upd7759-adpcm}`. The details file's `src/assets/formats/*.ts` paths are stale
@@ -41,6 +44,7 @@ First MAME arcade-romset project in the account (data = `data/<game>/<platform>/
 - Golden Axe: paletteram `$140000`, spriteram `$200000` (earlier swap overturned); i8751 programs the mapper; sprite segmentation is heuristic
 - ddsom: debug-menu `BOSS`/`ESHL WORK` labels conflict with traced pool roles, unresolved
 - No MAME/live capture; oracles are static (source, vgmtrans, decoded-audio stats)
+- ga2: disassemble V60/V25 with `unidasm` (no r2/Ghidra V60; `game-re-tooling/mame-arcade.md`); the V25 ROM's raw-order leftover assembler listing is a names-only oracle (scan raw and descrambled views; see details)
 
 ## Key lessons
 - `cps2-decrypt-input-must-be-raw-rom-bytes.md` — CPS2: decrypt raw un-byteswapped ROM bytes
