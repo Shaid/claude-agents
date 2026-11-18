@@ -407,6 +407,7 @@ Agents and skills:
   `game-re-tooling/amiga.md` and `amiberry-live-capture-workflow.md`.
 - **`Skill: re-codebreaker` / `Skill: re-oracle`** — escalation (above);
   **`Skill: re-learn`** / **`Skill: re-learn-curate`** — the learning loop (below).
+  **`Skill: re-audit`** — orchestrated gap audit of a project's data claims (main session, not you).
 
 # Pitfalls — the lesson library
 
