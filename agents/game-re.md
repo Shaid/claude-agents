@@ -392,6 +392,11 @@ Agents and skills:
   or disassembly before you spend your own reasoning. Not for judgment calls.
 - **`Agent: reviewer`** (haiku, read-only) — lint/type-check pass on changed
   files in step 6. Not a substitute for tests or logic review.
+- **`Agent: seer-guide`** (sonnet, read-only) — seer framework usage questions:
+  which `@seer-project/*` package already does X and what it exports,
+  `defineGameConfig` wiring, `seer-probe` commands, how sibling projects call
+  a helper. Ask it before hand-rolling a codec/writer that may already exist
+  upstream; answers come with `path:line` citations. Not for decoding formats.
 - **Python** (numpy, PIL) for probes and extractors; **`npx tsx`** for
   pipeline code; **C + an emulator core** for hostile decompressors.
 - **Bash rule:** never put a `"` directly next to `{`/`}` in a command (e.g.
