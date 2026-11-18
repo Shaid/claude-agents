@@ -3,7 +3,7 @@
 **Project root:** `~/Development/strike` · **Full history/evidence:** `game-re-corpora/details/strike.md` (read on demand) · **Open work:** `docs/<game>/TODO.md` (`desertstrike`, `junglestrike`, `urbanstrike`)
 
 ## Games
-- Desert Strike (`desertstrike`: `amiga`, `megadrive`) — Amiga object atlas, tiles, MODs, entity templates + spawn binding confirmed; no Apache sprite found
+- Desert Strike (`desertstrike`: `amiga`, `megadrive`) — Amiga object atlas, tiles, MODs, entity templates + spawn binding confirmed; player helicopter is in the entity bank. A SNES ROM (`data/desertstrike/snes/`, "Desert Strike: Return") is present with no coverage
 - Jungle Strike (`junglestrike`: `amiga` OCS, `amigaaga`, `megadrive`) — AGA screens, `weapons`, `objects1-9`/`sprites1-9` confirmed
 - Urban Strike (`urbanstrike`: `megadrive`, `snes`) — MD tilemap + overlay bank; SNES tilesets/screens/text shipped; sprites open
 
@@ -17,7 +17,7 @@
 
 ## Engine-family / cross-project links
 - Desert Strike Amiga tileset/tilemap is byte-identical in shape to Jungle Strike AGA's (u8 → u16 indices); MD tilemap reader is identical across Urban and Jungle Strike (different addresses).
-- Urban Strike SNES is an unrelated toolchain/codec from the MD/Amiga builds.
+- Urban Strike SNES graphics **are** the Mega Drive assets, runtime-converted: 65/65 LZSS tilesets, 132/132 tilemaps and 140/140 tile-delta sets byte-identical, same descriptor layout, and its "Okumura LZSS" is Strike LZSS. Only palettes are re-authored. Hash-join SNES against MD before decoding.
 - SNES DMA-register census (`STA $420B/$4342/$4345`) should crack `sorcery`'s open Wizardry 6 SNES graphics.
 
 ## Reusable code in this repo
@@ -30,7 +30,7 @@
 - SNES: radare2 is blind to M/X flag width; use a flag-aware 65816 disassembler with the correct per-entry state (wrong state in bank `$A8` caused a false "no resource table") — `r2-snes-flag-width-blind.md`.
 - SNES graphics resources are per-subsystem far-pointer "handle" arrays in DP `$20`/`$22`, not one global catalog; a planar decode of ROM bytes looks coherent but is wrong (check out-of-palette pixel rate).
 - Census both direct-page and absolute hardware-register forms — `narrow-opcode-form-census-false-negative.md`.
-- Verify a byte-consumption invariant against the *decrunched* size; HUNK_RELOC32 presence separates pointer tables from flat pixel data.
+- Verify a byte-consumption invariant against the *decrunched* size; HUNK_RELOC32 marks Jungle Strike's pointer tables, but not as a general classifier: Desert Strike's object-atlas chunks carry 1,521-1,765 self-relocations (its doc's "zero relocations" line is wrong). Strike MD LZSS never clears its window between calls (`game-re-tooling/compression.md`).
 - Cached Musashi boot RAM dumps go stale past their checkpoint — take a live capture for later routines.
 - Re-verify an escalation's "leads" (bank `$A8` sprite leads were wrong).
 

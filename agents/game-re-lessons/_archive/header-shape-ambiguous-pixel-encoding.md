@@ -152,3 +152,6 @@ the decoded content pick the winner — it's cheap enough to run corpus-wide
 (one decode + one O(pixels) pass per candidate) and degrades gracefully
 (a wrong pick on inherently flat content still looks plausible, since
 there's nothing there to get wrong).
+
+## 2026-11-13 audit — Spirit of Excalibur (`middilgard`)
+`_LoadResource` (`Excal.asm:50566ff`, CODE `0x23d50`) → `_GetResAttrs` (ref-list `+4` byte) → `BTST #0` → `_RLDecode`, `BTST #7` → `_LZSSDecode`, neither → raw, no u32 prefix. Attribute-driven decode: Spirit 496 (Amiga) / 653 (CDTV), Vengeance 591, WIME 134, Conan 505 compressed resources, 0 failures (exact or +1 byte). Matches the repo's heuristic output on 1,060/1,060 Spirit resources; all Vengeance (55/55) and Conan (101/101) FRMLs satisfy `bitmapStart == 8+6F` under attribute decoding.

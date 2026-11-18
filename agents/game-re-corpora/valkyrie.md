@@ -10,8 +10,8 @@
 ## Solved formats → where documented
 - VP1 PSX, `docs/valkyrieprofile/psx/data-structure.md`: SLZ LZSS (§4), XOR-encrypted TOC (§8), group directory (§9.3), STR video (§9.4), 3D/rooms/sprites (§9.6), subset-font text (§10), audio/BGM (§11), battle sprites (§13) — confirmed
 - VP1 logic: `psx/battle-logic.md`, `battle-engine-spec.md`, `item-skill-system.md`, `dungeon-field-mechanics.md`, `scene-script-vm.md`, `save-system.md` → `src/engine/`, `src/battle/`
-- PSP, `docs/valkyrieprofile/psp/data-structure.md`: `PSPVAL1.PFS` trailer dir, PSMF+ATRAC3+, CLUT8 art; PSX formats reused byte-for-byte at the same slot numbers
-- VP2, `docs/valkyrieprofile2/ps2/data-structure.md`: XOR raw-LBA TOC, `SL`/SLE/LZSS16, resource dir, FIS textures, TAC audio, VIF1 meshes, `MINA` anim — confirmed; `IDOM`↔`MINA` binding open
+- PSP, `docs/valkyrieprofile/psp/data-structure.md`: `PSPVAL1.PFS` trailer dir, PSMF+ATRAC3+, CLUT8 art; PSX formats reused byte-for-byte at the same slot numbers; 2,131 PFS entries are byte-identical to PSX Disc 1 slots, so PSP-vs-PSX parity there is automatic. Verify against the ~2,700 that differ
+- VP2, `docs/valkyrieprofile2/ps2/data-structure.md`: XOR raw-LBA TOC, `SL`/SLE/LZSS16, resource dir, FIS textures, TAC audio, VIF1 meshes, `MINA` anim — confirmed; `IDOM`↔`MINA` binding solved (§3.12.23). Resource-directory censuses are first-directory-only: 883 more sector-aligned directories (~16% of the disc) follow the first in 89 TOC entries
 
 ## Engine-family / cross-project links
 - SLZ identical on PSX/PS2/PSP; VP2 TOC from CUE's `triAce-PS2.c` (also SO3/Radiata, untested)
@@ -30,7 +30,7 @@
 - Triad baseline is non-zero; concurrent sessions edit the tree — targeted `git add`
 - User-confirmed: VP1 has no random encounters, and does use 3D (world map, arenas, effects)
 - The interpreter sweep's "% clean" is a first-fault rate, not coverage: judge rounds on depth (events reaching `resolveHit`, gameplay-stub-free modules) and classify new faults content-gap vs logic-bug — `no-fault-rate-flat-while-execution-depth-grows.md`; and its tick must replay the main loop's per-actor/per-pool calls, not just the module handler — `sweep-harness-must-replay-main-loop-per-entity-calls.md`
-- VP2's gameplay code is not in the ELF — it is overlay-loaded, and the ELF's 366 zero-`filesz` `PT_LOAD` reservations are the module census (slot, size, which are mutually exclusive): `docs/valkyrieprofile2/ps2/battle-logic.md` § 13.5
+- VP2's gameplay code is not in the ELF — it is overlay-loaded, and the ELF's 366 `PT_LOAD`s (365 zero-`filesz` reservations) are the module census (slot, size, which are mutually exclusive): `docs/valkyrieprofile2/ps2/battle-logic.md` § 13.5
 - VP2's battle image is header-masked in two layers (LCG over the bootstrap header; key-table magic unlock + chained word cipher over the pack) — no byte-shape scan can find it; it was located from the field engine's own mode-EXIT branch, § 16. Decoder: `tools/shared/ps2-battle-pack.ts`
 
 ## Key lessons

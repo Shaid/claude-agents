@@ -11,7 +11,7 @@ Registered viewer ids (`src/game-id.ts`): `hunter`, `carrier-command`, `epic`, `
 - Wings (Amiga, Cinemaware) — `.BOLT` archive, Mode-B codec, palettes, `pilot.dat`, dogfight renderer solved
 - Frontier: Elite II (Amiga) — model bytecode + scene graph + glTF shipped; savegame solved
 - Midwinter (Amiga) — NDOS disk, resource table, terrain seed+fractal confirmed; vehicle models open
-- Midwinter 2 (Amiga) — dir files, `.cmp`/`.mcp`/`.fsd` codecs, island sections, terrain solved; audio samples open
+- Midwinter 2 (Amiga) — dir files, `.cmp`/`.mcp`/`.fsd` codecs, island sections, terrain solved; audio samples open; `disk.4` is the shipped blank campaign/save disk (WHDLoad ReadMe: CUSTOM1=4-9), not copy protection
 - Gunship 2000 AGA — `.PIX` (RNC1 ILBM), `.cat` catalog, roster partial, SFX engine
 - Embryo (Amiga, 1994) — XOR-obfuscated CrM2 container + file catalog solved; 3D engine exe not found
 - Zeewolf — boot catalog + custom disk layout; 64% of disk uncharacterised
@@ -20,11 +20,11 @@ Registered viewer ids (`src/game-id.ts`): `hunter`, `carrier-command`, `epic`, `
 
 ## Solved formats → where documented
 - RNC1 (`tools/hunter/rnc1.py`, byte-verified; reused for Gunship `.PIX`) and FIRE backwards LZ77, no Huffman (`tools/hunter/fire-depack.py`)
-- Hunter "OB" objects (Amiga = ST layout) — confirmed code-level — `docs/formats/hunter-ob.md`, `docs/3d-object-format.md`, `tools/hunter/ob-format.mjs`; ST file-descriptor table + checksums — `docs/data-format-reference.md` (§2.8 verifier)
+- Hunter "OB" objects (Amiga = ST layout) — confirmed code-level (197 unique objects; the tracks 50-51 chain and `musfile` tail are disk-build residue, byte-exact copies of `objfile`/`soundfile`) — `docs/formats/hunter-ob.md`, `docs/3d-object-format.md`, `tools/hunter/ob-format.mjs`; ST file-descriptor table + checksums — `docs/data-format-reference.md` (§2.8 verifier)
 - Carrier Command 3D/BSP/entity pools — `docs/explore/CarrierCommand/data-structure.md`
 - Epic `.3D`/`.IGD` 25-opcode display list — confirmed — `docs/explore/Epic/epic-3d-format.md`, `tools/epic/epic_oplist.py`
 - Wings `.BOLT` (trailer-pointer directory, Mode-B LZ, `flags1` 0x00 palette/0x05/0x06/0x12), `pilot.dat` — confirmed — `docs/explore/Wings/data-structure.md`, `tools/wings/bolt_{parse,decompress,palette}.py`
-- FE2 savegame (self-keying cipher + zero-RLE) — `docs/formats/fe2-savegame.md`; Frontier models (32-opcode bytecode, 8 vertex encodings) + scene graph — byte-exact vs oracle — `docs/explore/Frontier/data-structure.md`, `tools/frontier/frontier_models.py`, `frontier_scenegraph.py`, `build-gltf.mjs`
+- FE2 savegame (self-keying cipher + zero-RLE; the footer is a weak check — the cipher self-resynchronises, so it ignores the initial key and almost all of the payload, 0/200 bit flips detected) — `docs/formats/fe2-savegame.md`; Frontier models (32-opcode bytecode, 8 vertex encodings) + scene graph — byte-exact vs oracle — `docs/explore/Frontier/data-structure.md`, `tools/frontier/frontier_models.py`, `frontier_scenegraph.py`, `build-gltf.mjs`
 - Midwinter terrain (50x50 seed, midpoint displacement) — confirmed — `tools/midwinter/terrain.py`; Midwinter 2 `.cmp` nibble-RLE (312/415 frames; `LAB_0BAF` variant open), `islandNN.bin` sections, `mw2map.bin` diamond-square — `tools/midwinter2/`, `docs/explore/Midwinter{,2}/data-structure.md`
 - Gunship `.cat` catalog, `roster.dat` — `docs/explore/Gunship2000AGA/data-structure.md`
 - Embryo CrM2 (XOR'd header) — `tools/embryo/crm2.py`, `docs/explore/EmbryoHr/data-structure.md`

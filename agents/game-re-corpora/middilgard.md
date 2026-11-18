@@ -10,8 +10,8 @@
 - Warriors of Legend (`legend`: DOS VGA) — GAMI/LMRF/PAMM/NECS solved; `TAPM` still open
 
 ## Solved formats → where documented
-- Mac-style **resource-fork** container, all games; endianness + byte-reversed FourCCs per platform (`IMAG`/`GAMI`, `FRML`/`LMRF`, `MMAP`/`PAMM`, `SCEN`/`NECS`) — `docs/formats/resource-fork.md`, `src/assets/formats/resource-fork.ts`
-- `IMAG`/`FRML` (28/27/6-byte header variants; PackBits **or** LZSS, auto-detected) — `docs/formats/{imag,frml}.md`, `src/assets/formats/{imag,frml}.ts`
+- Mac-style **resource-fork** container, all games; endianness + byte-reversed FourCCs per platform (`IMAG`/`GAMI`, `FRML`/`LMRF`, `MMAP`/`PAMM`, `SCEN`/`NECS`); DOS and IIGS data sections are u32-length-prefixed like Amiga's (the doc's "unprefixed" is wrong) — `docs/formats/resource-fork.md`, `src/assets/formats/resource-fork.ts`
+- `IMAG`/`FRML` (28/27/6-byte header variants; codec chosen per resource by the attribute byte: bit 0 RLE/PackBits, bit 7 LZSS, neither raw) — `docs/formats/{imag,frml}.md`, `src/assets/formats/{imag,frml}.ts`
 - `SCEN` scene object lists (Vengeance 4911/4911, Spirit 99.9%, Conan 6,542/6,542; per-game bitfield) — `docs/{spirit,vengeance,conan}/amiga/engine.md`, `src/assets/formats/scen.ts`
 - Legend `NECS` (LZSS-compressed, 32-byte header + 32-byte records; 316 scenes render) — `docs/legend/dosvga/engine.md`, `src/assets/formats/legend-necs.ts`
 - WIME `BScene`/`SynthSceneObjects` procedural generator (all 276 paths) — `docs/wime/amiga/bscene-format.md`
@@ -23,7 +23,7 @@
 
 ## Engine-family / cross-project links
 - Melbourne House / Synergistic engine, five games on one container — re-derive SCEN bitfield, id formula and header per game; expect a new variant, not the same constants.
-- Conan's `Game`/`Conan` compressed DATA hunk = same custom backwards-LZ77 + 7-hunk shape as Black Crypt `bcdft` (`crawl` corpus); solved by running the exe's own CODE under musashi (`tools/conan/decompress-data-hunk/`).
+- Conan's `Game`/`Conan` compressed DATA hunk = same custom backwards-LZ77 + 7-hunk shape as Black Crypt `bcdft` (`crawl` corpus); solved by running the exe's own CODE under musashi (`tools/conan/decompress-data-hunk/`). The decompressed hunk1 **is** code (hunk0's `RTS` jumps into it → SAS/C startup, A4 = hunk2+`0x7ffe`); the cached images carry relocations applied to the harness's synthetic bases.
 - DOS ports are field-for-field x86 ports of Amiga code; Amiga data tables are byte-identical search oracles (swap 16-bit words for bytecode).
 
 ## Reusable code in this repo
@@ -36,14 +36,15 @@
 ## Know before you start
 - SCEN entry longwords are byte-reversed on disk (fixed up in `_LoadScene`); `refId` is dispatched on a flags byte (`_aCharFlags`), not the id; SCEN ids are computed (`x*100+loc`).
 - Executables ship `HUNK_SYMBOL` (~1,100 real C names) — resolve A4 `JSR`s via SAS/C jump-table stubs (`game-re-method/finding-the-reader.md`); displacements never transfer between `Excal` and `ExcalII`.
-- FRML codec choice (PackBits vs LZSS) needs a structural tie-break (frame-0 bitplane depth), not a fixed preference.
+- Decode from `ResourceEntry.attributes` (Spirit `_LoadResource`: `BTST #0` RLE, `BTST #7` LZSS), not a heuristic; the "153 non-standard-bitmapStart FRMLs" were codec mis-picks. Never byte-swap a size prefix on uncompressed `LMRF`/`RAHC`.
+- Compiled `_aLoc`/`_itemTypes`/`_itemLoc` defaults are inert (`_Restore("EPISODE1.DAT")` replaces them before play); episodes renumber locations, and tables index from the `HUNK_SYMBOL` address (slot 0 blank). WIME DOS VGA/EGA/IIGS do ship map + tileset + icons.
 - DOS exes are packed: Conan `START.EXE` LZEXE with crack-tampered `e_ip`/`e_cs`; WIME `START.EXE` EXEPACK (different file); Vengeance `game.exe`/`vex.exe` LZEXE 0.91; Legend `wofl.exe` in-file overlays stall static tracing.
 - Format docs hold confirmed info only; every eliminated theory goes in `docs/reference/eliminated/` — check there before retrying.
 - `www/` Astro site is a third rendering surface (`www/scripts/build.mjs`); multiple concurrent agent sessions commit to the same tree.
 
 ## Key lessons
 - `port-reverses-whole-header-word-not-per-field.md` — SCEN longwords are byte-reversed whole, per platform
-- `header-shape-ambiguous-pixel-encoding.md` — FRML PackBits-vs-LZSS needs a structural tie-break
+- `header-shape-ambiguous-pixel-encoding.md` — read the recorded codec selector (attribute byte) before any tie-break
 - `packed-exe-mimics-variable-length-records.md` — DOS exes are LZEXE/EXEPACK-packed; unpack before censusing
 - `multiple-rendering-surfaces-same-data.md` — `www/` site is a third rendering surface for the data
 - `bare-git-commit-sweeps-concurrent-stage.md` — concurrent sessions commit here — always use pathspecs

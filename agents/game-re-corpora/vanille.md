@@ -3,17 +3,17 @@
 **Project root:** `~/Development/vanille` · **Full history/evidence:** `game-re-corpora/details/vanille.md` (read on demand) · **Open work:** `docs/<game>/TODO.md` per game
 
 ## Games
-- Odin Sphere (PS2) — `odinsphere`/`ps2` — CVM solved, ADX audio + FMBP models shipped; FECD/FTEX/DTPK/ZLD/ARD identified, not decoded
+- Odin Sphere (PS2) — `odinsphere`/`ps2` — CVM solved, ADX audio + FMBP models shipped; FECD/FTEX/ZLD/ARD identified, not decoded; `ps2_DTPK` (`.DAT`/`.DAU`) is a sound bank (TBLD + VAGD, 118/118 across Odin and Grim), not a texture pack
 - Grim Grimoire (PS2) — `grimgrimoire`/`ps2` — CVM solved, ADX audio + FMBP models shipped
 - Dragon's Crown (PS3) — `dragonscrown`/`ps3` (`ps4` registered, empty) — CPK, FTEX, FMBS models, ACB/AWB (HCA metadata only) shipped
-- Grand Knights History (PSP) — `grandknightshistory`/`psp` — unencrypted CPK; ACB/AWB (ATRAC3 metadata only)
-- Muramasa: The Demon Blade (Wii) — `muramasa`/`wii` — RVZ→FST extracted; FCMP, Wii FMBS (549/621) solved
+- Grand Knights History (PSP) — `grandknightshistory`/`psp` — CPK (`GKHINST.CPK`'s `@UTF` header/TOC are DecryptUTF-encrypted); ACB/AWB (ATRAC3 metadata only)
+- Muramasa: The Demon Blade (Wii) — `muramasa`/`wii` — RVZ→FST extracted; FCMP, Wii FMBS (549/621) solved; the FMBS part uv index is u16 @+4, not the low half @+6 (constant 0, so the old in-range check passed and renders were wrong)
 - 13 Sentinels: Aegis Rim (Switch) — `13sentinels`/`switch` — CPK + Tegra FTX/NVT textures + 4th FMBS layout shipped
 - Unicorn Overlord (Switch) — `unicornoverlord`/`switch` — CPK + FTX/NVT textures shipped
 
 ## Solved formats → where documented
 - CRI ROFS **CVM** (`CVMH`+`ZONE`, ISO9660 with scrambled directory sectors; passphrase `shinobutan` for both PS2 titles) — fully solved — `docs/odinsphere/ps2/data-structure.md` §3-4, `docs/grimgrimoire/ps2/data-structure.md`, `tools/shared/rofs-cvm.ts`
-- CRI **CPK** (`@UTF` TOC + CRILAYLA; UTF encryption optional per game — DC encrypts, GKH doesn't) — solved — `docs/dragonscrown/ps3/data-structure.md`
+- CRI **CPK** (`@UTF` TOC + CRILAYLA; UTF encryption is per CPK, not per game — check each CPK) — solved — `docs/dragonscrown/ps3/data-structure.md`
 - CRI audio **ADX/AFS/ACB/AWB** (AWB = AFS2 *or* nested-CPK/ITOC; ACB positional cue↔waveform pairing, no cue-graph interpreter; HCA/ATRAC3 decode out of scope) — shipped — `docs/audio-format.md`
 - **FMBP/FMBS** "paper-doll" sprite models — four layouts: PS2 FMBP (LE, VIF-packed), PS3 FMBS (BE, 0xE4 header), Wii FMBS (BE, 0xA0 header at FMBP positions), Switch FMBS (LE, 0x120 header, u64 offsets, normalized UVs) — render-verified — `docs/fmbp-model-format.md`, `tools/shared/fmbp.ts`, `tools/shared/switch-cpk-models.ts`
 - Switch `FTEX`/`FTX0`/`.tex` (NVT) Tegra X1 block-linear BC3/BC4/BC7 (7,301/7,301 payloads) — solved — `docs/switch-ftx-nvt-format.md`, `tools/shared/switch-nvtx.ts`

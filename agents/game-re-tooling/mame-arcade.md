@@ -402,3 +402,17 @@ and `~/.claude/agents/game-re-lessons/cps2-gfx-needs-extra-unshuffle-pass.md`
 for CPS2-specific traps found via this workflow (both plausibly generalize
 to other MAME-driver families that do similar loader-vs-cipher or
 loader-vs-gfx-decode byte-order tricks).
+
+## MAME Lua: a bus read of a write-only register returns 0, not the register
+
+Registers MAME maps with `.w(...)` (often `.share(...)` for the driver's own use) have no read handler. `space:read_u16(addr)` from a Lua script returns 0 (open bus) on every frame and looks like a valid capture. Read the backing memory share instead (the `cps_a_regs` share, via the Lua `memory.shares` table), or tap the write with a write passthrough. Check the address map in the driver source for every register you capture. Example: CPS2 CPS-A palette base at `0x80010a` was "captured" as 0 in all 186 frames across six games. The decoded "hardware palette banks" for four games were therefore the wrong window; the real data started at other 1 KB pages.
+
+## CPS3: decrypt both SIMM banks before any static negative
+
+MAME's `copy_from_nvram` decrypts SIMM1 and SIMM2 (at `0x06800000`). A pipeline that decrypts only SIMM1 sees half the program space. SFIII3's SIMM2 holds about 1.6 M non-blank dwords of structured data (96.6% with top nibble 0), so every "no reference to X" negative from SIMM1 alone is scoped to half the program. Red Earth has no SIMM2.
+
+## Neo Geo palettes: many SNK tables put an ID in word 0, and pen 0 is transparent
+
+- Many palette ROM tables (kof98, kof99, svc) are runs of 32-byte (16-word) records whose **word 0 is a sequential palette-ID tag** (`0001`, `0002`, … one per record), because pen 0 is transparent and its colour is unused. A scanner that requires word 0 == 0 misses them, though other titles' tables do keep word 0 at 0 (lastbld2 `0xd4000`), so scan for both. Scan for runs where word 0 rises by one per record (kof98 `0x3d7810`, 5,183 records; svc `0x562558`, 10,399), and confirm by finding runtime-captured banks verbatim in that window, with a shuffled null.
+- Neo Geo sprite transparency is **pen 0**, not pen 15. An atlas that keys pen 15 drops a dark outline and fills tile boxes with a solid backdrop.
+- A shuffled-word null against "aligned records with word 0 == 0" fails for any record table, so it isn't palette-specific. Use a smoothness score or a runtime match instead.

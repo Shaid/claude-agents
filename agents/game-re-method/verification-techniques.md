@@ -1730,3 +1730,30 @@ engine-engaged. Reaching that state at all first required modelling the
 harness's hardware waits and the UI's click gating — see
 `harness-blank-output-is-unmodelled-hardware-wait.md` and
 `silent-no-op-clicks-in-driven-ui.md`.
+
+## Seam continuity: score a tile decode, a tile-bank addressing model or a map↔atlas pairing against a shuffled null
+
+When a tiled image or map has no reference render, measure how often pixels agree across the shared edge of adjacent tiles, then compare with the same measure for randomly paired tiles. Report `lift = (observed − null) / (1 − null)`. A right decode, a right index→tile mapping, or the right atlas for a map gives a clear lift. A wrong one sits at the null, however plausible the render looks.
+
+- Gold Box Curse walls: corrected glyph decode 0.584 vs null 0.201 (lift 0.48); the shipped 1bpp reading 0.655 vs 0.621 (lift 0.09). PoR blank+45 alignment lift 0.46 vs 0.29/0.31 for the other alignments. Champions flat-bank addressing scored 0.23–0.50 against a 0.16–0.34 null (wrong); the per-wall model 0.39–0.68. Calibrate the "probably right" band on a title whose model is already confirmed (Death Knights 0.51–0.71 vs 0.17–0.30).
+- Warriors of Legend city map: seam/shuffled-grid ratio 0.376 at 148 columns vs 0.647 at 222, where the shipped width had been "picked by eye". The same score paired maps with atlases: 49 for atlas 507 vs 147 for the shipped 508.
+- WIME IIGS `RAHC` ("confirmed blank"): edge agreement 99.4% against the Amiga `CHAR` tiles vs 50.3% under a tile-index shift. It was the terrain tileset.
+- Use per-tile or per-level scores, not one corpus average. Ship it as a regression test that would fail on a wrong width or pairing.
+
+## Shared-wall reciprocity: pin direction-slot order and grid transposition, per level
+
+In a cell grid where each cell stores its own N/E/S/W wall codes, the east slot of (x,y) and the west slot of (x+1,y) describe the same wall, and so do the north slot and the neighbour's south slot. Score every permutation of the slot order, plus width/height swaps, by the fraction of shared walls that agree. Report each level separately.
+
+- Might & Magic 1/2: the documented `N=b&3, E=>>2, S=>>4, W=>>6` labels scored about 30%. The true order W,S,E,N (y+1 = north) scored 6,996/7,005 and 7,150/7,160 (MM1) and 100% on every MM2 indoor screen. Two sources agreeing on the wrong labels (the reference's prose and the port) is one source.
+- Gold Box Dark Queen variable GEO: an "82.4% average" hid 8 of 20 levels that were transposed. Swapping width/height took L18 from 0.093 to 1.0 and L14 from 0.304 to 0.998.
+- A horizontal-axis check can't see a N/S swap, and vice versa. State which axis each permutation test can tell apart.
+- The same idea works with any second table that counts per column or row. Dungeon Master's per-column cumulative thing counts match the thing-bit squares of the column-major grid (DM1 412/412, DM2 725/725). Read row-major, the null gives 40/412 and 122/725.
+
+## Field identity by `max(field) == count − 1`
+
+To decide which field indexes which table, check per file whether each candidate field's maximum equals the target table's count − 1. Also test each field against the wrong table's count as a control. The test rejects a constant-0 field, which a plain in-range test accepts.
+
+- Muramasa (Wii) FMBS parts: u16 @+4 equalled `uvCount−1` in 642/642 files; the shipped u16 @+6 only in 37/642, the files where @+4 == @+6. Colour @+8 and xy @+10 hit 642/642 against their own counts and 11–23 against the wrong counts.
+- Urban Strike tilemaps: `max(tileIndex) == tileCount − 1` holds on 62 real maps against about 0.8% with shuffled tilesets, while "0 out-of-range cells" still held on 66.8% of shuffled pairings.
+
+Sources: 2026-11 codebreaker audit sweep — crawl (Gold Box FR/Krynn, Might & Magic 1/2, Dungeon Master), middilgard (Warriors of Legend, War in Middle Earth), vanille (Muramasa), strike (Urban/Jungle Strike). See `check-that-cannot-fail-is-not-evidence.md` for the checks these replace.

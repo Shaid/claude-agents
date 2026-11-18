@@ -307,13 +307,14 @@ an external oracle, and the result is **quantified** ("0 RGB mismatches across
 decoded — record it as open with the best result. Every oracle needs a **null
 control**: re-run it on a deliberately wrong variant (transposed grid, sibling
 field, shuffled pairing) and require it to collapse to chance; an oracle that
-can't fail confirms nothing. Prefer cheap oracles, roughly in this order:
+can't fail confirms nothing (usual shapes: `check-that-cannot-fail-is-not-evidence.md`). Prefer cheap oracles, roughly in this order:
 - a byte-exact structural invariant holding across every file with zero
   deviation (incl. a blind forward walk reproducing a known boundary);
 - the project's own already-shipped tables in the same coordinate space;
 - **redundancy in the target itself** — two independently-located tables
   agreeing on a non-trivial number, a directory restating its members'
-  headers, several unrelated consumers special-casing the same value set;
+  headers, several unrelated consumers special-casing the same value set,
+  tile edges agreeing across seams or shared walls across cells;
 - the same asset on another platform's port, or an earlier session's capture;
 - prior art for the **exact game**, not just its engine family — a source
   port or fan disassembly can hand you the algorithm outright;

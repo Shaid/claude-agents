@@ -12,12 +12,12 @@ Per-game decoders live in `tools/<game>/`; format docs in `docs/<game>/snes/data
 ## Solved formats → where documented
 - FFVI LZSS (2KB ring, compressed-length header) — confirmed — §4; FFV LZSS is **not byte-compatible** (decompressed-size header, reversed token packing) — `docs/ffv/snes/data-structure.md`
 - FFVI US text: DTE dialogue + separate fixed-length name alphabet — confirmed — §5; control codes `:b`/`:w` consume parameter bytes (`tools/ffvi/text.ts`)
-- JP text systems: FFIV-J flat kana; FFV-J kana + 72-entry MTE; FFVI-J MTE + 2-byte kanji (`tools/ffvi/jp-dialogue.ts`, `jp-text.ts`) — confirmed — §15.3, §15.10
+- JP text systems: FFIV-J flat kana; FFV-J kana + 71-entry MTE; FFVI-J MTE + 2-byte kanji (`tools/ffvi/jp-dialogue.ts`, `jp-text.ts`) — confirmed — §15.3, §15.10
 - FFVI graphics: portraits (tile-formation reorder) §6; monster/Esper stencil-trimmed tiles §8.1; field sprites + walk/flip frames (`field-sprites.ts`) §13; field maps/tilesets (`maps.ts`) §9; world map + minimap/sprites/Mode 7 backdrop (`world-map.ts`) §10; battle sprites §16 — confirmed by render + invariants
 - FFVI data: `MonsterProp`, `MagicProp`, `ItemProp`, AI/battle-event/attack-animation script banks — confirmed — §8, §12, §16-17
 - AKAO SPC700 drivers: FFIV V1, FFV V3, FFVI V4 (`AKAOSNES_V4_FF6`, not N-SPC); sequence decoders + real SPC700 boot-harness renderers (`tools/<game>/akao-spc-render.ts`) — confirmed — FFVI §18-19, FFV §12-13, FFIV §13; `docs/spc700-emulation.md`
 - FFVI battle engine (ATB, AI, damage formula, status timers, counters, commands) — `tools/ffvi/battle-*.ts`, `attack-data.ts` — §20, `docs/ffvi/battle-engine-plan.md`
-- FFIV: text pools/DTE, portraits, window font, battle char gfx §9, `CharProp`/`AttackProp`/`MonsterProp` (pointer-indexed, overlapping records) §10-12, JP-vs-US diff §8 — `docs/ffiv/snes/data-structure.md`
+- FFIV: text pools/DTE (export cuts records ≥512 B: `tools/ffiv/text.ts` reads a fixed 512-byte window; bound by terminator/next pointer), portraits, window font, battle char gfx §9, `CharProp`/`AttackProp`/`MonsterProp` (pointer-indexed, overlapping records) §10-12, JP-vs-US diff §8 — `docs/ffiv/snes/data-structure.md`
 - FFV: MTE/kanji dialogue, monster gfx (big-endian pointer packing), job battle sprites §9, battle-stat tables §10, overworld EventScript VM (`tools/ffv/overworld-gfx.ts`) §11.2 — `docs/ffv/snes/data-structure.md`
 
 ## Engine-family / cross-project links

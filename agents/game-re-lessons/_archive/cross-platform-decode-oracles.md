@@ -258,3 +258,12 @@ port's `COMMAND1.HSQ` at the same offsets (`cmp` disagreed only inside the
 earlier directory region, exactly as expected) — settling both the format
 and the extraction from two independent angles in one pass, with no code-
 level consumer traced at all.
+
+## 2026-11 audit sweep (codebreaker gap audits, report-only)
+- Urban Strike SNES vs Mega Drive (`strike`): 65/65 LZSS tilesets, 132/132 tilemaps, 140/140 tile-delta sets byte-identical; SNES "Okumura LZSS" = Strike LZSS; only palettes re-authored. Refuted "unrelated toolchain".
+- Dune (`wyrm`): `map.hsq`, `map2.hsq`, `globdata.hsq`, `tablat.bin` md5-identical Amiga/DOS.
+- MM2 (`crawl`): DOS `MAP.DAT` (60 u16 offsets + u32 size + LZW) decodes 60/60 byte-exact to Amiga `map.dat`.
+- VP1 PSP vs PSX (`valkyrie`): 2,131 PFS entries byte-identical to PSX Disc 1 slots, so PSP "byte-exact cross-platform" checks on them were tautological.
+- Deuteros v2 / Millennium 2.2 second publisher (`methanoid`): reissues patch the protection entry to load the expected result as an immediate; v2 ProgramDisc IPF has no Copylock track.
+- Neo Geo (`facepunch`): runtime-captured palette banks found verbatim in ROM (kof98 312/395, kof99 97/97, svc 212/229, samsho4 89/89; shuffled null 0).
+- Phantasie I vs II (`nicodemus`): 32 race + 98 monster sprites pixel-identical across planar/interleaved layouts (null 24–69%).

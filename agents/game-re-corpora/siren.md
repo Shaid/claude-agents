@@ -10,7 +10,7 @@
 ## Solved formats → where documented
 - **AKAO** sequenced audio — FF8/FF9 "v3" (0x40 header, identical across both; 9,832 tracks 100%) vs FF7 "v1.0" (0x14 header; 17,672 tracks 100%) — corpus-confirmed — `docs/akao-format.md`, `tools/shared/akao*.ts`
 - FF8/FF9 AKAO sample bank (PSX SPU ADPCM + instrument records) — `tools/shared/akao-sample-bank.ts`
-- FF7 global instrument bank `SOUND/INSTR.DAT` + `INSTR.ALL` (93 records; 12-TET pitch table; `PROGCHANGE` → record index 24,487/24,487) — substantially decoded; local drum-table grammar and `INSTR2.ALL` range discrepancy open — `docs/akao-format.md`, `tools/shared/akao-sample-bank-v1.ts`
+- FF7 global instrument bank `SOUND/INSTR.DAT` + `INSTR.ALL` (93 records; 12-TET pitch table; `PROGCHANGE` → record index 24,487/24,487) — substantially decoded; `DRUM_ON` drum table and `INSTR2` (SPU `0x38560`) resolved per `docs/ff7/TODO.md`; what sets Subsystem 16 (the `INSTR2` load mode) is still open — `docs/akao-format.md`, `tools/shared/akao-sample-bank-v1.ts`
 - FF9 dir13 special-effect archive (IMG Type-3; chunk table + 3-byte command stream at `0x400` + small-file table), ported from Memoria `SFXBinaryFile.cs` — `docs/ff9/psx/sfx-format.md`, `tools/ff9/sfx.ts`
 - FF9 dir07 battle mesh (type 0x02) + pose (0x03), TIM/VRAM material baking — 182 GLBs, 2,729 clips; type-C polygons explicitly unsupported — `tools/ff9/{model,gltf,vram}.ts`
 - Not covered by the details file (status unknown here, read directly): `docs/ff9/psx/{ff9-img-format,db-archive-format,dot1-archive-format,field-data,ev-script,disc-manifest}.md`
@@ -30,6 +30,10 @@
 - FF9 model-effect opcodes 0x80-0x87 cross a proven closed-native boundary (Memoria P/Invokes `FF9SpecialEffectPlugin`): 108/126 dispatches are opaque — classify referenced resources only by their own leading bytes (`"AKAO"`, `0x6f73` "so" static mesh → dir07 mesh reader).
 - FF7 instrument loop-seed records are 1-2 ADPCM blocks — tile them or renders come out >99% silent.
 - FF8/FF9 instrument/drumkit table work (`akao-instruments.ts`) was a separate, concurrent pass.
+- FF7 discs are not all byte-identical: Disc 1 `FIELD/TUNNEL_6.MIM` is a damaged rip (6 zero-filled sectors with valid EDC); take it from Disc 2.
+- FF9 DB archives: the documented end rule over-reads the next type list's 4-byte header on every boundary (10,080 of them). BTL_SCENE's "4-byte trailer" and AKAO `+0x06 = size−4` follow from it; fix `parseDbArchive` once.
+- FF8 field backgrounds: the MIM/MAP spec is right but `tools/ff8/mim-render.ts` is not (it must blit 16×16 tiles, sort by Z, make colour 0 transparent); 572 of 875 unique fields are never extracted.
+- Cross-disc counts double-count byte-identical copies (AKAO "all 4 discs"); hash before counting.
 - TODO files, not this summary, are the status source of truth.
 
 ## Lessons sourced from this corpus

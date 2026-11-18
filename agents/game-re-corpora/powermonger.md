@@ -5,19 +5,19 @@
 ## Games
 - Powermonger, classic (Amiga) — `powermonger`/`amiga` — fully worked: disk, codecs, graphics, palette, terrain gen, entity/AI
 - Powermonger: World War I Edition (Amiga) — `powermongerwwi`/`amiga` — same disk/compression confirmed; formats not individually re-verified (see `docs/powermonger/amiga/ww1-edition.md`)
-- Powermonger (DOS VGA) — `powermonger`/`dosvga` — separate doc tree; Huffman `.HUF` compression, not the Amiga LZ — `docs/powermonger/dosvga/{data-structure,huf-format}.md`
+- Powermonger (DOS VGA) — `powermonger`/`dosvga` — separate doc tree; Huffman `.HUF` compression, not the Amiga LZ; each entry = `[u32 LE origSize][LZHUF stream]` (54/54), so every size is stored and the old "+4 invariant" was that prefix — `docs/powermonger/dosvga/{data-structure,huf-format}.md`
 
 ## Solved formats → where documented
 Format specs: `docs/powermonger/amiga/data-structure.md`; 68k findings: `docs/powermonger/amiga/runprog-code.md`.
 - Bullfrog track-based disk filesystem (not AmigaDOS; 5632-byte tracks, `DIR\0`/`WAR\0` directory at track 1) — `src/assets/formats/disk.ts`
-- Two custom backward-bitstream LZ codecs: A (MSB-first gamma, `INTRODAT` only), B (LSB-first-per-longword, XOR-zero checksum trailer, everything else incl. RUN_PROG self-depack) — `src/assets/formats/depack-b.ts`
+- Two custom backward-bitstream LZ codecs: A (MSB-first gamma, `INTRODAT` only; the documented refill rule is wrong: after `move.l -(a0),d4; addx.l d4,d4` the delivered bit is the new word's top bit. The shipped chunk-1 decode consumed 32 of 36,608 bytes and is garbage; the correct rule consumes all 7 chunks exactly), B (LSB-first-per-longword, XOR-zero checksum trailer, everything else incl. RUN_PROG self-depack) — `src/assets/formats/depack-b.ts`
 - Full-screen pictures: raw headerless planar; 5 plane-major, CAPGRAPH word-interleaved — `src/assets/formats/screen.ts`
 - OCS palette: 3 × 16-colour tables in a runtime work table in RUN_PROG (copper list built at runtime); screenshot-confirmed — `src/assets/formats/palette.ts`
 - Sprite banks SPRITE8/16/24/32 = masked 4bpp (mask + 4 planes); TEXTURES = plain 4bpp row-interleaved; all use the active screen palette (A) — `src/assets/formats/sprite-bank.ts`
 - `FX.PAK` 16-byte descriptor directory (structure confirmed; "raw signed-8-bit PCM" is hypothesis) — `docs/powermonger/amiga/audio-format.md`, `src/assets/formats/fx-pak.ts`
 - `END.PAK` sparse cumulative delta-patch animation (7 frames) — `src/assets/formats/end-pak.ts`
 - Runtime resource loader: 16-entry `{namePtr, loadAddr, length}` table + `LoadResource(index)`
-- `MAPDATA` 332-byte records (identical on PC, per Viridian Games) + terrain generation: LCG, random walk + smoothing (`$F860`/`$FCCA`, **live-verified byte-exact** under Musashi), object placement `$B488` and marching-squares classifier `$F912` (disassembly-confirmed only) — `src/assets/formats/{mapdata,terrain-gen,terrain-objects,terrain-classify}.ts`
+- `MAPDATA` 332-byte records (identical on PC, per Viridian Games) + terrain generation: LCG, random walk + smoothing (`$F860`/`$FCCA`; byte-exact under Musashi on 162/195 MAPDATA records — the test sampled 6; 33 diverge on the last 64-byte row, cause open), object placement `$B488` and marching-squares classifier `$F912` (disassembly-confirmed only) — `src/assets/formats/{mapdata,terrain-gen,terrain-objects,terrain-classify}.ts`
 - Entity/AI (RAM-only): entity pool `$77B7A`, team records `$7754C`, ≥75-case task dispatch `$144A2`, real main loop `$1286C`, mouse/order UI chain — `docs/powermonger/amiga/entity-ai.md`, `src/assets/formats/entities.ts` (documentation-as-code)
 - Not covered by the details file (newer docs, read directly): `docs/powermonger/amiga/weather-system.md`, `mopup-findings.md`
 

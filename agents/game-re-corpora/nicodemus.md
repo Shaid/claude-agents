@@ -10,7 +10,7 @@
 
 ## Solved formats → where documented
 Bare doc names below are in `docs/phantasie/`.
-- Dungeon `DNG*`/`MESS*` (P1/P2 33×38 grid; P3 24×30 with embedded messages + opcodes 0x14-0x1B) — confirmed — `docs/phantasie/dungeon-format.md`, `scripting-engine.md`
+- Dungeon `DNG*`/`MESS*` (P1/P2 33×38 grid; P1/P2 action table = fixed 256 slots at `0x5AA`, not "up to the first `0D0D`" — 62 star-reachable records sit past it; P3 24×30 with embedded messages + opcodes 0x14-0x1B) — confirmed — `docs/phantasie/dungeon-format.md`, `scripting-engine.md`
 - Exe tables (monster/race/item/spell names, sprite tables, palettes; P3 races, spells, skill-name strings; skill→record-offset binding is hypothesis) — confirmed — `docs/phantasie/data-tables.md`, `src/assets/formats/exe-data.ts`
 - Combat RNG + to-hit/damage formulas, all three games; `GetStat`/`SetStat` statIndex→offset table — confirmed (field English names open) — `scripting-engine.md` §6-§7
 - P1/P2 world map `maps.int` + `out*.dat` (one `OutdoorLayout`, only record size/display-list offset differ) — confirmed — `dungeon-format.md` §8, `src/assets/formats/outdoor.ts`
@@ -18,7 +18,8 @@ Bare doc names below are in `docs/phantasie/`.
 - P3 `D/M0`/`M1` music (VBlank driver, ProTracker period table) — confirmed — `dungeon-format.md` §9.0.2, `src/assets/formats/music.ts`
 - P3 `.cmp` palettes (only `heros.cmp` palette installed for all sprite banks; ramp `34n`, not ST `36.43n`) — confirmed — `graphics-formats.md` §2/§4.5
 - P2 `.pat` sprites + `.PIC` screens (ST word-interleaved by 2; palettes from `START.PRG`/`PHANT.PRG`) — confirmed — `graphics-formats.md` §9/§10
-- P2 `.stx` (Pasti) extraction, save-vs-template verdicts — `docs/phantasie/stx-extraction.md`
+- P2 `.stx` (Pasti) extraction, save-vs-template verdicts — `docs/phantasie/stx-extraction.md`; disk 2 `DNG.SAV`/`DNGX.SAV` are a FAT cross-link (one cluster chain), not two copies
+- P1 (planar) and P2 (interleaved) race/monster sprites are pixel-identical (32 + 98 sprites): the regression oracle for both layouts
 
 ## Engine-family / cross-project links
 - P1 and P2 share one dungeon/scripting engine (boolean-flag selected) and combat formula — but **not** the RNG (P1 LCG `*3677+3`; P2 7-word circular-sum buffer). P3 is a distinct engine (LCG `*25173+13849`).

@@ -652,3 +652,9 @@ format. Two things worth knowing beyond that doc:
   a working technique, until a future session cracks the real layout
   (candidate approach: find and read actual WinUAE/Amiberry C++ savestate
   source rather than resync-by-plausibility alone).
+
+## Packer detection, `ATN!`, and WHDLoad installs as prior art
+
+- **A compression detector must return `unknown`, never `none`, for high-entropy data with no recognised magic.** A detector that maps "not `RNC\x01` / not `=SB=`" to `none` passes packed files through as raw data, and every downstream decode then fails silently or "finds" structure in compressed bytes. Run `ancient` on anything unrecognised before treating it as raw.
+- **`ATN!` is the File Imploder with a renamed magic.** `ancient` identifies and decodes it. Layout seen in Team17 titles: `ATN!` + 12-byte header, packed data, 38-byte trailer, so file size = 12 + packed size + 38 (30/30 files). Dropping the trailer or shifting the payload by 2 makes 0/12 decode.
+- **WHDLoad installs are prior art for file roles.** Before calling a disk or file "copy protection" or "unknown", read the install's `ReadMe` and the slave's `strings`. They name campaign/save disks (Midwinter 2: "CUSTOM1=4 to 9 to select campaign disk.4-9"; the protection was a manual check), what was patched out, and the dump format. `Disk.N` files in a WHDLoad install are usually DIC/RawDIC sector images, not ADFs: expect no AmigaDOS root block, and address them as linear 512-byte sectors.

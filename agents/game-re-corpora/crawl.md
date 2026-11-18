@@ -8,13 +8,13 @@
 - Might & Magic II/III (Amiga+DOS) — not summarized in details; see `docs/mm2/`, `docs/mm3/`
 - Wizardry 6 (Amiga/DOS EGA/SNES) — merged from old `sorcery` repo; see `docs/wizardry6/`; corpus summary is `game-re-corpora/sorcery.md`
 - EOB1/EOB2/Lands of Lore (DOS VGA; EOB1+EOB2 Amiga) — formats confirmed; mostly pipeline wiring left
-- Eye of the Beholder III (DOS) — AESOP/16; 265/312 bitmaps coloured, rest open
+- Eye of the Beholder III (DOS) — AESOP/16; 265 or 279/312 bitmaps coloured (sources disagree)
 - Dungeon Hack (DOS) — AESOP/16, source-verified; per-sprite palette choice open
-- Gold Box (Amiga): Pool of Radiance, Curse, Secret, Pools of Darkness, Champions/Death Knights/Dark Queen of Krynn, Gateway/Treasures of the Savage Frontier — containers, GEO, ECL, wall art solved; walkers built
+- Gold Box (Amiga): Pool of Radiance, Curse, Secret, Pools of Darkness, Champions/Death Knights/Dark Queen of Krynn, Gateway/Treasures of the Savage Frontier — containers, GEO, ECL solved; wall-glyph pixels were wrong in the 4 FR titles (header + 4-6 planes, not 1bpp; re-render); Dark Queen has wall art (ECL v1.3 `0x21`); walkers built
 - Ishar 1-3 + Crystals of Arborea (Amiga AGA) — ALIS location scripts render first-person for 13 locations across all 4 titles
-- Elvira 1/2 + Waxworks (Amiga, AGOS) — 5,745 pictures rendered; sound/text open
-- Bard's Tale I-III (Amiga) — picture banks rendered; walls/maps/audio open
-- Dungeon Master / DM2 / Chaos Strikes Back (Amiga) — container/IMG/dungeon solved; palette + IMG7/8 open
+- Elvira 1/2 + Waxworks (Amiga, AGOS) — 9,308 images (old 5,745 stopped at the first 0×0 entry); `*tune` = ProTracker; `gameamiga` = game database
+- Bard's Tale I-III (Amiga) — pictures rendered (BT3 = 85); all BT1/BT2 files are `[size][bitcount][Huffman]`; walls/maps/audio open
+- Dungeon Master / DM2 / Chaos Strikes Back (Amiga) — container/dungeon solved; IMG1 = 687 images; DM2 IMG4 = 5/6-nibble palette + RLE + 16-B trailer; palette + IMG7/8 open
 
 ## Solved formats → where documented
 - Black Crypt Amiga RLE/planar/EHB, LZ77 via 68k emulation (`tools/bcdft_decompress/`), in-exe chunk directories (3-word records) — `docs/blackcrypt/amiga/data-structure.md`
@@ -33,7 +33,7 @@
 - EOB1/EOB2/LoL: ScummVM `engines/kyra/` is a byte-exact oracle (check `/tmp/scummvm` clone first)
 - MM1: ScummVM `engines/mm/mm1` + Vairn/MM2 Python tools; MM1 map codec shares `decodeMapCell` with MM2
 - Gold Box oracles: `simeonpilgrim/goldboxexplorer` (`DaxFile.cs`), `simeonpilgrim/coab` decompiled DOS source, wiki `pooldata.py`
-- AGOS: ScummVM `extract_agos.cpp`/`res_ami.cpp`. Bard's Tale: Kroah's viewer (its `Files/` are cmp-identical to the corpus). DM: dmweb docs + "DM II Data Files Notes"; libxmp ProWizard `p40.c`
+- AGOS: ScummVM `extract_agos.cpp`/`res_ami.cpp`. Bard's Tale: Kroah's viewer (its `Files/` cmp-identity is recalled, not re-runnable here). DM: dmweb docs + "DM II Data Files Notes"; libxmp ProWizard `p40.c`
 - Black Crypt DOS `crypt.exe` embeds Amiga `bcdft` item-name block verbatim
 
 ## Reusable code in this repo
@@ -51,7 +51,8 @@
 - Gold Box ECL: use the CFG reachability walker, not linear scans. A uniform degenerate result such as `{127,127,127}` means the decode config is wrong. Treasures' wallsets come from an exe-hardcoded table, and its overlays need `HUNK_OVERLAY` scanning
 - ALIS: find each script's own `cswitch` value set, then scan the grid. Never reuse another script's test position
 - ALIS: `cstop` is a per-frame yield, not an end — CFG walks continue past it. `acc OP[opile]` is `popped OP acc`. Stored grids are the world transposed — see `docs/ishar-container-format.md`
-- MM page-0 wall codes are 2=door, 3=torch (earlier prose had them swapped). Overland code 3 is border
+- MM page-0 wall codes are 2=door, 3=torch; overland code 3 is border. MM1/MM2 map bits are W,S,E,N (bits 0-1 W … 6-7 N), `0x20` = cell dark
+- Walker can-step, start pose and map-edge rules must come from each game's move routine — `walker-movement-rule-must-port-games-move-routine.md`
 
 ## Key lessons
 - `familiar-extension-not-proof-of-standard-format.md` — same extension, different format across titles here
@@ -63,6 +64,5 @@
 - `amiga-overlay-segment-defeats-resident-only-trace.md` — Gold Box Amiga exes need `HUNK_OVERLAY` scanning
 - `hypothesis-tested-with-mismatched-input-looks-refuted.md` — ALIS: never reuse another script's test position
 - `cross-platform-decode-oracles.md` — ScummVM/AESOP/Gold Box sources are byte-exact oracles here
-- `format-field-width-unexercised-by-first-corpus.md` — many sibling titles reuse decoders; larger files break widths
 
 Full list: `details/crawl.md` § "Lessons sourced from this corpus (full list)".
