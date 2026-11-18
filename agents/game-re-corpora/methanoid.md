@@ -3,14 +3,14 @@
 **Project root:** `~/Development/methanoid` (one repo holds all three games; there is no `~/Development/deuteros`) · **Full history/evidence:** `game-re-corpora/details/methanoid.md` (read on demand) · **Open work:** `docs/<game>/TODO.md` per game
 
 ## Games
-- Millennium 2.2 (Novagen, Amiga) — game-id `millenium22`/`amiga` (one "n") — boot chain solved; palettes, audio, 135-image art bank shipped
+- Millennium 2.2 (Novagen, Amiga) — game-id `millenium22`/`amiga` (one "n") — boot chain solved; palettes, audio, 136-image art bank shipped
 - Deuteros (Novagen, Amiga) — game-id `deuteros`/`amiga` — boot chain + protection solved; title screen, palettes, audio shipped; engine state now reachable live through the real UI (vessel/site record fields pinned)
 - Reunion (Amnesty Design, Amiga AGA) — game-id `reunion`/`amigaaga` — solved end to end
 - Reunion OCS/ECS (6 raw ADFs) — game-id `reunion`/`amiga` — nearly fully solved; small `.tbl` residual open
 
 ## Solved formats → where documented
 - M2.2 boot chain: `BB_ENTRY` at `0xC`, then a self-relocating stub, then hand-built trackdisk I/O using standard `ETD_*` commands. `Disk.2` is a blank disk stamped by the in-game formatter (magic `0x16C65710`). `TDIC` track has no consumer (static + 3G-instruction Musashi trace) — `docs/millenium22/amiga/data-structure.md`
-- M2.2 content: 2 `amiga12` palettes (LoadRGB4), Paula driver + 2 PCM banks, command grammar + 16 envelope curves (confirmed; arpeggio content only rendered), compressed art bank at `Disk.1+0x21000` (Deuteros' RLE codec, 135/136)
+- M2.2 content: 2 `amiga12` palettes (LoadRGB4), Paula driver + 2 PCM banks, command grammar + 16 envelope curves (confirmed; arpeggio content only rendered), compressed art bank at `Disk.1+0x21000` (Deuteros' RLE codec, 136 images; a final `T=0` token copies the next two bytes, which fixed record 61)
 - Deuteros: raw flat-blob boot chain (no HUNK exe). "DISC COMPANY 010991" protection = CPU probe, then trace-vector self-decrypt, then a CIA timing check vs `$DA8DBFDB` (Musashi harness). Track-8 title picture + LoadRGB4 palette; 4 UI palettes; 13 audio-shaped regions (approx. rate 8287 Hz) — `docs/deuteros/amiga/data-structure.md`
 - Deuteros runtime engine state: the UI hit-table/dispatch model (`[hdr.w][12-byte rec]*`, masked tables, area + chain records, `jsr ([$212BE + slot*4])`) and per-class vessel/site record field roles, pinned by UI-driven before/after memory diffs in `tools/deuteros/emu/live_probe.c` — `docs/deuteros/amiga/data-structure.md` § "Second live pass"
 - Reunion AGA: RNC1/IMP! via `ancient`; IFF ILBM/PBM/8SVX; ProTracker MOD; `EFT!ANIM` key+delta animation; `AMN0` wireframe models; `pmain/*.DAT` = 16×16-tile maps into `PM*11.CHR`; `STMAP`/`GRKIEG` `.CHR` are 32 px / 16 px × 8-plane row-interleaved sprite sheets (same row stride as the old "1bpp 256 px" reading); OCS 1-bitplane family likewise multi-plane; ALIEN portrait + FAJ palettes (rendered) — `docs/reunion/amigaaga/data-structure.md`

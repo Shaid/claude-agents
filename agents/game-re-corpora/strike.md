@@ -4,7 +4,7 @@
 
 ## Games
 - Desert Strike (`desertstrike`: `amiga`, `megadrive`) — Amiga object atlas, tiles, MODs, entity templates + spawn binding confirmed; player helicopter is in the entity bank. A SNES ROM (`data/desertstrike/snes/`, "Desert Strike: Return") is present with no coverage
-- Jungle Strike (`junglestrike`: `amiga` OCS, `amigaaga`, `megadrive`) — AGA screens, `weapons`, `objects1-9`/`sprites1-9` confirmed
+- Jungle Strike (`junglestrike`: `amiga` OCS, `amigaaga`, `megadrive`) — AGA screens, `weapons`, `objects1-9`/`sprites1-9` confirmed; AGA world palettes are per mission (9-pointer table `LAB_03A7`), not one static snapshot
 - Urban Strike (`urbanstrike`: `megadrive`, `snes`) — MD tilemap + overlay bank; SNES tilesets/screens/text shipped; sprites open
 
 ## Solved formats → where documented
@@ -12,8 +12,8 @@
 - Desert Strike Amiga trackloaded disk format, 96×72 6-plane object atlas, 16×16 5-plane tileset + u8 tile-index maps, ProTracker `M.K.` cues, `DMCA` sample bank (sample rate inferred, not confirmed) — `docs/desertstrike/amiga/data-structure.md`, `tools/desertstrike/object-atlas.ts`
 - Desert Strike per-mission entity templates (61/62/66/59) bound 100% to sprites; spawn = bank-header manifest at `+0x50` (live-confirmed); spawn-grid leaf fields still open — same doc "Twelfth session", `tools/desertstrike/entity-{templates,sprites}.ts`
 - Jungle Strike AGA screens (shared scratch copper-list palette patch), `weapons` HUD/projectile bank, `statmapN` palette, `worldNblks`/`worldNmap`, `objectsN`/`spritesN` HUNK-wrapped tables — confirmed — `docs/junglestrike/amigaaga/{data-structure,js-code-structure}.md`, `tools/junglestrike/objects.ts`
-- Mega Drive: Strike LZSS + RLE, shared tilemap container (Urban + Jungle), overlay-tile bank (`format=0x1A`), fourth codec `cmd=18` tile-delta (129/129), level↔tileset association (29/29) — confirmed; `cmd=18` CRAM palette open — `docs/strike-megadrive-tilemap.md` (§7.6-§7.9), `docs/<game>/megadrive/data-structure.md`
-- Urban Strike SNES: splash-only 6-op tag-byte codec; main graphics = Okumura LZSS (`$9F:EBD4`) storing **chunky 4bpp** (converted to planar at DMA time); tilemap descriptor (raw/RLE); 883-string ASCII text table; OAM sprites in use — confirmed (67/67 tilesets, 97 screens) — `docs/urbanstrike/snes/data-structure.md`, `tools/urbanstrike/snes-{tagbyte-codec,lzss,gfx,tilemap,text}.ts`
+- Mega Drive: Strike LZSS + RLE, shared tilemap container (Urban + Jungle), overlay-tile bank (`format=0x1A`), fourth codec `cmd=18` tile-delta (129/129), level↔tileset association (29/29), 4 CRAM lines per catalog record (29/29), 25-record terrain-sector table at Desert Strike `0x30198` — confirmed; `cmd=18` CRAM palette open — `docs/strike-megadrive-tilemap.md` (§7.6-§7.9), `docs/<game>/megadrive/data-structure.md`
+- Urban Strike SNES: splash-only 6-op tag-byte codec; main graphics are the Mega Drive data decoded with the shared Strike LZSS (see the cross-project link below); tilemaps are raw, word-RLE or type `0x1E` bit-packed (62/35/35 = 132, each tiling exactly); 883-string ASCII text table; 140 format-18 tilesets not yet shipped — `docs/urbanstrike/snes/data-structure.md`, `tools/urbanstrike/snes-{tagbyte-codec,tilemap,text}.ts`
 
 ## Engine-family / cross-project links
 - Desert Strike Amiga tileset/tilemap is byte-identical in shape to Jungle Strike AGA's (u8 → u16 indices); MD tilemap reader is identical across Urban and Jungle Strike (different addresses).
