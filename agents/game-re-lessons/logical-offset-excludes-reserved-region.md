@@ -3,7 +3,9 @@
 **When it bites:** most entries in a directory/chunk table decode
 byte-exact by walking it naively, but a systematic-looking minority don't —
 and the failures cluster at or after a known reserved structure's file
-location (a boot sector, a root/bitmap block, a partition table).
+location (a boot sector, a root/bitmap block, a partition table). Also:
+an extent table read physically yields "overlapping unclassified sequences"
+or points into packed data, and the game has its own load routine.
 
 A custom trackloaded container layered under a cosmetic-but-real AmigaDOS
 root+bitmap block (placed mid-disk purely so the volume shows a name, and
@@ -34,3 +36,22 @@ correlate with file position rather than any per-entry property. Check
 whether the reserved structure's file offset and length line up with where
 the naive-vs-real decode divergence starts before chasing a per-chunk
 theory.
+
+## Logical offsets mapped by the game's loader routine
+
+The mapping can be more than one excised region: the load routine may pick a
+disk from a requested-disk number and subtract per-disk bases. Run every
+entry through the loader's own mapping and score it — how many mapped starts
+land exactly on a checksum-valid stream with the expected span — using the
+swapped disk as the null. **Grep the project first:** if the mapping is
+already implemented for another consumer, a second code path reading the
+same table physically is a contradiction to resolve, not a second opinion.
+
+Shadow of the Beast (Amiga, `moonstone`): the 43-entry resource-005 extent
+table was exported as Disk.2 physical offsets, although `mapBeast1RuntimeLoad`
+(LOADROUT: ≥0x822d0 → −0xa988; Disk.1 a further −0x1838) already served two
+other docs on the same table. Through LOADROUT, 35/43 entries start exactly
+on a stream with span = packed + 0x28 (0 under the swapped disk); four
+"PCM extents" had been bytes cut from the wrong places.
+
+**History:** 2 instances (strike Desert Strike, moonstone SotB1).

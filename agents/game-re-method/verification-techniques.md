@@ -1739,6 +1739,7 @@ When a tiled image or map has no reference render, measure how often pixels agre
 - Warriors of Legend city map: seam/shuffled-grid ratio 0.376 at 148 columns vs 0.647 at 222, where the shipped width had been "picked by eye". The same score paired maps with atlases: 49 for atlas 507 vs 147 for the shipped 508.
 - WIME IIGS `RAHC` ("confirmed blank"): edge agreement 99.4% against the Amiga `CHAR` tiles vs 50.3% under a tile-index shift. It was the terrain tileset.
 - Use per-tile or per-level scores, not one corpus average. Ship it as a regression test that would fail on a wrong width or pairing.
+- **A seam test on square tiles is blind to transposition.** Transposing every square tile maps north edges to west edges, so shared-edge counts are unchanged (World Construction Set `.elev`, `vista`: 20 north + 20 west shared edges under both readings; only which neighbour matches swaps). Discriminate with something asymmetric: a non-square tile (`Deformatio.elev` 300×151: neighbour difference 1.05 at the true line length vs 1.57 transposed) or header geography (which neighbour sits at `lat+0.25` vs `lon+0.25`).
 
 ## Shared-wall reciprocity: pin direction-slot order and grid transposition, per level
 
@@ -1756,4 +1757,4 @@ To decide which field indexes which table, check per file whether each candidate
 - Muramasa (Wii) FMBS parts: u16 @+4 equalled `uvCount−1` in 642/642 files; the shipped u16 @+6 only in 37/642, the files where @+4 == @+6. Colour @+8 and xy @+10 hit 642/642 against their own counts and 11–23 against the wrong counts.
 - Urban Strike tilemaps: `max(tileIndex) == tileCount − 1` holds on 62 real maps against about 0.8% with shuffled tilesets, while "0 out-of-range cells" still held on 66.8% of shuffled pairings.
 
-Sources: 2026-11 codebreaker audit sweep — crawl (Gold Box FR/Krynn, Might & Magic 1/2, Dungeon Master), middilgard (Warriors of Legend, War in Middle Earth), vanille (Muramasa), strike (Urban/Jungle Strike). See `check-that-cannot-fail-is-not-evidence.md` for the checks these replace.
+Sources: 2026-11 codebreaker audit sweep — crawl (Gold Box FR/Krynn, Might & Magic 1/2, Dungeon Master), middilgard (Warriors of Legend, War in Middle Earth), vanille (Muramasa), strike (Urban/Jungle Strike), vista (WCS). See `check-that-cannot-fail-is-not-evidence.md` for the checks these replace.

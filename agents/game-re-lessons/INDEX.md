@@ -312,7 +312,7 @@ _Archives, directories, filesystems, records, strides, headers, field widths_
 | `whole-corpus-count-is-scoped-to-reader-coverage.md` | About to publish or build on a "whole-disc"/"all N directories"/"every record" census or a "nothing references X" negative from a shared reader — measure bytes after the last parsed directory/section per container, undecrypted banks/SIMMs, non-zero header slots you don't parse, and table slots past the last named entry |
 | `container-entry-end-overread-becomes-fake-trailer.md` | A format gains a "real 4-byte trailer", a "size − 4" field, a "+4 invariant", a "sequential id" field, or you're about to "correct" a reference doc by a constant field shift — check each container entry's computed END against the next structure's start; one over-read or 2-byte framing slip produces all of these across formats |
 | `slack-matching-another-buffer-is-build-residue.md` | An unexplained tail, slack region, "extra rows", "orphan records" or a "can't be falsified without a second disk revision" row sits after real content — search those bytes verbatim in the resource's own compressed input and in sibling or predecessor files at the same relative offset before modelling them as data |
-
+| `offset-size-table-read-half-record-off-pairs-neighbours.md` | A two-field `{offset/LBA, size}` directory decodes "mostly right" but a small cluster of entries fails or runs into the next file, and the table base came from a VA, a guessed header size, or a field order borrowed from a sibling. Score whole-table sector-contiguous tiling against a shuffled-size null before chasing the outliers. |
 
 ## compression-crypto
 
@@ -424,6 +424,7 @@ _Pixels, bitplanes, palettes, tiles, sprites, textures_
 | `undecoded-metadata-byte-is-tile-code-bank-extension.md` | A sprite/tile decode renders plausible, non-degenerate, coherently-positioned content that still doesn't semantically match the expected subject, and a structurally-adjacent header/flag byte in the same record was previously documented as undecoded or only partially decoded (e.g. "priority", "z-order", "unknown flags") |
 | `unreferenced-slot-check-pixel-identity-before-guessing-role.md` | An indexed asset/constant table has slots no dispatch/consumer code ever reaches, and a semantic-sounding guess ("probably a cursor icon") is forming for one of them — diff its raw content against every *referenced* sibling slot first |
 | `one-bitplane-or-equal-stride-reading-renders-plausible-art.md` | A planar asset renders legibly at 1bpp or as side-by-side 8-wide panels, or a row-coherence metric chose its width — one plane of a multi-plane image looks clean alone, and W px × P planes has the same row stride as W·P px × 1 plane; decode every (width, depth) with that stride and score with a seam oracle against a null |
+| `plane-mask-byte-stores-only-named-planes.md` | A planar sprite/cel record has a small "flags"/"usage" byte left uninterpreted, frame data spans vary at the same w×h, or a few frames show wrong colours while most look right. Test whether the byte is a plane mask (span = popcount × rowBytes × h) and scatter stored planes to its set bits (PlanePick). |
 
 ## 3d-animation
 

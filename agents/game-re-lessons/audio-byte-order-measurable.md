@@ -27,6 +27,16 @@ Worked example (Spirit of Excalibur CDTV, `middilgard` project), measured on a
 Roughly two thirds of full scale, sample to sample, on 20 of 26 tracks —
 unambiguous, and unanimous across the whole set. No listening required.
 
+**The wrong order has a fixed fingerprint.** Swapping makes each sample's high
+byte effectively random, so samples behave like uniform int16 noise: RMS ≈
+32768/√3 ≈ **18,900**, lag-1 autocorrelation ≈ **0**, L/R correlation ≈ 0.
+Real audio has lag-1 near 1. Two unrelated projects hit the same number:
+Spirit of Excalibur above, and Devil May Cry PS2 `S01_1P.PSS` read
+little-endian (RMS 18,886, lag-1 0.002, L/R 0.024) vs the correct big-endian
+(RMS 7,849, lag-1 0.987, L/R 0.249). **The wrong reading is the louder one** —
+never pick the order with "more signal". RMS near 18,900 with lag-1 near 0
+means wrong order, or not audio at all.
+
 **Fix:** always measure both readings before choosing. Mean absolute first
 difference is the cheapest test; the correct order is the one that produces a
 value small relative to the signal's own RMS. The same statistic doubles as a

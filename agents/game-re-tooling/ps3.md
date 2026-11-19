@@ -3,6 +3,16 @@
 See `game-re-tooling/ghidra-loaders.md` for the Cell SPU processor module
 (the PPU side is stock PowerPC).
 
+## A staged "disc" directory may be an HDD install cache
+
+Many PS3 titles copy part of the disc to `/dev_hdd0/game/<ID>INSTALL/` and
+keep reading the rest from Blu-ray. A copy of that directory looks like
+plaintext disc data but is a subset: its `PARAM.SFO` category/title reads
+"INSTALL DATA", and many files are zero-length. Every corpus-wide count,
+coverage figure and "level X has no Y" negative taken from it is a lower
+bound — re-run on a real disc image or the PSN PKG before publishing
+(Drakengard 3, `flower`: `ps3disc/` was an install cache).
+
 ## Retail game/DLC/patch PKG != Vita "finalized" PKG — don't trust `pkg2zip` blind
 
 The obvious first tool for any PSN `.pkg` file is

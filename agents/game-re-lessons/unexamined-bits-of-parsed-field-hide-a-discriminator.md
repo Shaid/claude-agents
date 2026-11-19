@@ -59,6 +59,19 @@ kind) that isn't obviously present:
    into whatever flags word was already being carried around, not into new
    dedicated bytes.
 
+## Variant: aligned-size low bits
+
+A size-like field that matches the true size exactly for some records and
+"+1"/"+3" for others is `roundup4(size) | kind`. Shadow of the Beast 3
+(Amiga, `moonstone`): runtime table field +0x0c low 2 bits select the decoder
+(0 = second pass only, 1 = main + second, 3 = a third decoder); driven by it,
+66/70 records reproduce the final size vs ≤ 10 under 200 shuffled pairings.
+The per-file header "packed" bit the docs used was the wrong selector — ~30
+files documented as "raw code" were second-pass packed (one decodes to a
+complete FLT4 module ending exactly at EOF). Mask the low alignment bits and
+tabulate them against what each file needs; recount census figures rather
+than copying them (31 re-counted vs 48 claimed).
+
 See `identical-nested-header-across-varying-allocations-is-inert-
 boilerplate.md` for the specific format puzzle this technique resolved (a
 nested-container header that looked like inert boilerplate turned out to

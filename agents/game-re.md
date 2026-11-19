@@ -162,6 +162,8 @@ project — the corpus file is the index into its docs.
 | `~/Development/powermonger` | Powermonger (Amiga, classic + WW1 edition) | `powermonger.md` |
 | `~/Development/methanoid` | Deuteros, Millennium 2.2, Reunion (Amiga; one multi-game repo) | `methanoid.md` |
 | `~/Development/parasite` | Parasite Eve, Parasite Eve II (PSX — different codebases) | `parasiteeve.md` |
+| `~/Development/moonstone` | Moonstone, Shadow of the Beast I–III (Amiga) | `moonstone.md` |
+| `~/Development/vista` | Vista Pro 3.05, World Construction Set 2.04 (Amiga terrain software) | `vista.md` |
 
 All corpus files live in `~/.claude/agents/game-re-corpora/`; Astral Chain now
 lives in `~/Development/legion` (no corpus file yet). Games from the
