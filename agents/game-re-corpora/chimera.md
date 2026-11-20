@@ -23,6 +23,7 @@ Docs are flat `docs/<game>.md` (+ `fe3h-modding.md`, `few-modding.md`, `model-im
 
 ## Engine-family / cross-project links
 - KT trio: shared codecs, **different containers**; check audio `codecID` first. RDB/KTID/KOD are KTGL-wide (Nioh, Dynasty Warriors, Atelier).
+- FE Warriors 3DS (`lucina.md`): same G1M/G1T/LINKDATA family; its G1T per-texture header is flag-conditional (20/8 B).
 - Exe as ID→name oracle: FE Warriors data array vs Three Hopes registration code (`game-re-method/name-hash-recovery.md`).
 - Wwise → `tools/.bin/vgmstream-cli`; MSBT = Nintendo LibMessageStudio (`pymsb`). Oracles: 010-binary-templates/Progenitor, `Joschuka/fmt_g1m`, ThreeCopes templates, koeipy, vgmstream source.
 

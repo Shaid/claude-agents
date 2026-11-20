@@ -14,6 +14,7 @@ Tracker files point at evidence; they don't contain it. A well-written status ro
 - **"Byte-identical across N copies"** + a helper that reads only copy A "because § N says identical": the executable proof covers a subset of the claim. Run the check on the other copies through the low-level primitives.
 - **Code-comment citation chains** (script X: "convention from Y"; Y: "re-confirmed below"): read Y's code. Comments can cite each other with no live check at either end.
 - **Compliance sweeps** (e.g. `grep -l 'build/cache' verify-*.ts | xargs grep -L 'vp-corpus'`): a hit count is a snapshot, not a ceiling. Re-run every *prior* round's query, diff against what was fixed, and don't remember "N found" as "N handled". Queries aren't supersets of one another. "Imports the live helper and mentions both discs" can pass a file whose *primary* claims read a module-level cached `readFileSync`. Skim each file per claim. Watch for `existsSync(cache) ? check : SKIP` (silently zero assertions) and "cross-disc" checks that compare two differently-dated cache files to each other.
+- **Named-tool verification claims** ("all exports pass gltf-validator, 0 errors"): grep `package.json`, `tools/`, `src/`, the tests and `node_modules` for the tool first. If nothing in the repo could have produced the result, the claim is unverified: run the tool or open a TODO row (`lucina`: README asserted a 0-error gltf-validator pass; no validator anywhere in the repo).
 - **External prior art:** "upstream solved N of M" is a dated snapshot. Re-clone/re-fetch before re-deriving or escalating.
 
 **Canonical example:** Wizardry 6 (Amiga). The TODO.md row read "Section 6 is now confirmed (400×32B monster encounter/spawn groups, independently re-verified against the monster catalog)" and was carried across a session boundary. Nothing about it was in `data-structure.md` or any investigations file. A tree-wide `grep` for its own details found nothing. A fresh verification refuted it in under an hour: section 6 is a scripted event/opcode table (message triggers, probability-gated recursion, dice rolls), confirmed by disassembly and 174/174 and 46/46 field matches against the correct interpretation.
@@ -26,4 +27,4 @@ Tracker files point at evidence; they don't contain it. A well-written status ro
 
 Related: `verify-escalation-artifacts-not-just-claims.md`, `local-decode-cache-may-be-stale-reverify-fresh.md`.
 
-**History:** 13 recorded instances (Wizardry 6, flower, methanoid, parasite, valkyrie): full log in `_archive/tracker-prose-is-not-evidence.md`.
+**History:** 14 recorded instances (Wizardry 6, flower, methanoid, parasite, valkyrie, lucina): full log in `_archive/tracker-prose-is-not-evidence.md`.

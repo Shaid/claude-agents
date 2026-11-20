@@ -912,25 +912,21 @@ Open: the `COMPLEX` opcode's bezier-surface interior mini-VM, a
 `LINES`-mode glTF fallback for the 8 line-only models, and 7 of 15
 header fields — see `docs/explore/Frontier/TODO.md`.
 
-Virus (Firebird/Telecomsoft, 1988, Amiga — Braben's earlier Zarch-derived
-title, the fractal-landscape engine Frontier's own terrain lineage traces
-back to): confirmed **no stored 3D object/model format exists at all** —
-unlike Frontier's ships/stations above, Virus's landscape (and, per the
-disassembled code, its only other rendered content) is 100% procedural:
-an explicit, code-confirmed bounded work-queue recursively subdivides
-quads via fractal midpoint displacement (a shared 2-longword
-additive-recurrence PRNG perturbs each new point in full 3D, reused
-verbatim for particle/spore placement) with adaptive screen-space-size LOD
-termination and a standard fixed-point perspective-divide draw path. See
-`docs/explore/Virus/data-structure.md`. This is a useful engine-lineage
-data point for the family: needing (Frontier) vs. not needing (Virus)
-explicit stored vertex/polygon data tracks directly with whether the game
-has discrete objects to render at all, not with shared engine ancestry —
-don't assume one Braben-lineage title's asset format (or absence of one)
-transfers to another without checking. Disk image structure (raw
-non-AmigaDOS custom track dump, ~8000-byte track-slot pitch) and two
-still-unidentified data regions remain open — see
+Virus (Firebird/Telecomsoft, 1988, Amiga — Braben's Zarch-derived title).
+An earlier pass recorded a reasoned negative ("no stored 3D model format;
+fully procedural fractal midpoint-displacement terrain"). The 2026-11-19
+recon overturned it by reading Mark Moxon's annotated Lander source
+(lander.bbcelite.com) for architecture and checking each component: a
+1,024-entry sine table, an 8-term sum-of-sines altitude routine, and 43
+object blueprints tiling 9,256 B exactly (header `face_off == 14 + 6*nv`
+43/43; null 25/2000). The "distance-bucketed work queue" has 10 buckets,
+matching Lander's 10-row tile grid, not a fractal LOD. A WHDLoad slave's
+`resload_DiskLoad` destination pinned the raw image's load base, and an
+absolute-pointer census from code into data regions exposed the sample bank
+and the blueprint array. Lesson: `content-type-absence-needs-multiple-independent-angles.md`
+(lineage angle). Blueprint semantics, landscape confirmation and live
+verification are open — see `docs/explore/Virus/plan.md` and
 `docs/explore/Virus/TODO.md`.
 
 ## Lessons sourced from this corpus (full list)
-amiberry-live-capture-workflow.md, bootstrap-catalog-boundary-not-content-boundary.md, byte-shape-classifier-needs-entropy-gate.md, committed-ira-asm-silent-coverage-gap.md, confirmed-call-target-off-instruction-boundary.md, crack-redirects-io-to-resident-loader-stub.md, cross-platform-decode-oracles.md, decompressor-port-loop-condition-iteration-shift.md, familiar-extension-not-proof-of-standard-format.md, forced-code-range-address-comments-unreliable-past-boundary.md, high-entropy-trivial-cipher.md, ira-label-name-is-not-a-literal-address.md, jump-table-longword-entries-misdisassembled-as-branches.md, leading-header-equal-to-field-offset-masks-record-start.md, length-invariant-blind-to-copy-semantics.md, loop-reentry-label-decides-reuse-vs-refetch-subcase.md, narrow-opcode-form-census-false-negative.md, palette-storage-quirks.md, patterned-fill-defeats-naive-entropy-scan.md, resume-entry-citation-drops-setup-arithmetic.md, reversed-text-fragment-anti-strings-trick.md, second-record-type-shifts-primary-counts.md, self-consistent-chain-wrong-unit.md, sibling-field-values-alias-in-dominant-case.md, static-xref-misleads.md, trailer-offset-locates-real-header.md, trampoline-role-guessed-not-resolved.md, websearch-cited-repo-may-not-exist.md, whdload-slave-no-format-info.md
+amiberry-live-capture-workflow.md, bootstrap-catalog-boundary-not-content-boundary.md, byte-shape-classifier-needs-entropy-gate.md, committed-ira-asm-silent-coverage-gap.md, content-type-absence-needs-multiple-independent-angles.md, confirmed-call-target-off-instruction-boundary.md, crack-redirects-io-to-resident-loader-stub.md, cross-platform-decode-oracles.md, decompressor-port-loop-condition-iteration-shift.md, familiar-extension-not-proof-of-standard-format.md, forced-code-range-address-comments-unreliable-past-boundary.md, high-entropy-trivial-cipher.md, ira-label-name-is-not-a-literal-address.md, jump-table-longword-entries-misdisassembled-as-branches.md, leading-header-equal-to-field-offset-masks-record-start.md, length-invariant-blind-to-copy-semantics.md, loop-reentry-label-decides-reuse-vs-refetch-subcase.md, narrow-opcode-form-census-false-negative.md, palette-storage-quirks.md, patterned-fill-defeats-naive-entropy-scan.md, resume-entry-citation-drops-setup-arithmetic.md, reversed-text-fragment-anti-strings-trick.md, second-record-type-shifts-primary-counts.md, self-consistent-chain-wrong-unit.md, sibling-field-values-alias-in-dominant-case.md, static-xref-misleads.md, trailer-offset-locates-real-header.md, trampoline-role-guessed-not-resolved.md, websearch-cited-repo-may-not-exist.md, whdload-slave-no-format-info.md

@@ -350,3 +350,7 @@ prose — but the executable proof covers a strict subset of what the prose
 claims, and the citation loop (helper cites doc, doc's only evidence is a
 one-time unscripted probe) can hide that indefinitely since nothing in it is
 false, only unchecked.
+
+## 2026-11-20 — lucina (3DS): named-tool verification claim
+
+Add: a project's own docs can state a verification result ("all glTF exports pass gltf-validator with 0 errors") that no code in the repo could have produced. Before counting such a claim as evidence, grep package.json, tools/, src/, node_modules and the test suite for the named tool. If it is absent, mark the claim unverified, and either run the tool or open a TODO row. In lucina, `gltf-validator` was nowhere in the repo, yet the README asserted a 0-error pass.

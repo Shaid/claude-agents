@@ -39,3 +39,15 @@ date	lesson	project	note
 2026-11-13	tracker-prose-is-not-evidence.md	crawl	AGOS audit: re-derived every "visually verified"/count claim from bytes; found 5,745-image count truncated and E1 0xF96 palette anecdote unreproducible
 2026-11-13	fixed-stride-record-count-unverified.md	crawl	AGOS vga2 anim table: census of all entries vs early-stop walk + VC-script draw refs showed ~9.3k real images, not 5,745
 2026-11-15	individually-failed-fixes-may-combine-cleanly.md	kolbold	table-end fix needed three combined parts (bra-table sites, speculative table pass ordered by address, exact sizes for two tables)
+2026-11-19	check-that-cannot-fail-is-not-evidence.md	hunter	Embryo recon: ran seg-reloc and P60A size equations over all 114 files as null controls (0 false hits) before calling them confirmed
+2026-11-19	monotonic-integer-table-mimics-smooth-color-gradient.md	hunter	Guardian splits: added swapped-role null control and checked independent per-channel rates before calling 4096-entry table a colour gradient
+2026-11-19	committed-ira-asm-silent-coverage-gap.md	hunter	Guardian: checked committed sw_default.asm MACHINE line; found 68000-mode listing hiding 68020 scaled-index LEA in maps consumer
+2026-11-19	whdload-slave-no-format-info.md	hunter	used slave DiskLoad dest to pin Virus load base $3B800
+2026-11-19	call-site-address-misread-as-load-base.md	hunter	added address-independent JSR-target census with shifted-base nulls
+2026-11-19	content-type-absence-needs-multiple-independent-angles.md	hunter	re-tested Virus no-models negative via code-ref census; found 43 blueprints
+2026-11-19	whdload-slave-no-format-info.md	hunter	AG1: decoded slave PL_ patch lists + resload_DiskLoad D2 to pin every file role and the main image base $4B90
+2026-11-19	prescaled-joint-indices-divisibility-census.md	hunter	AG1: recognised x6-prescaled vertex indices in main $38B90 bank; plan uses divisibility census as first oracle
+2026-11-19	whdload-slave-no-format-info.md	hunter	Zeewolf slave patch sites gave hunk0/hunk2 runtime bases (8/8) and exposed the sector mapping 0x1600+n*512
+2026-11-19	check-that-cannot-fail-is-not-evidence.md	hunter	Old "sensible content at block*512" check could not fail; replaced with exact-consumption on both disks
+2026-11-19	logical-offset-excludes-reserved-region.md	hunter	Directory blocks counted from track 1 (0x1600), excluding boot+loader
+2026-11-19	check-that-cannot-fail-is-not-evidence.md	hunter	Refused to count the Epic1MB install as an oracle for the main Epic docs once the hash-join showed they are the same bytes

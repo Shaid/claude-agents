@@ -134,3 +134,15 @@ actually cover** — a largest-NSP-only (or largest-NCA-only) extractor is a
 common, reasonable default that silently creates exactly this gap, and DLC
 content is the single most likely place for it to hide real, paid,
 never-before-seen assets.
+
+## 2026-11-19 — hunter (Amiga): Virus engine-level negative refuted via predecessor reimplementation
+
+# Candidate lesson (hunter / Virus recon, 2026-11-19)
+
+**When it bites:** a doc carries a "reasoned negative" or a headline interpretation about a whole engine (e.g. "no stored 3D models, fully procedural", "fractal terrain") for a game whose direct predecessor/sibling has a public annotated reimplementation or source (here: Mark Moxon's annotated Lander source, lander.bbcelite.com, for Zarch/Virus).
+
+**What happened:** Virus (Amiga) was recorded in the corpus as "no stored 3D model format (fully procedural, fractal midpoint-displacement terrain)". Lander's documented architecture (sum-of-sines altitude function with a sine table; vertex/face blueprints; 10-row per-row graphics buffers) predicted all three things that were then found in about an hour: a 1,024-entry sin table, an 8-term sum-of-sines altitude routine, and 43 blueprints tiling 9,256 B exactly (header `face_off == 14 + 6*nv` 43/43, null 25/2000). The "distance-bucketed work queue" had 10 buckets, which matches Lander's 10-row tile grid, not a fractal LOD.
+
+**Check / fix:** before accepting or building on an engine-level negative, read the predecessor's public reimplementation for its architecture and look for each of its components (math tables, generator routine, model records). Also: a WHDLoad slave's `resload_DiskLoad` destination pinned the raw image's load base outright (`whdload-slave-no-format-info.md` already says this; the earlier session had dismissed the slave). Absolute-pointer census from code into data regions (refs → record starts) is what exposed both the sample bank and the blueprint array.
+
+Related: content-type-absence-needs-multiple-independent-angles.md, whdload-slave-no-format-info.md.

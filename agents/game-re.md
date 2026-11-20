@@ -164,6 +164,7 @@ project — the corpus file is the index into its docs.
 | `~/Development/parasite` | Parasite Eve, Parasite Eve II (PSX — different codebases) | `parasiteeve.md` |
 | `~/Development/moonstone` | Moonstone, Shadow of the Beast I–III (Amiga) | `moonstone.md` |
 | `~/Development/vista` | Vista Pro 3.05, World Construction Set 2.04 (Amiga terrain software) | `vista.md` |
+| `~/Development/lucina` | Fire Emblem Awakening/Fates/Echoes/Warriors, Bravely Default/Second, Monster Hunter 4U (3DS) | `lucina.md` |
 
 All corpus files live in `~/.claude/agents/game-re-corpora/`; Astral Chain now
 lives in `~/Development/legion` (no corpus file yet). Games from the

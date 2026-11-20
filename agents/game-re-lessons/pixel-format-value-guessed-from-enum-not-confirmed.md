@@ -83,3 +83,21 @@ accident for the values you happened to check first. Confirm every
 distinct tag value against real bytes and a real render independently;
 don't extrapolate a working single-value match across an entire enum
 family.
+
+## Converse: don't dismiss a hardware-enum match untested either
+
+The mirror error happens too: a doc or code comment asserts a format field
+is "NOT the hardware enums" (an SDK-private numbering) without testing it.
+Use the same payload-size oracle in both directions. For each candidate
+numbering, check per texture that the declared data size equals the mip-chain
+byte size implied by (width, height, mip count, bpp of the format that
+numbering names). The numbering that fits every texture wins.
+
+Example: 3DS CTPK texture packs (`lucina`). The shared library's comment said
+"CT SDK numbering, NOT the hardware enums". In fact the format ids are the
+PICA200 hardware texture-format values (the BCH GPU register numbering):
+`dataSize` matches the hardware mip-chain size on 2,863/2,863 loose FE
+Awakening textures (9,072/9,072 including arc-embedded ones). The decode
+tables were already right; only the label misled readers.
+
+**History:** 2 recorded instances (3rd Birthday PSP, `lucina`).

@@ -15,7 +15,7 @@ Registered viewer ids (`src/game-id.ts`): `hunter`, `carrier-command`, `epic`, `
 - Gunship 2000 AGA — `.PIX` (RNC1 ILBM), `.cat` catalog, roster partial, SFX engine
 - Embryo (Amiga, 1994) — XOR-obfuscated CrM2 container + file catalog solved; 3D engine exe not found
 - Zeewolf — boot catalog + custom disk layout; 64% of disk uncharacterised
-- Virus — reasoned negative: no stored 3D model format (fully procedural)
+- Virus — Lander/Zarch model: sum-of-sines heightfield + 43 stored object blueprints located (2026-11-19 recon); blueprint semantics open — `docs/explore/Virus/`
 - Also present, not in details file: ArmourGeddon 1/2, Guardian AGA, Zeewolf 2 (`docs/explore/<Game>/`)
 
 ## Solved formats → where documented
@@ -31,7 +31,7 @@ Registered viewer ids (`src/game-id.ts`): `hunter`, `carrier-command`, `epic`, `
 
 ## Engine-family / cross-project links
 - Hunter Amiga↔ST share load base `$800` and source: map one from the other by anchor matching (`cross-platform-decode-oracles.md`).
-- Braben lineage: Frontier stores models, Virus is purely procedural — don't transfer formats by lineage. Midwinter 1/2 share terrain-expansion shape, sprite-container shape and place-name strings, but are different codebases.
+- Braben lineage: Virus follows Lander/Zarch (sum-of-sines terrain, stored blueprints); Mark Moxon's annotated Lander source (lander.bbcelite.com) is the architecture oracle — byte encodings differ, so don't transfer formats by lineage. Midwinter 1/2 share terrain-expansion shape, sprite-container shape and place-name strings, but are different codebases.
 - Oracles: `watsonmw/fe2-intro` (spec only, no licence — no code copied; needs `-orig` patch for our exe), DOS-port fan decode (Midwinter), `ancient` (`tools/hunter/ancient`) for CrM2, WinUAE/amiberry `newcpu.cpp` for `.uss` savestates.
 - Shared WHDLoad library + amiberry configs: `~/Development/amigagames`.
 
