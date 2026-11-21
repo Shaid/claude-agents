@@ -8,7 +8,7 @@ description: Use when IRA (Interactive ReAssembler) is the right tool for the jo
 ## What is IRA
 
 IRA (Interactive ReAssembler / Aira Force) is a portable MC68000/010/020/030/040/060
-reassembler. Located at `~/Downloads/AiraForce-Linux/ira`.
+reassembler. On PATH as `ira` (IRA 2.11, built from Aminet source at `~/Development/tools-src/ira/ira/`, symlinked in `~/.local/bin`).
 
 **Key properties:**
 - Produces **annotated, re-assemblable** assembly output
@@ -21,10 +21,10 @@ reassembler. Located at `~/Downloads/AiraForce-Linux/ira`.
 
 ```bash
 # Basic disassembly
-~/Downloads/AiraForce-Linux/ira SOURCE [TARGET]
+ira SOURCE [TARGET]
 
 # Example for WIME
-~/Downloads/AiraForce-Linux/ira \
+ira \
   ~/Development/middilgard/data/wime/amiga/WarInMiddleEarth \
   ~/Development/middilgard/data/wime/amiga/WarInMiddleEarth.asm
 ```
@@ -51,7 +51,7 @@ reassembler. Located at `~/Downloads/AiraForce-Linux/ira`.
 ### Recommended invocation for WIME
 
 ```bash
-~/Downloads/AiraForce-Linux/ira -a -compat=bi \
+ira -a -compat=bi \
   ~/Development/middilgard/data/wime/amiga/WarInMiddleEarth \
   ~/Development/middilgard/data/wime/amiga/WarInMiddleEarth.asm
 ```
@@ -67,7 +67,7 @@ the recommended workflow is an iterative loop, not a single invocation:
 
 1. **Auto-detect pass.** Run with `-preproc` (plus your usual `-a -compat=bi`):
    ```bash
-   ~/Downloads/AiraForce-Linux/ira -a -compat=bi -preproc -keepzh Target Target.asm
+   ira -a -compat=bi -preproc -keepzh Target Target.asm
    ```
    This emits both `Target.asm` and a `Target.cnf` config file.
 2. **Spot misclassifications** by reading the `.asm` output:
@@ -92,7 +92,7 @@ the recommended workflow is an iterative loop, not a single invocation:
 4. **Re-run with `-config`** (not `-preproc` — that would throw away your
    edits and re-guess):
    ```bash
-   ~/Downloads/AiraForce-Linux/ira -a -compat=bi -config -keepzh Target Target.asm
+   ira -a -compat=bi -config -keepzh Target Target.asm
    ```
 5. **Repeat 2–4** as you understand more of the binary — each pass should
    produce cleaner output with fewer misclassified regions. This is why the
@@ -183,12 +183,12 @@ cross-references (`axt`).
 
 ```bash
 # Disassemble
-~/Downloads/AiraForce-Linux/ira -a -compat=bi -config -keepzh SOURCE
+ira -a -compat=bi -config -keepzh SOURCE
 
 # Reassemble (requires config file from -config)
 vasmm68k_mot -no-opt -Fhunkexe -nosym -o NewBinary SOURCE.asm
 
 # Verify
-~/Downloads/AiraForce-Linux/ira -a -compat=bi -config -keepzh NewBinary
+ira -a -compat=bi -config -keepzh NewBinary
 diff -s SOURCE.asm NewBinary.asm
 ```
