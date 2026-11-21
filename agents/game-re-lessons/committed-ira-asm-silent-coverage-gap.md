@@ -74,3 +74,14 @@ against the hunk size (same diagnostic as above) and/or grep the whole
 `$6100`-range inside `DC.W`/`DC.L` lines) before trusting that a single
 flagged-and-fixed region means the binary's disassembly is now reliable
 end to end.
+
+## Second cause: wrong CPU mode (full coverage, still missing instructions)
+
+A listing can declare every byte `CODE` and still drop instructions if IRA
+ran as `MACHINE 68000` over 68020+ code (common for AGA/CD32 titles):
+scaled-index addressing, `EXTB.L`, `MULS.L`/`DIVS.L`, bitfields come out as
+`DC.W` words mid-routine. Check the listing's `MACHINE` line before any
+sweep; for an AGA-era exe, grep for stray `DC.W` inside code ranges and
+decode one by hand. Re-run IRA with `-M68020`. Guardian AGA (hunter):
+`DC.W $47F3,$3608` in the map-record reader was `LEA 8(A3,D3.W*8),A3`,
+with ~1,900 similar candidates across the listing.

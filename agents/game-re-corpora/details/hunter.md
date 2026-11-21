@@ -772,49 +772,26 @@ next step is finding the real engine executable, which would likely settle
 several of these in one pass).
 
 Zeewolf (Binary Asylum, 1994, Amiga — helicopter combat, Zarch/Virus-lineage
-rendering): fresh-start session cracked `Disk.1`'s undocumented custom
-trackloader disk layout from scratch (no public spec — only a WHDLoad
-install ReadMe describing, not specifying, a "longtrack" protection). The
-disk (901,120 bytes, standard AmigaDOS DD capacity, `"DOS\0"` bootblock but
-**not** a real AmigaDOS filesystem — root block position holds real data,
-not a valid OFS/FFS root) boots via a hand-rolled loader: block 0/1's code
-does two `AllocMem()` calls (0x48000 bytes each, one MEMF_CHIP one MEMF_ANY)
-with chip-mem-size-dependent load-address arithmetic, then a **4-file
-boot-time catalog** embedded in the boot code itself (32-byte records:
-11-byte 8.3-style name + record index + reserved + flag byte [0x80=more
-follow] + 8x consecutive `u16` LE logical-block numbers; `block*512` = a
-direct byte offset into the flat image, confirmed via real 68k code/English
-text at every boundary; a whole-disk scan for the exact record shape found
-only the 43 hits belonging to these 4 files, confirming no second catalog
-of this shape exists anywhere else). `STARTUP.68K` (blocks 4-272, ~134 KB)
-is the headerless main executable (no `HUNK_HEADER` at all — a byte-
-classification scan found ordinary embedded UI strings, no `HUNK_DEBUG`
-source fragments). `WOLFNEW.DAT` and `TITLE.MOD` share an unresolved
-pointer/parameter record grammar (a small set of ~10-15 distinct clustered
-`0x0001xxxx`-range values recur heavily across both files, structurally
-reminiscent of Carrier Command's `callback_fn`-headed entity records but
-**not** semantically confirmed — the dynamic `AllocMem`-based load address
-means these can't be resolved to real code offsets without a live capture
-or a loader-relocation trace). `TITLE.MOD` and `TITLE.DRV` are both
-confirmed **not** what their extensions suggest (no IFF/ProTracker module,
-no device driver — see `familiar-extension-not-proof-of-standard-format.md`):
-both hold a mission-briefing text database (byte-exact 3-byte tag `0x0C
-0x00 0x08` precedes 94/95 real "Mission " occurrences disk-wide) that starts
-partway through `TITLE.MOD`'s own catalogued range and continues seamlessly
-past the catalog's declared end into un-catalogued disk space with no
-transition marker — see the new `bootstrap-catalog-boundary-not-content-
-boundary.md` lesson this produced. The disk's last 264 blocks (132 KB) are
-confirmed **not** game data at all — a synthetic 4-byte-stride counter fill
-pattern that a naive entropy/byte-diversity sweep initially misread as real
-content; see the new `patterned-fill-defeats-naive-entropy-scan.md` lesson.
-No 3D vertex/polygon model format was found this session (checked
-explicitly, both structured resources examined show the pointer/parameter
-grammar above, not a CC/Hunter-OB-style small-signed-byte vertex shape).
-Open: blocks 369-1495 (577 KB, ~64% of the disk) are real but uncatalogued
-content of unknown structure — the primary target for a follow-up session;
-`WOLFNEW.DAT`/`TITLE.MOD`'s record grammar; full `STARTUP.68K` disassembly;
-no music/sound file identified yet (no standard IFF audio magic anywhere on
-disk). See `docs/explore/Zeewolf/data-structure.md` and `TODO.md`. Music/SFX
+rendering): `Disk.1` is a custom trackloader disk (`"DOS\0"` bootblock, not an
+AmigaDOS filesystem). The first pass mapped the boot catalog's u16 block
+numbers as `block*512` from disk 0 and built a whole reading on it — a
+"headerless STARTUP.68K", a WOLFNEW/TITLE.MOD pointer-record grammar,
+"TITLE.MOD/DRV = mission-text database running past the catalog's end",
+and "64% of the disk uncatalogued". The 2026-11-19 recon corrected all of
+it: the catalog is a **CP/M 2.2 directory** (32-B entries, `0xE5` fill, RC
+record count) at disk `0x1600`, and its values are 2 KB allocation blocks
+from track 1 (`offset = 0x1600 + block*2048`, matching both the stage-2
+loader's sector maths and the WHDLoad slave's replacement routine).
+Under it `STARTUP.68K` is a normal 5-hunk exe (mission records + briefing
+text in hunk 0, XOR-keyed passwords in hunk 2), `TITLE.MOD` is a The
+Player 4.1A module, `TITLE.DRV` its replay routine, and the disk is
+accounted to the byte; the last 264 blocks are an imager `'D' 'O' xx nn`
+fill (`patterned-fill-defeats-naive-entropy-scan.md`, still valid).
+Zeewolf 2 shares the boot block and filesystem; its standalone `MISSnn.ZMF`
+files are the structural oracle for ZW1's in-hunk mission records. Lesson:
+`disk-catalog-wrong-unit-still-yields-plausible-files.md` (which retired the
+earlier `bootstrap-catalog-boundary-not-content-boundary` lesson, built on
+the mis-mapping). See `docs/explore/Zeewolf{,2}/data-structure.md`. Music/SFX
 for both Zeewolf games confirmed **Allister Brimble** (a prior Adrian
 Cummings attribution was checked and is wrong).
 
@@ -929,4 +906,4 @@ verification are open — see `docs/explore/Virus/plan.md` and
 `docs/explore/Virus/TODO.md`.
 
 ## Lessons sourced from this corpus (full list)
-amiberry-live-capture-workflow.md, bootstrap-catalog-boundary-not-content-boundary.md, byte-shape-classifier-needs-entropy-gate.md, committed-ira-asm-silent-coverage-gap.md, content-type-absence-needs-multiple-independent-angles.md, confirmed-call-target-off-instruction-boundary.md, crack-redirects-io-to-resident-loader-stub.md, cross-platform-decode-oracles.md, decompressor-port-loop-condition-iteration-shift.md, familiar-extension-not-proof-of-standard-format.md, forced-code-range-address-comments-unreliable-past-boundary.md, high-entropy-trivial-cipher.md, ira-label-name-is-not-a-literal-address.md, jump-table-longword-entries-misdisassembled-as-branches.md, leading-header-equal-to-field-offset-masks-record-start.md, length-invariant-blind-to-copy-semantics.md, loop-reentry-label-decides-reuse-vs-refetch-subcase.md, narrow-opcode-form-census-false-negative.md, palette-storage-quirks.md, patterned-fill-defeats-naive-entropy-scan.md, resume-entry-citation-drops-setup-arithmetic.md, reversed-text-fragment-anti-strings-trick.md, second-record-type-shifts-primary-counts.md, self-consistent-chain-wrong-unit.md, sibling-field-values-alias-in-dominant-case.md, static-xref-misleads.md, trailer-offset-locates-real-header.md, trampoline-role-guessed-not-resolved.md, websearch-cited-repo-may-not-exist.md, whdload-slave-no-format-info.md
+amiberry-live-capture-workflow.md, disk-catalog-wrong-unit-still-yields-plausible-files.md, byte-shape-classifier-needs-entropy-gate.md, committed-ira-asm-silent-coverage-gap.md, content-type-absence-needs-multiple-independent-angles.md, confirmed-call-target-off-instruction-boundary.md, crack-redirects-io-to-resident-loader-stub.md, cross-platform-decode-oracles.md, decompressor-port-loop-condition-iteration-shift.md, familiar-extension-not-proof-of-standard-format.md, forced-code-range-address-comments-unreliable-past-boundary.md, high-entropy-trivial-cipher.md, ira-label-name-is-not-a-literal-address.md, jump-table-longword-entries-misdisassembled-as-branches.md, leading-header-equal-to-field-offset-masks-record-start.md, length-invariant-blind-to-copy-semantics.md, loop-reentry-label-decides-reuse-vs-refetch-subcase.md, narrow-opcode-form-census-false-negative.md, palette-storage-quirks.md, patterned-fill-defeats-naive-entropy-scan.md, resume-entry-citation-drops-setup-arithmetic.md, reversed-text-fragment-anti-strings-trick.md, second-record-type-shifts-primary-counts.md, self-consistent-chain-wrong-unit.md, sibling-field-values-alias-in-dominant-case.md, static-xref-misleads.md, trailer-offset-locates-real-header.md, trampoline-role-guessed-not-resolved.md, websearch-cited-repo-may-not-exist.md, whdload-slave-no-format-info.md

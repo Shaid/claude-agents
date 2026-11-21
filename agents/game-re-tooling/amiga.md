@@ -15,11 +15,27 @@ it**: the expected location is
 per-user extensions path this Ghidra build resolves to — not the legacy
 `~/.ghidra/.ghidra_12.1.2_PUBLIC/` most other Ghidra documentation assumes;
 see `game-re-tooling/ghidra-loaders.md` for why), yet a 2026-09-01 session
-found **no `Extensions/` directory at all** — only unbuilt source at
-`~/Development/ghidra_amiga_ldr` (gradle-buildable). The same session also
-found the IRA binary, radare2, and capstone all absent — tool inventory
-drifts, check before you commit to a route, and if everything is missing
-use the extension-free headless fallback below rather than stalling. When
+found the extension absent — only unbuilt source at
+`~/Development/ghidra_amiga_ldr` (gradle-buildable). Tool inventory drifts;
+check before you commit to a route, and if everything is missing use the
+extension-free headless fallback below rather than stalling.
+
+**Inventory (checked 2026-11-21):**
+- **IRA 2.11** — built from Aminet `dev/asm/ira.lha` source at
+  `~/Development/tools-src/ira/ira/`, symlinked as `~/.local/bin/ira` (the
+  old `~/Downloads/AiraForce-Linux/ira` is gone). `-M68020` for AGA/CD32
+  executables (see `committed-ira-asm-silent-coverage-gap.md`).
+- **radare2 6.2.7** — built from `~/Development/radare2` via `sys/user.sh`
+  into `~/.local` (`r2` on PATH); re-run that script if `r2` fails on a
+  missing `libr_*.so`.
+- **Ghidra 12.1.2** — `~/ghidra_12.1.2_PUBLIC/`; headless is
+  `support/analyzeHeadless` (not on PATH). The `Extensions/` dir exists but
+  is **empty** — no Amiga loader, use the raw-import fallback.
+- **capstone** — not system-wide; use a scratch venv (`pip install capstone`).
+- **Musashi** — `~/Development/crawl/tools/bcdft_decompress/musashi` builds a
+  small `dasm` when nothing else works.
+
+When
 present, the extension ships Amiga NDK 3.9
 datatypes for accurate struct typing and its own `ghidra_scripts/`
 (`ApplyRegBase.java` for custom hardware register overlays, `CopperList.java`

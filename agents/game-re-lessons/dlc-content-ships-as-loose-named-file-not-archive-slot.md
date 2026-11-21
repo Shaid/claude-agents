@@ -75,8 +75,7 @@ textures months earlier, but nobody had pointed the already-solved mesh
    (not established for every character checked this pass — left as an
    explicitly separate, lower-priority open question, not assumed).
 
-Related: `bootstrap-catalog-boundary-not-content-boundary.md` (a different
-flavor of "the catalog says less than the real content"),
+Related:
 `update-patch-ships-a-revised-struct.md` (the *table-structure* sibling of
 this same "the update is prior art you haven't read yet" family — that one
 covers a record layout changing shape, this one covers content existing at

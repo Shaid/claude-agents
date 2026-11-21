@@ -52,9 +52,7 @@ direction:
 
 Sibling lessons, reached from different symptoms:
 `unbounded-appended-data-boundary.md` (unidentified data with no declared
-end — where does it *stop*), `bootstrap-catalog-boundary-not-content-boundary.md`
-(a verified catalog bound that is the wrong *kind* of bound). This one is the
-inverse of both: a correct positive finding over-extended backwards into a
+end — where does it *stop*). This one is its inverse: a correct positive finding over-extended backwards into a
 negative claim about bytes it never covered.
 
 **The same over-extension happens at file scope, not just region scope**, and

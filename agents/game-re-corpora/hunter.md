@@ -14,9 +14,9 @@ Registered viewer ids (`src/game-id.ts`): `hunter`, `carrier-command`, `epic`, `
 - Midwinter 2 (Amiga) — dir files, `.cmp`/`.mcp`/`.fsd` codecs, island sections, terrain solved; audio samples open; `disk.4` is the shipped blank campaign/save disk (WHDLoad ReadMe: CUSTOM1=4-9), not copy protection
 - Gunship 2000 AGA — `.PIX` (RNC1 ILBM), `.cat` catalog, roster partial, SFX engine
 - Embryo (Amiga, 1994) — XOR-obfuscated CrM2 container + file catalog solved; 3D engine exe not found
-- Zeewolf — boot catalog + custom disk layout; 64% of disk uncharacterised
+- Zeewolf 1/2 — CP/M-format boot catalog (2 KB blocks from `0x1600`), disk accounted to the byte; WOLFNEW bitmap layout open
 - Virus — Lander/Zarch model: sum-of-sines heightfield + 43 stored object blueprints located (2026-11-19 recon); blueprint semantics open — `docs/explore/Virus/`
-- Also present, not in details file: ArmourGeddon 1/2, Guardian AGA, Zeewolf 2 (`docs/explore/<Game>/`)
+- Also present, not in details file: ArmourGeddon 1/2, Guardian AGA (`docs/explore/<Game>/`)
 
 ## Solved formats → where documented
 - RNC1 (`tools/hunter/rnc1.py`, byte-verified; reused for Gunship `.PIX`) and FIRE backwards LZ77, no Huffman (`tools/hunter/fire-depack.py`)

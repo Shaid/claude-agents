@@ -1,3 +1,5 @@
+> RETIRED 2026-11-21: the only example was a wrong `block x 512` catalog mapping (hunter Zeewolf); under the correct mapping no content crosses any catalog boundary. See `disk-catalog-wrong-unit-still-yields-plausible-files.md`.
+
 # A boot-time/quickload catalog's declared per-file byte range bounds what's loaded at that stage, not the resource's real semantic extent
 
 **When it bites:** a disk/archive has a small, confirmed, byte-exact
