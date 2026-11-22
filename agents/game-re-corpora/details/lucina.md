@@ -41,4 +41,4 @@ title (`docs/<game>/audit-2026-11-18.md`) was applied title by title
   Uncensored); its `Sound.bcsar` is 0 B.
 
 ## Lessons sourced from this corpus (full list)
-crunched-size-mistaken-for-decrunched-size-invariant-mismatch.md, decoder-passthrough-fallback-hides-wrapper-variants.md, formula-check-small-sample-misses-conditional-rounding-term.md, pixel-format-value-guessed-from-enum-not-confirmed.md, tracker-prose-is-not-evidence.md
+crunched-size-mistaken-for-decrunched-size-invariant-mismatch.md, decoder-passthrough-fallback-hides-wrapper-variants.md, formula-check-small-sample-misses-conditional-rounding-term.md, partial-hunk-commit-leaves-head-uncompilable.md, pixel-format-value-guessed-from-enum-not-confirmed.md, tracker-prose-is-not-evidence.md, whole-corpus-count-is-scoped-to-reader-coverage.md (Fates header-slot variant)
