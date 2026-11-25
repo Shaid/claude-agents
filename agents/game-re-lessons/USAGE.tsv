@@ -59,3 +59,5 @@ date	lesson	project	note
 2026-11-21	negative-from-addressing-root-not-shapes.md	lucina	unscheduled-spawn count dropped 101->82 by fixing script lookup path, not a new mechanism
 2026-11-21	whdload-slave-no-format-info.md	crawl	Perihelion: slave strings gave the aabbccccdddddddd filename template that decoded the hex names as Table.Dat records (disk/track/offset/type/len)
 2026-11-21	check-that-cannot-fail-is-not-evidence.md	crawl	Perihelion: added a shuffled-tile null to the overhead-map seam check (0.59 vs 0.35)
+2026-11-25	check-that-cannot-fail-is-not-evidence.md	lucina	added shuffled/random nulls for TEV, LUT continuity, block signature
+2026-11-25	file-offsets-vs-segment-relative.md	lucina	CGFX dict offset is the flags word; fixed shader-name offsets

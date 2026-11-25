@@ -362,6 +362,7 @@ _Pixels, bitplanes, palettes, tiles, sprites, textures_
 
 | File | When it bites |
 |------|---------------|
+| `material-texture-name-not-embedded-lives-in-companion-file.md` | An exported/rendered model has UVs but comes out near-black, flat or env-mapped because the export bound whichever texture the model embeds — before concluding it has no colour texture, list every material mapper's texture name and look for texture-only companion files (variant files may store the base name, `*_c1` holding `*_c0`) |
 | `absolute-hw-register-load-signals-software-composite-sprite.md` | The confirmed hardware sprite/OBJ record has no group/link/size field, and the question is whether the game composes multiple hardware tiles into one bigger logical sprite anyway |
 | `additive-blend-must-not-write-synthetic-alpha.md` | Implementing/reviewing an additive/screen/glow blend mode in a rasterizer that tracks coverage in an alpha channel and un-premultiplies by dividing RGB by alpha at the end — especially right after verifying such a fix only against the one known defect it targets |
 | `additive-blend-under-oversampling-rasterizer-double-accumulates.md` | Implementing/reviewing a switch from overwrite to additive/multiply/any-non-idempotent blend inside a forward-mapping or supersampling rasterizer that deliberately revisits the same destination pixel more than once per draw call (dense oversampling, an NxN splat, MSAA) — or a synthetic single-pixel/single-part test fixture for a new blend mode comes back suspiciously saturated/clamped compared to the hand-computed expected value |
@@ -433,6 +434,7 @@ _Meshes, skeletons, animation, transforms, glTF_
 
 | File | When it bites |
 |------|---------------|
+| `register-write-parser-must-honour-byte-enable-mask.md` | Parsing a GPU command/register-write stream (PICA200 `shbin`/BCH/CGFX command lists, any header with a byte-enable mask) for shader uniforms or vertex scale, and a constant is off by an exact power of 256 / power of two on a minority of meshes, or a heuristic has to snap it to fit |
 | `bind-pose-render-blind-to-joints-index-space-bug.md` | Writing/reviewing a skinned-mesh exporter that writes a resolved bone identifier straight into glTF's `JOINTS_0`; about to call skinning "verified" on a bind-pose render or validator pass alone — **strongest trigger:** the exporter *computes* `inverseBindMatrices` as `inverse(world[joint])` instead of reading a bind-matrix palette out of the source file, which makes every skinning observation vacuous (joint order, joint field and matrices alike) |
 | `bone-palette-may-bind-one-bone-twice-needs-proxy-joint-node.md` | Exporting per-submesh matrix palettes as one glTF skin each and the validator reports `DUPLICATE_ELEMENTS` at `/skins/N/joints/M` — before deduping slots or falling back to a whole-skeleton skin |
 | `canonical-local-rest-frame-tests-rotation-necessity.md` | A hierarchical-skeleton format has confirmed parent-child links and a per-bone length scalar but no obvious rotation field, before running (or after watching fail) a translation-only forward-kinematics assembly attempt |
