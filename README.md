@@ -13,6 +13,12 @@ Distilled from reverse-engineering **Black Crypt** (Amiga), with prior art
 from the Eye of the Beholder series, War in Middle Earth, the Excalibur
 series, Conan, Warriors of Legend, Dune, and KGB.
 
+It also covers a second task: **deriving a game's rules** from its own
+executable. Single real routines are run in a CPU-core harness (Unicorn or
+musashi) on synthetic state and diffed byte for byte against a hand-written
+port, with strict read/write-footprint parity and a null control per unit
+(see `agents/game-re-method/cpu-emulation-boot-harness.md`).
+
 > This repo lives at `~/.claude` on purpose, with a strict whitelist
 > `.gitignore`: only the files below are tracked — never credentials,
 > sessions, memory, or settings. The reason: the agent **improves its own
@@ -93,7 +99,11 @@ drains a backlog by hand.
    verification is quantified, never "looks right".
 5. **Emulate hostile decompressors** — run the game's own routine under an
    emulator core instead of debugging a hand-port.
-6. **Promote** — verified probes become committed extractors using the
+6. **Derive rules, not just formats** — for game logic, run one real routine
+   at a time in a CPU core on synthetic state; the port may read only the
+   bytes the routine read, writes must match, and every unit needs a null
+   control that disagrees. Grade each rule harness / code / hyp / open.
+7. **Promote** — verified probes become committed extractors using the
    project's shared decode libraries, pixel-exact regression-checked; findings
    land in `docs/<game>/<platform>/data-structure.md`, assets in
    `public/assets/<game>/<platform>/`.
