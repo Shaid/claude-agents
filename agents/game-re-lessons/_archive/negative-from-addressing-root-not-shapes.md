@@ -505,3 +505,6 @@ with more compressed content past its own top-level header — a
 directory/chain walk or a plain magic-byte re-scan of each file's raw
 bytes past offset 0 is what actually completes the corpus, not just a
 longer file list.
+
+## crawl MM3 (Amiga, 2026-11-26)
+`tools/mm3/rules_oracle/audit_monster_reads.py`, `docs/mm3/amiga/game-rules.md` 19.7-19.8: monster flee/morale/surprise/spells written up as absent by a closed static code census, strengthened by showing no harnessed unit reads the fields those would depend on across all vectors; graded census+footprint, not proven. The same audit corrected a false "no consumer for other skills" claim (one routine, 11 callers).

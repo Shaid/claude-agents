@@ -4,17 +4,19 @@
 
 ## Games
 - Black Crypt (Amiga; DOS demo) — formats solved; DOS full-game restoration Phases 1B-4 open
-- Might & Magic I (DOS EGA) — maze/gfx/tables/misc solved; `.OVR` code semantics open
-- Might & Magic II/III (Amiga+DOS) — not summarized in details; see `docs/mm2/`, `docs/mm3/`
+- Might & Magic I (DOS EGA) — maze/gfx/tables solved; `.OVR` handlers run under an overlay executor (event census, text pointers only)
+- Might & Magic II/III (Amiga+DOS) — see `docs/mm2/`, `docs/mm3/` (MM2 ported from Vairn/MM2 format docs)
 - Wizardry 6 (Amiga/DOS EGA/SNES) — merged from old `sorcery` repo; see `docs/wizardry6/`; corpus summary is `game-re-corpora/sorcery.md`
 - EOB1/EOB2/Lands of Lore (DOS VGA; EOB1+EOB2 Amiga) — formats confirmed; mostly pipeline wiring left
 - Eye of the Beholder III (DOS) — AESOP/16; 265 or 279/312 bitmaps coloured (sources disagree)
 - Dungeon Hack (DOS) — AESOP/16, source-verified; per-sprite palette choice open
-- Gold Box (Amiga): Pool of Radiance, Curse, Secret, Pools of Darkness, Champions/Death Knights/Dark Queen of Krynn, Gateway/Treasures of the Savage Frontier — containers, GEO, ECL solved; wall-glyph pixels were wrong in the 4 FR titles (header + 4-6 planes, not 1bpp; re-render); Dark Queen has wall art (ECL v1.3 `0x21`); walkers built
+- Gold Box (Amiga): Pool of Radiance, Curse, Secret, Pools of Darkness, Champions/Death Knights/Dark Queen of Krynn, Gateway/Treasures of the Savage Frontier — containers, GEO, ECL solved; walkers built
 - Ishar 1-3 + Crystals of Arborea (Amiga AGA) — ALIS location scripts render first-person for 13 locations across all 4 titles
 - Elvira 1/2 + Waxworks (Amiga, AGOS) — 9,308 images (old 5,745 stopped at the first 0×0 entry); `*tune` = ProTracker; `gameamiga` = game database
-- Bard's Tale I-III (Amiga) — pictures rendered (BT3 = 85); all BT1/BT2 files are `[size][bitcount][Huffman]`; walls/maps/audio open
-- Dungeon Master / DM2 / Chaos Strikes Back (Amiga) — container/dungeon solved; IMG1 = 687 images; DM2 IMG4 = 5/6-nibble palette + RLE + 16-B trailer; palette + IMG7/8 open
+- Bard's Tale I-III (Amiga) — pictures rendered; walls/maps/audio open
+- Dungeon Master / DM2 / Chaos Strikes Back (Amiga) — container/dungeon/IMG1-4 solved; palette + IMG7/8 open
+
+- **Game rules** (Black Crypt musashi; Wizardry 6, MM1 8086, MM2, MM3 Unicorn 68k): single-routine harness with strict read/write-footprint parity + null controls, > 1M vectors (small subsets committed, full sets gitignored); entry point = each `docs/<game>/<platform>/game-rules.md` status block. Remake layer: host + per-title engine contract (`docs/remake-architecture.md`, concept only, no GPL code)
 
 ## Solved formats → where documented
 - Black Crypt Amiga RLE/planar/EHB, LZ77 via 68k emulation (`tools/bcdft_decompress/`), in-exe chunk directories (3-word records) — `docs/blackcrypt/amiga/data-structure.md`
@@ -33,14 +35,12 @@
 - EOB1/EOB2/LoL: ScummVM `engines/kyra/` is a byte-exact oracle (check `/tmp/scummvm` clone first)
 - MM1: ScummVM `engines/mm/mm1` + Vairn/MM2 Python tools; MM1 map codec shares `decodeMapCell` with MM2
 - Gold Box oracles: `simeonpilgrim/goldboxexplorer` (`DaxFile.cs`), `simeonpilgrim/coab` decompiled DOS source, wiki `pooldata.py`
-- AGOS: ScummVM `extract_agos.cpp`/`res_ami.cpp`. Bard's Tale: Kroah's viewer (its `Files/` cmp-identity is recalled, not re-runnable here). DM: dmweb docs + "DM II Data Files Notes"; libxmp ProWizard `p40.c`
-- Black Crypt DOS `crypt.exe` embeds Amiga `bcdft` item-name block verbatim
+- AGOS: ScummVM `extract_agos.cpp`/`res_ami.cpp`. Bard's Tale: Kroah's viewer. DM: dmweb docs + "DM II Data Files Notes"; libxmp ProWizard `p40.c`
 
 ## Reusable code in this repo
 - `tools/shared/goldbox-{glib,glib-codecs,dosdax,daa-tiles,walltiles,geo,ecl,glib-export}.ts` — whole Gold Box stack
 - `tools/shared/alis-{disasm,interp}.ts`, `ishar-*.ts`, `silmarils-unpack.ts` — Silmarils ALIS
-- `tools/shared/agos-vga.ts`, `bardstale-codecs.ts`, `dungeonmaster-*.ts`, `amiga-player4x.ts` (P41A)
-- `tools/shared/ilbm.ts` (generic IFF ILBM/PBM), `amiga-planar.ts`
+- `tools/shared/agos-vga.ts`, `bardstale-codecs.ts`, `dungeonmaster-*.ts`, `amiga-player4x.ts`, `ilbm.ts`, `amiga-planar.ts`
 - `scripts/kyralib/`, `scripts/eotb3lib/`, `scripts/dungeonhacklib/`, `scripts/mm1lib/`, `scripts/m68k_emu.py`
 - `tools/walker/` — shared Dungeon Walker (`GameView`; `games-mm.ts`, `games-goldbox.ts`)
 
@@ -53,13 +53,11 @@
 - ALIS: `cstop` is a per-frame yield, not an end — CFG walks continue past it. `acc OP[opile]` is `popped OP acc`. Stored grids are the world transposed — see `docs/ishar-container-format.md`
 - MM page-0 wall codes are 2=door, 3=torch; overland code 3 is border. MM1/MM2 map bits are W,S,E,N (bits 0-1 W … 6-7 N), `0x20` = cell dark
 - Walker can-step, start pose and map-edge rules must come from each game's move routine — `walker-movement-rule-must-port-games-move-routine.md`
+- Rules harnesses: method in `cpu-emulation-boot-harness.md` (single-routine section); Unicorn needs `ctl_flush_tb()` after setup; never commit retail text or protection content in generated tables/vectors/commit messages
 
 ## Key lessons
-- `familiar-extension-not-proof-of-standard-format.md` — same extension, different format across titles here
-- `sequel-shares-codec-family-name-not-byte-grammar.md` — DM2 `IMGx`, EOB1/EOB2 `.EGA`: same name, different grammar
-- `port-wide-byte-order-convention-not-uniform-across-formats.md` — EOB2 Amiga `.VMP` is LE while EOB1 Amiga is BE
-- `false-positive-bytecode-hit-without-cfg-reachability.md` — Gold Box ECL: use the CFG walker, not linear scans
-- `uniform-degenerate-hit-value-signals-wrong-decode-config.md` — uniform `{127,127,127}` ECL results meant the wrong config
+- `familiar-extension-not-proof-of-standard-format.md`, `sequel-shares-codec-family-name-not-byte-grammar.md`, `port-wide-byte-order-convention-not-uniform-across-formats.md` — see Know before you start
+- `false-positive-bytecode-hit-without-cfg-reachability.md`, `uniform-degenerate-hit-value-signals-wrong-decode-config.md` — Gold Box ECL
 - `script-operands-overridden-by-exe-hardcoded-table.md` — Treasures wallsets come from an exe-hardcoded table
 - `amiga-overlay-segment-defeats-resident-only-trace.md` — Gold Box Amiga exes need `HUNK_OVERLAY` scanning
 - `hypothesis-tested-with-mismatched-input-looks-refuted.md` — ALIS: never reuse another script's test position

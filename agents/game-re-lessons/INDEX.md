@@ -570,6 +570,7 @@ _Oracles, statistics, censuses, null controls, negatives_
 
 | File | When it bites |
 |------|---------------|
+| `low-handler-coverage-suspect-harness-before-game-gates.md` | An emulator coverage/behaviour census over many game handlers, scripts or overlay routines leaves a sizeable share of code unreached and the working label is "gated by story flags / passwords / items" — before believing it, tabulate why each run ended (error on an unstubbed draw/sound call, busy-wait timeout, key-wait loop) |
 | `abi-verification-sample-mistaken-for-full-call-graph.md` | A shared function's calling convention was confirmed against a small "N call sites checked" sample, and a later scoping verdict ("every caller needs excluded subsystem X") is about to generalize that same N to the function's real caller population, instead of running a fresh exhaustive caller census before trusting the scope |
 | `aggregate-ratio-across-corpus-confirms-closed-form-constant.md` | A geometric/exponential-progression formula's per-entry tolerance fit is unconvincing (a minority match within ±1-2 units) but not obviously wrong, and the real underlying constant is suspected to be a well-known closed-form value |
 | `all-zero-stub-file-inflates-failure-count.md` | A batch decode run's success rate is noticeably below 100% and failures cluster in whole-prefix file groups |
@@ -652,6 +653,7 @@ _Tool/emulator/shell caveats_
 
 | File | When it bites |
 |------|---------------|
+| `unicorn-hooks-skip-already-translated-blocks.md` | A Unicorn (`uc`) single-routine harness disagrees with a plausible port, or its recorded read/write footprint misses accesses, only for code a setup step or earlier run already executed, or after patching code bytes / swapping an overlay hunk in — before debugging the port, check for `ctl_flush_tb()` after setup |
 | `absolute-path-silently-escapes-isolated-worktree.md` | Running in an isolated git worktree and about to `Read`/`Bash`/`Grep`/`Glob` an absolute path — especially one stated as a bare "project root" in the task prompt rather than built from the worktree's own root |
 | `amiberry-live-capture-workflow.md` | About to send keys/breakpoints/memory reads to a running amiberry instance |
 | `background-bash-job-no-push-notification.md` | Deciding whether a background job (Bash `run_in_background: true`, `Monitor`) will reliably notify on completion (it will — trust it), or whether a self-imposed `timeout` wrapper might be silently truncating a long batch job before it finishes |
@@ -722,6 +724,7 @@ _Docs/TODO hygiene, agent concurrency, pipeline plumbing, escalation_
 
 | File | When it bites |
 |------|---------------|
+| `generated-artefacts-from-game-code-carry-retail-text.md` | About to commit or push machine-generated output of a harness that ran real game code (event tables, UI/print call logs, trace vectors, string dumps, `.gz` JSON) in a public or soon-public RE repo — scan decompressed blobs and commit messages for retail text and copy-protection screen content |
 | `always-full-run-manifest-merge-accumulates-stale-entries.md` | A `finalizeManifest`-style step does an upsert-by-name merge against whatever `manifest.json` is already on disk, and the producer function it follows always runs as one complete, all-or-nothing pass (no scoped/partial-rerun mode) — or, the opposite symptom, a sibling asset-type stage's manifest entries (mesh/audio/etc) vanish after a pipeline run, especially a no-op resume with 0 new files |
 | `any-match-resumability-guard-orphans-partial-multi-item-entry.md` | A resumable pipeline's "already done" skip check for a container entry that can yield more than one output item uses `.some()`/"any sub-item exists" rather than `.every()`/"all sub-items exist" — especially after fixing an unrelated per-item filter (a flatness/format-support check) and a disk census still comes up short against an independent expected count |
 | `bare-git-commit-sweeps-concurrent-stage.md` | About to run a bare `git commit` (no pathspec) with other agents possibly working concurrently |
