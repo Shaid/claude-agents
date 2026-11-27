@@ -38,6 +38,21 @@ port, with strict read/write-footprint parity and a null control per unit
 | `re-learn` skill | `skills/re-learn/SKILL.md` | Opus | Harvest/scan: writes lesson candidates to the inbox (never edits shared files) |
 | `re-learn-curate` skill | `skills/re-learn-curate/SKILL.md` | Opus (forked) | The only writer: merges the inbox under a lock, runs `check.py`, commits explicit paths |
 
+### Helper agents and skills
+
+Tracked alongside the `game-re` family; `game-re` and the escalation skills call on them, and they work standalone too.
+
+| Piece | File | Model | Role |
+|-------|------|-------|------|
+| `amiga-disasm` agent | `agents/amiga-disasm.md` | inherits | Amiga 68000 work: IRA static disassembly, radare2 interactive analysis and the Ghidra HUNK loader together |
+| `ghidra-disasm` agent | `agents/ghidra-disasm.md` | inherits | Ghidra (GhidraMCP or headless) for platforms that need a real loader or decompiler: PSX, PS2, PS4, Wii/GameCube, Genesis, Switch, PSP, 3DS, Xbox 360, SNES |
+| `explorer` agent | `agents/explorer.md` | Haiku | Fast, cheap, read-only skim of a large doc tree or disassembly; returns a structured overview |
+| `reviewer` agent | `agents/reviewer.md` | Haiku | Fast read-only surface review of a file or diff: syntax, typos, lint, style |
+| `seer-guide` agent | `agents/seer-guide.md` | Sonnet | Read-only expert on using the seer framework: packages, scaffolding, `defineGameConfig`, upgrades |
+| `ira-disasm` skill | `skills/ira-disasm/SKILL.md` | n/a | IRA usage: static 68k disassembly, label search, reassembly |
+| `radare2-amiga` skill | `skills/radare2-amiga/SKILL.md` | n/a | radare2 on Amiga hunk executables, including SAS/C small-data addressing |
+| `seer-website` skill | `skills/seer-website/SKILL.md` | n/a | Writes the curated field-guide pages for a seer project's Astro+Starlight `www/` site |
+
 ### Escalation ladder
 
 `game-re` runs on a fast model and does the routine work itself. When a
