@@ -33,6 +33,8 @@ port, with strict read/write-footprint parity and a null control per unit
 | `game-re` agent | `agents/game-re.md` | Sonnet | The workhorse: full RE loop, orchestrates everything below |
 | `re-codebreaker` skill | `skills/re-codebreaker/SKILL.md` | Opus | Escalation for hard *bounded* sub-problems (forked specialist) |
 | `re-oracle` skill | `skills/re-oracle/SKILL.md` | Fable | Last-resort escalation: whole-corpus synthesis, contradictions (forked specialist) |
+| `re-recon` skill | `skills/re-recon/SKILL.md` | Opus (forked, `game-re`) | First contact with a new title: identifies game/platform/engine, inventories every file, checks sibling corpora for solved formats, writes the starting docs and a prioritised attack plan with ready-to-run `game-re` prompts. Plans the RE; does not do it |
+| `re-audit` skill | `skills/re-audit/SKILL.md` | Main session (spawns Opus `game-re` agents) | Gap-audits what a project believes it knows: report-only audits per title/engine family, one write-up page per title, verified fixes applied title by title with a changes file, then harvests the lessons |
 | `re-learn` skill | `skills/re-learn/SKILL.md` | Opus | Harvest/scan: writes lesson candidates to the inbox (never edits shared files) |
 | `re-learn-curate` skill | `skills/re-learn-curate/SKILL.md` | Opus (forked) | The only writer: merges the inbox under a lock, runs `check.py`, commits explicit paths |
 
@@ -119,6 +121,8 @@ use the game-re agent to scan the game data in data/eotb2/amiga and work out the
 Direct skill invocations also work:
 
 ```
+/re-recon       data/<game>/<platform>
+/re-audit       audit ../<repo>
 /re-codebreaker <self-contained brief for one hard sub-problem>
 /re-oracle      <brief including the failed codebreaker attempt>
 /re-learn       learn from ~/Development/wyrm
